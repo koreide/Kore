@@ -3,9 +3,9 @@ import { Sidebar } from "./components/sidebar";
 import { ResourceTable } from "./components/resource-table";
 import { CommandPalette } from "./components/command-palette";
 import { PodDetailsView } from "./components/pod-details-view";
-import { deleteResource, listContexts, listResources, ResourceItem, ResourceKind, startWatch } from "./lib/api";
+import { listContexts, listNamespaces, listResources, ResourceItem, ResourceKind, startWatch, switchContext } from "./lib/api";
 import type { SortingState } from "@tanstack/react-table";
-import { Loader2, Search, Trash2 } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
 import { AnimatePresence } from "framer-motion";
 
@@ -150,7 +150,7 @@ function toResourceItem(obj: Record<string, unknown>): ResourceItem | null {
 export default function App() {
   const [contexts, setContexts] = useState<string[]>([]);
   const [currentContext, setCurrentContext] = useState<string>();
-  const [namespaces] = useState<string[]>(DEFAULT_NAMESPACES);
+  const [namespaces, setNamespaces] = useState<string[]>(DEFAULT_NAMESPACES);
   const [namespace, setNamespace] = useState<string>("default");
   const [kind, setKind] = useState<ResourceKind>("pods");
   const [resources, setResources] = useState<ResourceItem[]>([]);
@@ -165,12 +165,34 @@ export default function App() {
   const watchInitializedRef = useRef(false);
   const currentKindRef = useRef<ResourceKind>(kind);
 
+  // Handle context change - clear state and switch backend context
+  const handleContextChange = useCallback(async (newContext: string) => {
+    // Immediately clear all state
+    setResources([]);
+    setNamespaces([]);
+    setSelected(null);
+    setSearch("");
+    setViewMode("table");
+    watchInitializedRef.current = false;
+    
+    // Switch the backend context
+    try {
+      await switchContext(newContext);
+      setCurrentContext(newContext);
+    } catch (err) {
+      console.error("Failed to switch context", err);
+      // Don't update currentContext if switch failed
+      return;
+    }
+  }, []);
+
   useEffect(() => {
     listContexts()
-      .then((ctxs) => {
+      .then(async (ctxs) => {
         if (ctxs && ctxs.length > 0) {
           setContexts(ctxs);
-          setCurrentContext(ctxs[0]);
+          // Use handleContextChange to properly initialize the first context
+          await handleContextChange(ctxs[0]);
         } else {
           console.warn("No contexts found");
           setContexts([]);
@@ -181,7 +203,38 @@ export default function App() {
         // Don't block rendering if contexts fail to load
         setContexts([]);
       });
-  }, []);
+  }, [handleContextChange]);
+
+  // Fetch namespaces when context changes
+  useEffect(() => {
+    if (currentContext) {
+      // Clear namespaces immediately
+      setNamespaces([]);
+      
+      listNamespaces()
+        .then((ns) => {
+          if (ns && ns.length > 0) {
+            setNamespaces(ns);
+            // Reset to default namespace if current namespace doesn't exist in new list
+            // (but keep "*" if that's what's selected)
+            setNamespace((currentNs) => {
+              if (currentNs === "*" || ns.includes(currentNs)) {
+                return currentNs;
+              }
+              return "default";
+            });
+          } else {
+            console.warn("No namespaces found");
+            setNamespaces(DEFAULT_NAMESPACES);
+          }
+        })
+        .catch((err) => {
+          console.error("Failed to load namespaces", err);
+          // Fall back to default namespaces on error
+          setNamespaces(DEFAULT_NAMESPACES);
+        });
+    }
+  }, [currentContext]);
 
   // Register hotkeys
   useEffect(() => {
@@ -197,11 +250,6 @@ export default function App() {
       if (e.key === "/") {
         e.preventDefault();
         searchRef.current?.focus();
-      }
-      if (e.key.toLowerCase() === "d") {
-        if (selected) {
-          handleDelete(selected);
-        }
       }
     };
     window.addEventListener("keydown", handler);
@@ -350,10 +398,26 @@ export default function App() {
     setSelected(null);
   }, [kind]);
 
+  // Refresh resources when context changes
   useEffect(() => {
-    watchInitializedRef.current = false;
-    refresh();
+    if (currentContext) {
+      // Clear resources immediately when context changes
+      setResources([]);
+      setSelected(null);
+      watchInitializedRef.current = false;
+      refresh();
+    }
   }, [refresh, currentContext]);
+
+  // Automatically start watch when kind or namespace changes (for live updates)
+  useEffect(() => {
+    if (currentContext) {
+      // Clear resources and restart watch when kind or namespace changes
+      setResources([]);
+      watchInitializedRef.current = false;
+      refresh();
+    }
+  }, [kind, namespace, refresh, currentContext]);
 
   const filtered = useMemo(() => {
     if (!search) return resources;
@@ -365,15 +429,6 @@ export default function App() {
         (r.status && r.status.toLowerCase().includes(lower))
     );
   }, [resources, search]);
-
-  const handleDelete = async (row: ResourceItem) => {
-    if (!row.name || !row.namespace) return;
-    try {
-      await deleteResource({ kind, namespace: row.namespace, name: row.name });
-    } catch (err) {
-      console.error("Failed to delete", err);
-    }
-  };
 
   const handleRowSelect = async (row: ResourceItem) => {
     setSelected(row);
@@ -396,7 +451,7 @@ export default function App() {
         namespaces={namespaces}
         currentNamespace={namespace}
         currentResource={kind}
-        onContextChange={setCurrentContext}
+        onContextChange={handleContextChange}
         onNamespaceChange={setNamespace}
         onResourceChange={setKind}
       />
@@ -412,13 +467,6 @@ export default function App() {
               className="w-full bg-surface/70 glass border border-slate-800 rounded-md px-10 py-2 outline-none focus:border-accent transition"
             />
           </div>
-          <button
-            className="px-3 py-2 rounded border border-slate-800 hover:border-accent text-sm flex items-center gap-2"
-            onClick={() => selected && handleDelete(selected)}
-          >
-            <Trash2 className="w-4 h-4" />
-            Delete (d)
-          </button>
           <div className="px-3 py-2 rounded border border-slate-800 bg-surface/70">
             {currentContext ?? "No context"}
           </div>
@@ -455,7 +503,7 @@ export default function App() {
         open={paletteOpen}
         contexts={contexts}
         onClose={() => setPaletteOpen(false)}
-        onSelectContext={setCurrentContext}
+        onSelectContext={handleContextChange}
       />
     </div>
   );

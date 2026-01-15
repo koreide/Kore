@@ -19,6 +19,7 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             list_contexts,
+            list_namespaces,
             switch_context,
             list_resources,
             start_watch,
@@ -26,7 +27,9 @@ fn main() {
             delete_resource,
             describe_pod,
             start_pod_logs_stream,
-            get_pod_metrics
+            get_pod_metrics,
+            start_port_forward,
+            stop_port_forward
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

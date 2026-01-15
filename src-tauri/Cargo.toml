@@ -10,6 +10,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true }
+tokio-util = { version = "0.7", features = ["codec"] }
 kube = { workspace = true }
 kube-runtime = { workspace = true }
 futures = { workspace = true }

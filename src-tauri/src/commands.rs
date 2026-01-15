@@ -10,9 +10,22 @@ pub struct LogRequest {
     pub tail_lines: Option<i64>,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct PortForwardRequest {
+    pub namespace: String,
+    pub podName: String,
+    pub localPort: u16,
+    pub podPort: u16,
+}
+
 #[tauri::command]
 pub async fn list_contexts(state: State<'_, K8sState>) -> std::result::Result<Vec<String>, String> {
     state.list_contexts().await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn list_namespaces(state: State<'_, K8sState>) -> std::result::Result<Vec<String>, String> {
+    state.list_namespaces().await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -110,3 +123,30 @@ pub async fn get_pod_metrics(
         .map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+pub async fn start_port_forward(
+    state: State<'_, K8sState>,
+    namespace: String,
+    podName: String,
+    localPort: u16,
+    podPort: u16,
+) -> std::result::Result<serde_json::Value, String> {
+    state
+        .start_port_forward(namespace, podName, localPort, podPort)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn stop_port_forward(
+    state: State<'_, K8sState>,
+    namespace: String,
+    podName: String,
+    localPort: u16,
+    podPort: u16,
+) -> std::result::Result<(), String> {
+    state
+        .stop_port_forward(namespace, podName, localPort, podPort)
+        .await
+        .map_err(|e| e.to_string())
+}

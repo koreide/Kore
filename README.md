@@ -36,3 +36,4 @@ npm run tauri:build
 - Watches stream resources via Tauri events; ensure your cluster is reachable.
 - Logs and deletes use the selected namespace/kind; be cautious when deleting resources.
 
+

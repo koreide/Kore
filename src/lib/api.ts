@@ -25,6 +25,10 @@ export async function listContexts(): Promise<string[]> {
   return invoke("list_contexts");
 }
 
+export async function listNamespaces(): Promise<string[]> {
+  return invoke("list_namespaces");
+}
+
 export async function switchContext(name: string): Promise<void> {
   return invoke("switch_context", { name });
 }
@@ -76,3 +80,37 @@ export async function getPodMetrics(
   return invoke("get_pod_metrics", { namespace, podName });
 }
 
+export interface PortForwardRequest {
+  namespace: string;
+  podName: string;
+  localPort: number;
+  podPort: number;
+}
+
+export interface PortForwardResponse {
+  localPort: number;
+  podPort: number;
+  status: string;
+}
+
+export async function startPortForward(
+  request: PortForwardRequest
+): Promise<PortForwardResponse> {
+  return invoke("start_port_forward", {
+    namespace: request.namespace,
+    podName: request.podName,
+    localPort: request.localPort,
+    podPort: request.podPort,
+  });
+}
+
+export async function stopPortForward(
+  request: PortForwardRequest
+): Promise<void> {
+  return invoke("stop_port_forward", {
+    namespace: request.namespace,
+    podName: request.podName,
+    localPort: request.localPort,
+    podPort: request.podPort,
+  });
+}

@@ -1,5 +1,6 @@
 import { LucideIcon, Boxes, Server, Activity, Cpu } from "lucide-react";
 import { ResourceKind } from "../lib/api";
+import { SearchableDropdown } from "./searchable-dropdown";
 
 type MenuItem = {
   id: ResourceKind;
@@ -37,53 +38,24 @@ export function Sidebar({
 }: SidebarProps) {
   return (
     <aside className="w-64 h-full border-r border-slate-800 bg-surface/80 glass p-4 flex flex-col gap-6">
-      <div>
-        <p className="text-xs uppercase tracking-wide text-slate-400 mb-2">Context</p>
-        <div className="space-y-2">
-          {contexts.map((ctx) => (
-            <button
-              key={ctx}
-              onClick={() => onContextChange(ctx)}
-              className={`w-full text-left px-3 py-2 rounded border transition ${
-                currentContext === ctx
-                  ? "border-accent text-accent bg-accent/10"
-                  : "border-slate-800 hover:border-slate-700"
-              }`}
-            >
-              {ctx}
-            </button>
-          ))}
-        </div>
-      </div>
+      <SearchableDropdown
+        items={contexts}
+        selected={currentContext}
+        onSelect={onContextChange}
+        placeholder="Select context..."
+        label="Context"
+        storageKey="kore-favorite-contexts"
+      />
 
-      <div>
-        <p className="text-xs uppercase tracking-wide text-slate-400 mb-2">Namespaces</p>
-        <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-          <button
-            onClick={() => onNamespaceChange("*")}
-            className={`w-full text-left px-3 py-2 rounded border transition ${
-              currentNamespace === "*"
-                ? "border-accent text-accent bg-accent/10"
-                : "border-slate-800 hover:border-slate-700"
-            }`}
-          >
-            All Namespaces
-          </button>
-          {namespaces.map((ns) => (
-            <button
-              key={ns}
-              onClick={() => onNamespaceChange(ns)}
-              className={`w-full text-left px-3 py-2 rounded border transition ${
-                currentNamespace === ns
-                  ? "border-accent text-accent bg-accent/10"
-                  : "border-slate-800 hover:border-slate-700"
-              }`}
-            >
-              {ns}
-            </button>
-          ))}
-        </div>
-      </div>
+      <SearchableDropdown
+        items={namespaces}
+        selected={currentNamespace}
+        onSelect={onNamespaceChange}
+        placeholder="Select namespace..."
+        label="Namespaces"
+        allOption={{ label: "All Namespaces", value: "*" }}
+        storageKey="kore-favorite-namespaces"
+      />
 
       <div>
         <p className="text-xs uppercase tracking-wide text-slate-400 mb-2">Resources</p>
