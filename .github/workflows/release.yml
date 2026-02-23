@@ -39,17 +39,19 @@ jobs:
 
       - run: npm ci
 
-      - uses: tauri-apps/tauri-action@v0
+      - run: npm run build
+
+      - run: npx tauri build --target ${{ matrix.target }} --bundles dmg
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          name: "Kore ${{ github.ref_name }}"
+          body: "See the assets below to download and install Kore."
+          files: |
+            target/${{ matrix.target }}/release/bundle/dmg/*.dmg
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tauriScript: npx tauri
-          args: --target ${{ matrix.target }}
-          tagName: ${{ github.ref_name }}
-          releaseName: "Kore ${{ github.ref_name }}"
-          releaseBody: "See the assets below to download and install Kore."
-          releaseDraft: true
-          prerelease: false
 
   build-windows:
     runs-on: windows-latest
@@ -69,13 +71,16 @@ jobs:
 
       - run: npm ci
 
-      - uses: tauri-apps/tauri-action@v0
+      - run: npm run build
+
+      - run: npx tauri build --bundles nsis
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          name: "Kore ${{ github.ref_name }}"
+          body: "See the assets below to download and install Kore."
+          files: |
+            target/release/bundle/nsis/*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tauriScript: npx tauri
-          tagName: ${{ github.ref_name }}
-          releaseName: "Kore ${{ github.ref_name }}"
-          releaseBody: "See the assets below to download and install Kore."
-          releaseDraft: true
-          prerelease: false
