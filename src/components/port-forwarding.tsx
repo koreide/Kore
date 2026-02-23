@@ -1,16 +1,10 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plug, X, ExternalLink, AlertCircle, Loader2 } from "lucide-react";
-import { startPortForward, stopPortForward } from "../lib/api";
-
-export interface PortForward {
-  id: string;
-  localPort: number;
-  podPort: number;
-  status: "connecting" | "active" | "error";
-  statusMessage?: string;
-  localAddress: string;
-}
+import { startPortForward, stopPortForward } from "@/lib/api";
+import { formatError } from "@/lib/errors";
+import type { PortForwardInfo } from "@/lib/types";
+import { useToast } from "./toast";
 
 interface PortForwardingProps {
   namespace: string;
@@ -18,38 +12,34 @@ interface PortForwardingProps {
 }
 
 export function PortForwarding({ namespace, podName }: PortForwardingProps) {
-  const [portForwards, setPortForwards] = useState<PortForward[]>([]);
+  const [portForwards, setPortForwards] = useState<PortForwardInfo[]>([]);
   const [localPortInput, setLocalPortInput] = useState<string>("8080");
   const [podPortInput, setPodPortInput] = useState<string>("80");
   const [isStarting, setIsStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
-  // Generate a random available port (between 49152-65535, which are dynamic/private ports)
   const getRandomPort = (): number => {
     return Math.floor(Math.random() * (65535 - 49152 + 1)) + 49152;
   };
 
-  // Check if a port is already in use
   const isPortInUse = (port: number): boolean => {
     return portForwards.some((pf) => pf.localPort === port && pf.status === "active");
   };
 
   const handleStartPortForward = async () => {
     setError(null);
-    
-    // Parse and validate inputs
+
     const podPort = parseInt(podPortInput, 10);
     if (isNaN(podPort) || podPort < 1 || podPort > 65535) {
       setError("Pod port must be a valid number between 1 and 65535");
       return;
     }
 
-    // Determine local port
     let localPort: number;
     const inputLocalPort = parseInt(localPortInput, 10);
-    
+
     if (!localPortInput || localPortInput.trim() === "" || inputLocalPort === 0) {
-      // Auto-assign random port
       let attempts = 0;
       do {
         localPort = getRandomPort();
@@ -72,10 +62,9 @@ export function PortForwarding({ namespace, podName }: PortForwardingProps) {
     }
 
     setIsStarting(true);
-    
-    // Create a temporary forward with "connecting" status
+
     const forwardId = `${namespace}/${podName}/${localPort}/${podPort}`;
-    const newForward: PortForward = {
+    const newForward: PortForwardInfo = {
       id: forwardId,
       localPort,
       podPort,
@@ -87,7 +76,6 @@ export function PortForwarding({ namespace, podName }: PortForwardingProps) {
     setPortForwards((prev) => [...prev, newForward]);
 
     try {
-      // Call the backend API
       const result = await startPortForward({
         namespace,
         podName,
@@ -95,43 +83,36 @@ export function PortForwarding({ namespace, podName }: PortForwardingProps) {
         podPort,
       });
 
-      // Update the forward to active status
       setPortForwards((prev) =>
         prev.map((pf) =>
           pf.id === forwardId
             ? {
                 ...pf,
-                status: "active",
+                status: "active" as const,
                 statusMessage: "Connected",
-                localPort: result.localPort || localPort, // Use the actual assigned port from backend
+                localPort: result.localPort || localPort,
                 localAddress: `http://127.0.0.1:${result.localPort || localPort}`,
               }
-            : pf
-        )
+            : pf,
+        ),
       );
 
-      // Reset inputs
+      toast(`Port forward active on :${result.localPort || localPort}`, "success");
       setLocalPortInput("8080");
       setPodPortInput("80");
-    } catch (err: any) {
-      // Extract error message - Tauri errors can be strings or Error objects
-      const errorMessage = typeof err === 'string' 
-        ? err 
-        : err?.message || err?.toString() || "Failed to start port forward";
-      
-      console.error("Port forward error:", err);
-      
-      // Update the forward to error status
+    } catch (err: unknown) {
+      const errorMessage = formatError(err);
+
       setPortForwards((prev) =>
         prev.map((pf) =>
           pf.id === forwardId
             ? {
                 ...pf,
-                status: "error",
+                status: "error" as const,
                 statusMessage: errorMessage,
               }
-            : pf
-        )
+            : pf,
+        ),
       );
       setError(errorMessage);
     } finally {
@@ -150,22 +131,17 @@ export function PortForwarding({ namespace, podName }: PortForwardingProps) {
         localPort: forward.localPort,
         podPort: forward.podPort,
       });
-
-      // Remove the forward from the list
       setPortForwards((prev) => prev.filter((pf) => pf.id !== forwardId));
-    } catch (err: any) {
-      setError(err.message || "Failed to stop port forward");
+    } catch (err: unknown) {
+      setError(formatError(err));
     }
   };
 
   const handleOpenInBrowser = async (url: string) => {
     try {
-      // Use Tauri's shell API to open the URL
       const { open } = await import("@tauri-apps/plugin-shell");
       await open(url);
-    } catch (err) {
-      // Fallback for development or if shell plugin is not available
-      console.warn("Failed to open URL with Tauri shell, using fallback:", err);
+    } catch {
       window.open(url, "_blank");
     }
   };
@@ -253,9 +229,7 @@ export function PortForwarding({ namespace, podName }: PortForwardingProps) {
       {/* Active Port Forwards List */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {portForwards.length === 0 ? (
-          <div className="text-center py-8 text-slate-500 text-sm">
-            No active port forwards
-          </div>
+          <div className="text-center py-8 text-slate-500 text-sm">No active port forwards</div>
         ) : (
           <AnimatePresence>
             {portForwards.map((forward) => (
@@ -268,8 +242,8 @@ export function PortForwarding({ namespace, podName }: PortForwardingProps) {
                   forward.status === "active"
                     ? "bg-green-500/10 border-green-500/50"
                     : forward.status === "connecting"
-                    ? "bg-yellow-500/10 border-yellow-500/50"
-                    : "bg-red-500/10 border-red-500/50"
+                      ? "bg-yellow-500/10 border-yellow-500/50"
+                      : "bg-red-500/10 border-red-500/50"
                 }`}
               >
                 {/* Status Indicator */}
@@ -292,21 +266,22 @@ export function PortForwarding({ namespace, podName }: PortForwardingProps) {
                         forward.status === "active"
                           ? "text-green-400"
                           : forward.status === "connecting"
-                          ? "text-yellow-400"
-                          : "text-red-400"
+                            ? "text-yellow-400"
+                            : "text-red-400"
                       }`}
                     >
                       {forward.status === "active"
                         ? "LIVE"
                         : forward.status === "connecting"
-                        ? "CONNECTING"
-                        : "ERROR"}
+                          ? "CONNECTING"
+                          : "ERROR"}
                     </span>
                   </div>
                   <button
                     onClick={() => handleStopPortForward(forward.id)}
                     className="p-1 hover:bg-red-500/20 rounded transition text-red-400 hover:text-red-300"
                     title="Stop port forward"
+                    aria-label="Stop port forward"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -337,9 +312,7 @@ export function PortForwarding({ namespace, podName }: PortForwardingProps) {
                     </span>
                   </div>
                   {forward.statusMessage && (
-                    <div className="text-xs text-slate-500 mt-1">
-                      {forward.statusMessage}
-                    </div>
+                    <div className="text-xs text-slate-500 mt-1">{forward.statusMessage}</div>
                   )}
                 </div>
               </motion.div>

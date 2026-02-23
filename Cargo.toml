@@ -15,7 +15,8 @@ kube = { version = "0.91.0", default-features = false, features = [
   "config",
   "derive",
   "runtime",
-  "rustls-tls"
+  "rustls-tls",
+  "ws"
 ] }
 kube-runtime = "0.91.0"
 futures = "0.3"

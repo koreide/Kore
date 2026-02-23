@@ -1,6 +1,15 @@
 import { useEffect, useState, useCallback } from "react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { getPodMetrics, describePod } from "../lib/api";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+import { getPodMetrics, describePod } from "@/lib/api";
+import type { Container, ContainerResource } from "@/lib/types";
 import { Activity } from "lucide-react";
 
 interface PodMetricsProps {
@@ -17,55 +26,38 @@ interface MetricDataPoint {
 
 interface CurrentMetrics {
   cpu: {
-    usage: number; // in millicores
-    limit: number; // in millicores
+    usage: number;
+    limit: number;
   };
   memory: {
-    usage: number; // in bytes
-    limit: number; // in bytes
+    usage: number;
+    limit: number;
   };
 }
 
-// Helper function to parse Kubernetes resource quantities
+interface MetricContainer {
+  name?: string;
+  usage?: ContainerResource;
+}
+
 function parseQuantity(quantity: string | undefined): number {
   if (!quantity) return 0;
-  
-  // Remove any whitespace
-  let qty = quantity.trim();
-  
-  // Handle memory (Ki, Mi, Gi, etc.)
-  if (qty.endsWith("Ki")) {
-    return parseFloat(qty.slice(0, -2)) * 1024;
-  } else if (qty.endsWith("Mi")) {
-    return parseFloat(qty.slice(0, -2)) * 1024 * 1024;
-  } else if (qty.endsWith("Gi")) {
-    return parseFloat(qty.slice(0, -2)) * 1024 * 1024 * 1024;
-  } else if (qty.endsWith("Ti")) {
-    return parseFloat(qty.slice(0, -2)) * 1024 * 1024 * 1024 * 1024;
-  }
-  
-  // Handle CPU (m for millicores)
-  if (qty.endsWith("m")) {
-    return parseFloat(qty.slice(0, -1));
-  } else if (qty.endsWith("n")) {
-    return parseFloat(qty.slice(0, -1)) / 1000000; // nancores to millicores
-  }
-  
-  // Try to parse as number - if no suffix, assume cores and convert to millicores
+
+  const qty = quantity.trim();
+
+  if (qty.endsWith("Ki")) return parseFloat(qty.slice(0, -2)) * 1024;
+  if (qty.endsWith("Mi")) return parseFloat(qty.slice(0, -2)) * 1024 * 1024;
+  if (qty.endsWith("Gi")) return parseFloat(qty.slice(0, -2)) * 1024 * 1024 * 1024;
+  if (qty.endsWith("Ti")) return parseFloat(qty.slice(0, -2)) * 1024 * 1024 * 1024 * 1024;
+  if (qty.endsWith("m")) return parseFloat(qty.slice(0, -1));
+  if (qty.endsWith("n")) return parseFloat(qty.slice(0, -1)) / 1000000;
+
   const num = parseFloat(qty);
   if (isNaN(num)) return 0;
-  
-  // If no suffix and it's a reasonable number (likely cores), convert to millicores
-  // Kubernetes typically uses "1" for 1 core, "500m" for 500 millicores, etc.
-  // If the number is >= 1 and has no suffix, it's likely cores
-  if (num >= 1 && !qty.includes(".")) {
-    return num * 1000; // cores to millicores
-  }
-  // Otherwise, assume it's already in millicores or return as-is
+  if (num >= 1 && !qty.includes(".")) return num * 1000;
   return num;
 }
 
-// Format bytes to human readable
 function formatBytes(bytes: number): string {
   if (bytes === 0) return "0 B";
   const k = 1024;
@@ -74,12 +66,9 @@ function formatBytes(bytes: number): string {
   return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
 }
 
-// Format millicores to human readable
 function formatCPU(millicores: number): string {
   if (millicores === 0) return "0 m";
-  if (millicores < 1000) {
-    return `${millicores.toFixed(0)} m`;
-  }
+  if (millicores < 1000) return `${millicores.toFixed(0)} m`;
   return `${(millicores / 1000).toFixed(2)} cores`;
 }
 
@@ -88,127 +77,100 @@ export function PodMetrics({ namespace, podName }: PodMetricsProps) {
   const [history, setHistory] = useState<MetricDataPoint[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [podSpec, setPodSpec] = useState<any>(null);
+  const [podSpec, setPodSpec] = useState<Record<string, unknown> | null>(null);
 
-  // Fetch pod spec once to get limits
   useEffect(() => {
+    let cancelled = false;
     describePod(namespace, podName)
       .then((pod) => {
-        setPodSpec(pod);
+        if (!cancelled) setPodSpec(pod);
       })
-      .catch(() => {
-        // If we can't fetch pod spec, we'll use defaults
-      });
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, [namespace, podName]);
 
-  // Extract limits from pod allocatedResources (from status)
   const getLimits = useCallback(() => {
-    if (!podSpec) {
-      return { cpu: 0, memory: 0 };
-    }
+    if (!podSpec) return { cpu: 0, memory: 0 };
 
-    // Get allocatedResources from pod status
-    const allocatedResources = (podSpec as any)?.status?.allocatedResources;
-    
+    const podStatus = podSpec.status as Record<string, unknown> | undefined;
+    const allocatedResources = podStatus?.allocatedResources as ContainerResource | undefined;
+
     if (allocatedResources) {
-      const cpuLimit = allocatedResources?.cpu || "0";
-      const memoryLimit = allocatedResources?.memory || "0";
-      
       return {
-        cpu: parseQuantity(cpuLimit),
-        memory: parseQuantity(memoryLimit),
+        cpu: parseQuantity(allocatedResources.cpu),
+        memory: parseQuantity(allocatedResources.memory),
       };
     }
 
-    // Fallback: try to get from spec if allocatedResources not available
-    const containers = (podSpec as any)?.spec?.containers || [];
+    const podSpecInner = podSpec.spec as Record<string, unknown> | undefined;
+    const containers = (podSpecInner?.containers as Container[]) || [];
     let totalCpuLimit = 0;
     let totalMemoryLimit = 0;
 
-    containers.forEach((container: any) => {
+    containers.forEach((container) => {
       const resources = container?.resources || {};
       const limits = resources?.limits || {};
       const requests = resources?.requests || {};
 
-      // Use limit if available, otherwise use request
       const cpuLimit = limits?.cpu || requests?.cpu;
       const memoryLimit = limits?.memory || requests?.memory;
 
-      if (cpuLimit) {
-        totalCpuLimit += parseQuantity(cpuLimit);
-      }
-      if (memoryLimit) {
-        totalMemoryLimit += parseQuantity(memoryLimit);
-      }
+      if (cpuLimit) totalCpuLimit += parseQuantity(cpuLimit);
+      if (memoryLimit) totalMemoryLimit += parseQuantity(memoryLimit);
     });
 
-    return {
-      cpu: totalCpuLimit || 0,
-      memory: totalMemoryLimit || 0,
-    };
+    return { cpu: totalCpuLimit || 0, memory: totalMemoryLimit || 0 };
   }, [podSpec]);
 
   const fetchMetrics = useCallback(async () => {
     try {
       const data = await getPodMetrics(namespace, podName);
-      
-      // Extract metrics from the response
-      // The metrics API returns: { containers: [{ usage: { cpu: "...", memory: "..." } }] }
-      const containers = (data as any)?.containers || [];
+
+      const containers = (data.containers as MetricContainer[]) || [];
       let totalCpuUsage = 0;
       let totalMemoryUsage = 0;
-      
-      containers.forEach((container: any) => {
-        const cpuUsage = container?.usage?.cpu || "0";
-        const memoryUsage = container?.usage?.memory || "0";
-        totalCpuUsage += parseQuantity(cpuUsage);
-        totalMemoryUsage += parseQuantity(memoryUsage);
+
+      containers.forEach((container) => {
+        totalCpuUsage += parseQuantity(container?.usage?.cpu);
+        totalMemoryUsage += parseQuantity(container?.usage?.memory);
       });
-      
-      // Get limits from pod allocatedResources
+
       const limits = getLimits();
-      // Use allocatedResources if available, otherwise fallback to defaults
-      const cpuLimit = limits.cpu > 0 
-        ? limits.cpu 
-        : (totalCpuUsage > 0 ? totalCpuUsage * 2 : 1000); // Default to 2x usage or 1000m
-      const memoryLimit = limits.memory > 0 
-        ? limits.memory 
-        : (totalMemoryUsage > 0 ? totalMemoryUsage * 2 : 512 * 1024 * 1024); // Default to 2x usage or 512Mi
-      
+      const cpuLimit =
+        limits.cpu > 0 ? limits.cpu : totalCpuUsage > 0 ? totalCpuUsage * 2 : 1000;
+      const memoryLimit =
+        limits.memory > 0
+          ? limits.memory
+          : totalMemoryUsage > 0
+            ? totalMemoryUsage * 2
+            : 512 * 1024 * 1024;
+
       const currentMetrics: CurrentMetrics = {
-        cpu: {
-          usage: totalCpuUsage,
-          limit: cpuLimit,
-        },
-        memory: {
-          usage: totalMemoryUsage,
-          limit: memoryLimit,
-        },
+        cpu: { usage: totalCpuUsage, limit: cpuLimit },
+        memory: { usage: totalMemoryUsage, limit: memoryLimit },
       };
-      
+
       setMetrics(currentMetrics);
       setError(null);
-      
-      // Add to history
+
       const now = Date.now();
       const newPoint: MetricDataPoint = {
         timestamp: now,
-        cpu: (totalCpuUsage / cpuLimit) * 100, // percentage
-        memory: (totalMemoryUsage / memoryLimit) * 100, // percentage
+        cpu: (totalCpuUsage / cpuLimit) * 100,
+        memory: (totalMemoryUsage / memoryLimit) * 100,
         timeLabel: new Date(now).toLocaleTimeString(),
       };
-      
+
       setHistory((prev) => {
         const updated = [...prev, newPoint];
-        // Keep only last 2 minutes (120 seconds, assuming we poll every 5 seconds = 24 points)
         const twoMinutesAgo = now - 120000;
         return updated.filter((p) => p.timestamp > twoMinutesAgo);
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       const errorMsg = err?.toString() || "Unknown error";
-      // Check for various error conditions
       if (errorMsg.includes("404") || errorMsg.includes("not found")) {
-        // Check if it's specifically a metrics server issue or just pod not found
         if (errorMsg.includes("Metrics Server") || errorMsg.includes("metrics.k8s.io")) {
           setError("Metrics Server not detected");
         } else {
@@ -217,7 +179,6 @@ export function PodMetrics({ namespace, podName }: PodMetricsProps) {
       } else if (errorMsg.includes("Metrics Server")) {
         setError("Metrics Server not detected");
       } else {
-        // Show the actual error message for debugging
         setError(`Error fetching metrics: ${errorMsg}`);
       }
       setMetrics(null);
@@ -226,10 +187,23 @@ export function PodMetrics({ namespace, podName }: PodMetricsProps) {
     }
   }, [namespace, podName, getLimits]);
 
+  // Fix: add cancelled flag to prevent state updates after unmount/identity change
   useEffect(() => {
-    fetchMetrics();
-    const interval = setInterval(fetchMetrics, 5000); // Poll every 5 seconds
-    return () => clearInterval(interval);
+    let cancelled = false;
+
+    const wrappedFetch = async () => {
+      await fetchMetrics();
+    };
+
+    wrappedFetch();
+    const interval = setInterval(() => {
+      if (!cancelled) fetchMetrics();
+    }, 5000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, [fetchMetrics]);
 
   if (loading && !metrics && !error) {
@@ -257,9 +231,7 @@ export function PodMetrics({ namespace, podName }: PodMetricsProps) {
     );
   }
 
-  if (!metrics) {
-    return null;
-  }
+  if (!metrics) return null;
 
   const cpuPercent = (metrics.cpu.usage / metrics.cpu.limit) * 100;
   const memoryPercent = (metrics.memory.usage / metrics.memory.limit) * 100;
@@ -333,7 +305,9 @@ export function PodMetrics({ namespace, podName }: PodMetricsProps) {
                 cy="50"
                 r="40"
                 fill="none"
-                stroke={memoryPercent > 80 ? "#ef4444" : memoryPercent > 60 ? "#f59e0b" : "#10b981"}
+                stroke={
+                  memoryPercent > 80 ? "#ef4444" : memoryPercent > 60 ? "#f59e0b" : "#10b981"
+                }
                 strokeWidth="8"
                 strokeDasharray={`${2 * Math.PI * 40}`}
                 strokeDashoffset={`${2 * Math.PI * 40 * (1 - Math.min(memoryPercent, 100) / 100)}`}
@@ -348,7 +322,9 @@ export function PodMetrics({ namespace, podName }: PodMetricsProps) {
       {/* Line Chart */}
       {history.length > 0 && (
         <div className="bg-surface/30 border border-slate-800 rounded-lg p-4">
-          <h3 className="text-sm font-semibold text-slate-300 mb-4">Usage Trend (Last 2 Minutes)</h3>
+          <h3 className="text-sm font-semibold text-slate-300 mb-4">
+            Usage Trend (Last 2 Minutes)
+          </h3>
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={history}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgb(51 65 85)" />
@@ -361,7 +337,12 @@ export function PodMetrics({ namespace, podName }: PodMetricsProps) {
                 stroke="rgb(148 163 184)"
                 style={{ fontSize: "10px" }}
                 domain={[0, 100]}
-                label={{ value: "%", angle: -90, position: "insideLeft", style: { fill: "rgb(148 163 184)", fontSize: "10px" } }}
+                label={{
+                  value: "%",
+                  angle: -90,
+                  position: "insideLeft",
+                  style: { fill: "rgb(148 163 184)", fontSize: "10px" },
+                }}
               />
               <Tooltip
                 contentStyle={{
@@ -395,4 +376,3 @@ export function PodMetrics({ namespace, podName }: PodMetricsProps) {
     </div>
   );
 }
-

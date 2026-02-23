@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo, type ReactNode } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Search, Star } from "lucide-react";
 
 interface SearchableDropdownProps {
@@ -9,6 +10,7 @@ interface SearchableDropdownProps {
   label: string;
   allOption?: { label: string; value: string };
   storageKey: string; // For localStorage favorites
+  onOpen?: () => void;
 }
 
 // Helper function to highlight matching text
@@ -40,7 +42,8 @@ export function SearchableDropdown({
   placeholder = "Select...",
   label,
   allOption,
-  storageKey
+  storageKey,
+  onOpen,
 }: SearchableDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -229,7 +232,14 @@ export function SearchableDropdown({
     <div className="relative" ref={dropdownRef}>
       <p className="text-xs uppercase tracking-wide text-slate-400 mb-2">{label}</p>
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          const willOpen = !isOpen;
+          setIsOpen(willOpen);
+          if (willOpen) onOpen?.();
+        }}
+        role="combobox"
+        aria-expanded={isOpen}
+        aria-label={label}
         className={`w-full text-left px-3 py-2 rounded border transition flex items-center justify-between gap-2 ${
           selected
             ? "border-accent text-accent bg-accent/10"
@@ -247,8 +257,14 @@ export function SearchableDropdown({
         />
       </button>
 
-      {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-surface/95 glass border border-slate-800 rounded-md shadow-lg max-h-80 flex flex-col">
+      <AnimatePresence>
+        {isOpen && (
+        <motion.div
+          initial={{ opacity: 0, y: -4, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -4, scale: 0.98 }}
+          transition={{ duration: 0.15, ease: "easeOut" }}
+          className="absolute z-50 w-full mt-1 bg-surface/95 glass border border-slate-800 rounded-md shadow-lg max-h-80 flex flex-col">
           {/* Search input */}
           <div className="p-2 border-b border-slate-800">
             <div className="relative">
@@ -336,8 +352,9 @@ export function SearchableDropdown({
               })
             )}
           </div>
-        </div>
-      )}
+        </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

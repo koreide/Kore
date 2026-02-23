@@ -10,12 +10,26 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true }
-tokio-util = { version = "0.7", features = ["codec"] }
+tokio-util = { version = "0.7", features = ["codec", "rt"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+rand = "0.8"
 kube = { workspace = true }
 kube-runtime = { workspace = true }
 futures = { workspace = true }
 anyhow = { workspace = true }
 k8s-openapi = { version = "0.22.0", features = ["v1_29"] }
+dirs = "5"
+chrono = "0.4"
+base64 = "0.22"
+serde_yaml = "0.9"
+similar = "2"
+rusqlite = { version = "0.31", features = ["bundled"] }
+reqwest = { version = "0.12", features = ["json", "stream"] }
+keyring = "2"
+
+[dev-dependencies]
+tokio-test = "0.4"
 
 [build-dependencies]
 tauri-build = { version = "2.0.0", features = [] }
