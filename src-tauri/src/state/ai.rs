@@ -37,12 +37,6 @@ pub struct DiagnoseRequest {
     pub session_id: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DiagnoseResponse {
-    pub analysis: String,
-    pub suggestions: Vec<String>,
-}
-
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "type")]
 enum AIStreamEvent {
