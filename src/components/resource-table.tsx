@@ -80,7 +80,13 @@ type StatusVariant = "running" | "pending" | "failed" | "terminating" | "default
 function getStatusVariant(status: string | undefined): StatusVariant {
   if (!status) return "default";
   const s = status.toLowerCase();
-  if (s === "running" || s === "ready" || s === "succeeded" || s === "completed" || s === "complete")
+  if (
+    s === "running" ||
+    s === "ready" ||
+    s === "succeeded" ||
+    s === "completed" ||
+    s === "complete"
+  )
     return "running";
   if (s === "pending" || s === "containercreating" || s === "init" || s === "waiting")
     return "pending";
@@ -358,12 +364,7 @@ export function ResourceTable({
           cell: ({ getValue }) => {
             const t = getValue() as string;
             return (
-              <span
-                className={cn(
-                  "text-xs",
-                  t === "Warning" ? "text-amber-400" : "text-blue-400",
-                )}
-              >
+              <span className={cn("text-xs", t === "Warning" ? "text-amber-400" : "text-blue-400")}>
                 {t || "-"}
               </span>
             );
@@ -590,9 +591,7 @@ export function ResourceTable({
       cols.push({
         id: "actions",
         header: "",
-        cell: ({ row }) => (
-          <RowActions kind={kind} row={row.original} onAction={handleAction} />
-        ),
+        cell: ({ row }) => <RowActions kind={kind} row={row.original} onAction={handleAction} />,
         enableSorting: false,
       });
     }
@@ -683,11 +682,7 @@ export function ResourceTable({
                     className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-400 select-none cursor-pointer hover:text-accent transition"
                     onClick={header.column.getToggleSortingHandler()}
                     aria-sort={
-                      sorted === "asc"
-                        ? "ascending"
-                        : sorted === "desc"
-                          ? "descending"
-                          : undefined
+                      sorted === "asc" ? "ascending" : sorted === "desc" ? "descending" : undefined
                     }
                   >
                     <div className="flex items-center gap-1">

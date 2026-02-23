@@ -48,7 +48,7 @@ export function ConfirmDialog({
             className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
             onClick={onCancel}
           />
-          
+
           {/* Dialog */}
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div
@@ -63,16 +63,24 @@ export function ConfirmDialog({
             >
               <div className="p-6">
                 <div className="flex items-start gap-4 mb-4">
-                  <div className={`p-2 rounded-full ${
-                    variant === "danger" ? "bg-red-500/20" : 
-                    variant === "warning" ? "bg-yellow-500/20" : 
-                    "bg-blue-500/20"
-                  }`}>
-                    <AlertTriangle className={`w-6 h-6 ${
-                      variant === "danger" ? "text-red-400" : 
-                      variant === "warning" ? "text-yellow-400" : 
-                      "text-blue-400"
-                    }`} />
+                  <div
+                    className={`p-2 rounded-full ${
+                      variant === "danger"
+                        ? "bg-red-500/20"
+                        : variant === "warning"
+                          ? "bg-yellow-500/20"
+                          : "bg-blue-500/20"
+                    }`}
+                  >
+                    <AlertTriangle
+                      className={`w-6 h-6 ${
+                        variant === "danger"
+                          ? "text-red-400"
+                          : variant === "warning"
+                            ? "text-yellow-400"
+                            : "text-blue-400"
+                      }`}
+                    />
                   </div>
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-slate-100 mb-2">{title}</h3>
@@ -85,7 +93,7 @@ export function ConfirmDialog({
                     <X className="w-5 h-5" />
                   </button>
                 </div>
-                
+
                 <div className="flex gap-3 justify-end mt-6">
                   <button
                     onClick={onCancel}
@@ -108,5 +116,3 @@ export function ConfirmDialog({
     </AnimatePresence>
   );
 }
-
-

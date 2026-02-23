@@ -19,13 +19,13 @@ function highlightMatch(text: string, query: string): ReactNode {
   const lowerText = text.toLowerCase();
   const lowerQuery = query.toLowerCase();
   const index = lowerText.indexOf(lowerQuery);
-  
+
   if (index === -1) return text;
-  
+
   const before = text.substring(0, index);
   const match = text.substring(index, index + query.length);
   const after = text.substring(index + query.length);
-  
+
   return (
     <>
       {before}
@@ -113,20 +113,20 @@ export function SearchableDropdown({
         return a.localeCompare(b);
       });
     }
-    
+
     const lower = searchQuery.toLowerCase();
     return [...filteredItems].sort((a, b) => {
       const aIsFavorite = favorites.has(a);
       const bIsFavorite = favorites.has(b);
       if (aIsFavorite && !bIsFavorite) return -1;
       if (!aIsFavorite && bIsFavorite) return 1;
-      
+
       // Prioritize items that start with the query
       const aStartsWith = a.toLowerCase().startsWith(lower);
       const bStartsWith = b.toLowerCase().startsWith(lower);
       if (aStartsWith && !bStartsWith) return -1;
       if (!aStartsWith && bStartsWith) return 1;
-      
+
       return a.localeCompare(b);
     });
   }, [filteredItems, favorites, searchQuery]);
@@ -259,103 +259,106 @@ export function SearchableDropdown({
 
       <AnimatePresence>
         {isOpen && (
-        <motion.div
-          initial={{ opacity: 0, y: -4, scale: 0.98 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -4, scale: 0.98 }}
-          transition={{ duration: 0.15, ease: "easeOut" }}
-          className="absolute z-50 w-full mt-1 bg-surface/95 glass border border-slate-800 rounded-md shadow-lg max-h-80 flex flex-col">
-          {/* Search input */}
-          <div className="p-2 border-b border-slate-800">
-            <div className="relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-2 top-1/2 -translate-y-1/2 z-10" />
-              <input
-                ref={searchInputRef}
-                type="text"
-                placeholder="Search..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Tab" && autocompleteSuggestion) {
-                    e.preventDefault();
-                    setSearchQuery(autocompleteSuggestion);
-                  }
-                }}
-                className="w-full bg-slate-900/50 border border-slate-700 rounded px-8 py-1.5 text-sm text-slate-100 outline-none focus:border-accent transition relative z-10"
-                onClick={(e) => e.stopPropagation()}
-              />
-              {/* Autocomplete suggestion overlay */}
-              {autocompleteSuggestion && (
-                <div className="absolute left-8 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500 text-sm z-0">
-                  <span className="invisible">{searchQuery}</span>
-                  <span className="text-slate-600">{autocompleteSuggestion.slice(searchQuery.length)}</span>
-                </div>
+          <motion.div
+            initial={{ opacity: 0, y: -4, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -4, scale: 0.98 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            className="absolute z-50 w-full mt-1 bg-surface/95 glass border border-slate-800 rounded-md shadow-lg max-h-80 flex flex-col"
+          >
+            {/* Search input */}
+            <div className="p-2 border-b border-slate-800">
+              <div className="relative">
+                <Search className="w-4 h-4 text-slate-400 absolute left-2 top-1/2 -translate-y-1/2 z-10" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  placeholder="Search..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Tab" && autocompleteSuggestion) {
+                      e.preventDefault();
+                      setSearchQuery(autocompleteSuggestion);
+                    }
+                  }}
+                  className="w-full bg-slate-900/50 border border-slate-700 rounded px-8 py-1.5 text-sm text-slate-100 outline-none focus:border-accent transition relative z-10"
+                  onClick={(e) => e.stopPropagation()}
+                />
+                {/* Autocomplete suggestion overlay */}
+                {autocompleteSuggestion && (
+                  <div className="absolute left-8 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500 text-sm z-0">
+                    <span className="invisible">{searchQuery}</span>
+                    <span className="text-slate-600">
+                      {autocompleteSuggestion.slice(searchQuery.length)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Items list */}
+            <div className="overflow-y-auto flex-1">
+              {sortedItems.length === 0 ? (
+                <div className="px-3 py-2 text-sm text-slate-500">No items found</div>
+              ) : (
+                sortedItems.map((item, index) => {
+                  const isFavorite = favorites.has(item);
+                  const isSelected = selected === item;
+                  const isHighlighted = index === highlightedIndex && sortedItems.length > 0;
+                  const displayLabel =
+                    allOption && item === allOption.value ? allOption.label : item;
+
+                  return (
+                    <button
+                      key={item}
+                      ref={(el) => {
+                        itemRefs.current[index] = el;
+                      }}
+                      onClick={() => {
+                        onSelect(item);
+                        setIsOpen(false);
+                        setSearchQuery("");
+                        setHighlightedIndex(0);
+                      }}
+                      onMouseEnter={() => setHighlightedIndex(index)}
+                      className={`w-full text-left px-3 py-2 flex items-center justify-between gap-2 transition ${
+                        isHighlighted
+                          ? "bg-accent/20 text-accent"
+                          : isSelected
+                            ? "bg-accent/10 text-accent"
+                            : "text-slate-200 hover:bg-slate-800/50"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        {isFavorite && (
+                          <Star className="w-3 h-3 fill-yellow-500 text-yellow-500 flex-shrink-0" />
+                        )}
+                        <span className="truncate">
+                          {highlightMatch(displayLabel, searchQuery)}
+                        </span>
+                      </div>
+                      <button
+                        onClick={(e) => toggleFavorite(item, e)}
+                        className="flex-shrink-0 p-1 hover:bg-slate-700 rounded transition"
+                        title={isFavorite ? "Remove from favorites" : "Add to favorites"}
+                      >
+                        <Star
+                          className={`w-3 h-3 transition-colors ${
+                            isFavorite
+                              ? "fill-yellow-500 text-yellow-500"
+                              : "text-slate-500 hover:text-yellow-500"
+                          }`}
+                        />
+                      </button>
+                    </button>
+                  );
+                })
               )}
             </div>
-          </div>
-
-          {/* Items list */}
-          <div className="overflow-y-auto flex-1">
-            {sortedItems.length === 0 ? (
-              <div className="px-3 py-2 text-sm text-slate-500">No items found</div>
-            ) : (
-              sortedItems.map((item, index) => {
-                const isFavorite = favorites.has(item);
-                const isSelected = selected === item;
-                const isHighlighted = index === highlightedIndex && sortedItems.length > 0;
-                const displayLabel = allOption && item === allOption.value ? allOption.label : item;
-
-                return (
-                  <button
-                    key={item}
-                    ref={(el) => {
-                      itemRefs.current[index] = el;
-                    }}
-                    onClick={() => {
-                      onSelect(item);
-                      setIsOpen(false);
-                      setSearchQuery("");
-                      setHighlightedIndex(0);
-                    }}
-                    onMouseEnter={() => setHighlightedIndex(index)}
-                    className={`w-full text-left px-3 py-2 flex items-center justify-between gap-2 transition ${
-                      isHighlighted
-                        ? "bg-accent/20 text-accent"
-                        : isSelected
-                        ? "bg-accent/10 text-accent"
-                        : "text-slate-200 hover:bg-slate-800/50"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      {isFavorite && (
-                        <Star className="w-3 h-3 fill-yellow-500 text-yellow-500 flex-shrink-0" />
-                      )}
-                      <span className="truncate">
-                        {highlightMatch(displayLabel, searchQuery)}
-                      </span>
-                    </div>
-                    <button
-                      onClick={(e) => toggleFavorite(item, e)}
-                      className="flex-shrink-0 p-1 hover:bg-slate-700 rounded transition"
-                      title={isFavorite ? "Remove from favorites" : "Add to favorites"}
-                    >
-                      <Star
-                        className={`w-3 h-3 transition-colors ${
-                          isFavorite
-                            ? "fill-yellow-500 text-yellow-500"
-                            : "text-slate-500 hover:text-yellow-500"
-                        }`}
-                      />
-                    </button>
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
   );
 }
-

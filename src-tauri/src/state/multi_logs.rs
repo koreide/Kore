@@ -58,8 +58,7 @@ impl K8sState {
             let event = event_name.clone();
 
             tauri::async_runtime::spawn(async move {
-                let api: Api<k8s_openapi::api::core::v1::Pod> =
-                    Api::namespaced(client, &ns);
+                let api: Api<k8s_openapi::api::core::v1::Pod> = Api::namespaced(client, &ns);
 
                 let lp = LogParams {
                     follow: true,

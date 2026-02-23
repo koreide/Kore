@@ -31,8 +31,21 @@ type ProviderOption = {
 
 const providers: ProviderOption[] = [
   { id: "openai", label: "OpenAI", defaultModel: "gpt-4o", needsApiKey: true, needsBaseUrl: false },
-  { id: "anthropic", label: "Anthropic", defaultModel: "claude-sonnet-4-20250514", needsApiKey: true, needsBaseUrl: false },
-  { id: "ollama", label: "Ollama", defaultModel: "llama3.1", needsApiKey: false, needsBaseUrl: true, defaultBaseUrl: "http://localhost:11434" },
+  {
+    id: "anthropic",
+    label: "Anthropic",
+    defaultModel: "claude-sonnet-4-20250514",
+    needsApiKey: true,
+    needsBaseUrl: false,
+  },
+  {
+    id: "ollama",
+    label: "Ollama",
+    defaultModel: "llama3.1",
+    needsApiKey: false,
+    needsBaseUrl: true,
+    defaultBaseUrl: "http://localhost:11434",
+  },
 ];
 
 const STORAGE_KEY = "kore-ai-config";

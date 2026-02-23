@@ -134,10 +134,7 @@ export async function scaleDeployment(
   return invoke("scale_deployment", { namespace, name, replicas });
 }
 
-export async function restartDeployment(
-  namespace: string,
-  name: string,
-): Promise<void> {
+export async function restartDeployment(namespace: string, name: string): Promise<void> {
   return invoke("restart_deployment", { namespace, name });
 }
 
@@ -157,18 +154,11 @@ export async function execIntoPod(
   return invoke("exec_into_pod", { namespace, podName, container, shell });
 }
 
-export async function sendExecInput(
-  sessionId: string,
-  data: string,
-): Promise<void> {
+export async function sendExecInput(sessionId: string, data: string): Promise<void> {
   return invoke("send_exec_input", { sessionId, data });
 }
 
-export async function resizeExec(
-  sessionId: string,
-  cols: number,
-  rows: number,
-): Promise<void> {
+export async function resizeExec(sessionId: string, cols: number, rows: number): Promise<void> {
   return invoke("resize_exec", { sessionId, cols, rows });
 }
 
@@ -227,10 +217,7 @@ export async function listDeploymentRevisions(
   return invoke("list_deployment_revisions", { namespace, name });
 }
 
-export async function getRevisionYaml(
-  namespace: string,
-  rsName: string,
-): Promise<string> {
+export async function getRevisionYaml(namespace: string, rsName: string): Promise<string> {
   return invoke("get_revision_yaml", { namespace, rsName });
 }
 
@@ -476,15 +463,10 @@ export interface DiagnoseRequest {
   name: string;
 }
 
-export async function aiDiagnose(
-  config: AIConfig,
-  request: DiagnoseRequest,
-): Promise<void> {
+export async function aiDiagnose(config: AIConfig, request: DiagnoseRequest): Promise<void> {
   return invoke("ai_diagnose", { config, request });
 }
 
-export async function aiTestConnection(
-  config: AIConfig,
-): Promise<boolean> {
+export async function aiTestConnection(config: AIConfig): Promise<boolean> {
   return invoke("ai_test_connection", { config });
 }

@@ -7,19 +7,10 @@ import {
   flexRender,
   useReactTable,
 } from "@tanstack/react-table";
-import {
-  ChevronUp,
-  ChevronDown,
-  ChevronsUpDown,
-  AlertCircle,
-  Package,
-} from "lucide-react";
+import { ChevronUp, ChevronDown, ChevronsUpDown, AlertCircle, Package } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import {
-  helmAvailable,
-  listHelmReleases,
-} from "@/lib/api";
+import { helmAvailable, listHelmReleases } from "@/lib/api";
 import type { HelmRelease } from "@/lib/api";
 
 interface HelmReleasesProps {
@@ -27,7 +18,13 @@ interface HelmReleasesProps {
   onSelectRelease: (release: { name: string; namespace: string }) => void;
 }
 
-type HelmStatusVariant = "deployed" | "failed" | "pending" | "superseded" | "uninstalling" | "default";
+type HelmStatusVariant =
+  | "deployed"
+  | "failed"
+  | "pending"
+  | "superseded"
+  | "uninstalling"
+  | "default";
 
 function getHelmStatusVariant(status: string): HelmStatusVariant {
   const s = status.toLowerCase();
@@ -150,16 +147,12 @@ export function HelmReleases({ namespace, onSelectRelease }: HelmReleasesProps) 
       {
         accessorKey: "name",
         header: "Name",
-        cell: ({ getValue }) => (
-          <span className="font-mono">{getValue() as string}</span>
-        ),
+        cell: ({ getValue }) => <span className="font-mono">{getValue() as string}</span>,
       },
       {
         accessorKey: "namespace",
         header: "Namespace",
-        cell: ({ getValue }) => (
-          <span className="font-mono">{getValue() as string}</span>
-        ),
+        cell: ({ getValue }) => <span className="font-mono">{getValue() as string}</span>,
       },
       {
         accessorKey: "revision",
@@ -326,11 +319,7 @@ export function HelmReleases({ namespace, onSelectRelease }: HelmReleasesProps) 
                     className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-400 select-none cursor-pointer hover:text-accent transition"
                     onClick={header.column.getToggleSortingHandler()}
                     aria-sort={
-                      sorted === "asc"
-                        ? "ascending"
-                        : sorted === "desc"
-                          ? "descending"
-                          : undefined
+                      sorted === "asc" ? "ascending" : sorted === "desc" ? "descending" : undefined
                     }
                   >
                     <div className="flex items-center gap-1">

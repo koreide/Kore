@@ -319,9 +319,7 @@ export function MultiPodLogs({ namespace, labelSelector, onStop }: MultiPodLogsP
             className="overflow-hidden border-b border-slate-800 bg-surface/30"
           >
             <div className="px-4 py-2 flex flex-wrap items-center gap-2">
-              <span className="text-[10px] text-slate-500 uppercase tracking-wider mr-1">
-                Pods
-              </span>
+              <span className="text-[10px] text-slate-500 uppercase tracking-wider mr-1">Pods</span>
               <button
                 onClick={showAllPods}
                 className="text-[10px] text-accent hover:text-accent/80 transition mr-1"
@@ -457,9 +455,7 @@ export function MultiPodLogs({ namespace, labelSelector, onStop }: MultiPodLogsP
                         style={{ color: entry.color }}
                         title={entry.pod}
                       >
-                        {logSearch
-                          ? highlightMatches(entry.pod, logSearch)
-                          : entry.pod}
+                        {logSearch ? highlightMatches(entry.pod, logSearch) : entry.pod}
                       </span>
                       {/* Separator */}
                       <span className="text-slate-700 py-px select-none">|</span>

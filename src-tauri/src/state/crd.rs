@@ -1,6 +1,8 @@
 use crate::error::{K8sError, Result};
 use crate::state::K8sState;
-use kube::api::{Api, ApiResource, DeleteParams, DynamicObject, GroupVersionKind, ListParams, ResourceExt};
+use kube::api::{
+    Api, ApiResource, DeleteParams, DynamicObject, GroupVersionKind, ListParams, ResourceExt,
+};
 use serde::Serialize;
 use serde_json::json;
 use tracing::info;
@@ -91,7 +93,9 @@ impl K8sState {
         let items: Vec<serde_json::Value> = list
             .items
             .iter()
-            .map(|obj| serde_json::to_value(obj).unwrap_or_else(|_| json!({ "name": obj.name_any() })))
+            .map(|obj| {
+                serde_json::to_value(obj).unwrap_or_else(|_| json!({ "name": obj.name_any() }))
+            })
             .collect();
 
         Ok(items)

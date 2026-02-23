@@ -9,4 +9,3 @@ export function LogPanel({ logs }: LogPanelProps) {
     </div>
   );
 }
-

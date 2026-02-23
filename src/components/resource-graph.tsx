@@ -72,12 +72,7 @@ function getStatusBorderColor(status: string): string {
     s === "available"
   )
     return "#10b981"; // emerald
-  if (
-    s === "pending" ||
-    s === "containercreating" ||
-    s === "init" ||
-    s === "waiting"
-  )
+  if (s === "pending" || s === "containercreating" || s === "init" || s === "waiting")
     return "#f59e0b"; // amber
   if (
     s === "failed" ||
@@ -155,8 +150,7 @@ function computeLayout(
   // First pass: compute each layer's width to find the widest
   for (const layerKey of sortedLayerKeys) {
     const layerNodes = layers.get(layerKey)!;
-    const layerWidth =
-      layerNodes.length * NODE_WIDTH + (layerNodes.length - 1) * NODE_GAP_X;
+    const layerWidth = layerNodes.length * NODE_WIDTH + (layerNodes.length - 1) * NODE_GAP_X;
     if (layerWidth > maxLayerWidth) maxLayerWidth = layerWidth;
   }
 
@@ -198,8 +192,7 @@ function computeLayout(
       (a, b) => (nodePositionScores.get(a.id) ?? 0) - (nodePositionScores.get(b.id) ?? 0),
     );
 
-    const layerWidth =
-      layerNodes.length * NODE_WIDTH + (layerNodes.length - 1) * NODE_GAP_X;
+    const layerWidth = layerNodes.length * NODE_WIDTH + (layerNodes.length - 1) * NODE_GAP_X;
     const startX = (totalWidth - layerWidth) / 2;
     const y = PADDING + li * (NODE_HEIGHT + LAYER_GAP_Y);
 
@@ -211,9 +204,7 @@ function computeLayout(
   }
 
   const totalHeight =
-    PADDING * 2 +
-    sortedLayerKeys.length * NODE_HEIGHT +
-    (sortedLayerKeys.length - 1) * LAYER_GAP_Y;
+    PADDING * 2 + sortedLayerKeys.length * NODE_HEIGHT + (sortedLayerKeys.length - 1) * LAYER_GAP_Y;
 
   return {
     layoutNodes,
@@ -224,10 +215,7 @@ function computeLayout(
 
 // ── Edge path computation ───────────────────────────────────────────────
 
-function computeEdgePath(
-  source: LayoutNode,
-  target: LayoutNode,
-): string {
+function computeEdgePath(source: LayoutNode, target: LayoutNode): string {
   const sx = source.x + NODE_WIDTH / 2;
   const sy = source.y + NODE_HEIGHT;
   const tx = target.x + NODE_WIDTH / 2;
@@ -259,8 +247,7 @@ function SVGGraphNode({
   const statusColor = getStatusBorderColor(node.status);
 
   // Truncate long names
-  const displayName =
-    node.name.length > 20 ? node.name.slice(0, 18) + "..." : node.name;
+  const displayName = node.name.length > 20 ? node.name.slice(0, 18) + "..." : node.name;
 
   return (
     <g
@@ -300,20 +287,10 @@ function SVGGraphNode({
       />
 
       {/* Status indicator dot */}
-      <circle
-        cx={node.x + NODE_WIDTH - 12}
-        cy={node.y + 12}
-        r={3.5}
-        fill={statusColor}
-      />
+      <circle cx={node.x + NODE_WIDTH - 12} cy={node.y + 12} r={3.5} fill={statusColor} />
 
       {/* Kind icon area (rendered as foreignObject for React icons) */}
-      <foreignObject
-        x={node.x + 10}
-        y={node.y + 8}
-        width={16}
-        height={16}
-      >
+      <foreignObject x={node.x + 10} y={node.y + 8} width={16} height={16}>
         <div
           // @ts-expect-error xmlns is valid for foreignObject children
           xmlns="http://www.w3.org/1999/xhtml"
@@ -362,8 +339,7 @@ interface TooltipProps {
 function GraphTooltip({ node, containerRect, svgTransform }: TooltipProps) {
   if (!containerRect) return null;
 
-  const screenX =
-    (node.x + NODE_WIDTH / 2) * svgTransform.scale + svgTransform.x;
+  const screenX = (node.x + NODE_WIDTH / 2) * svgTransform.scale + svgTransform.x;
   const screenY = node.y * svgTransform.scale + svgTransform.y - 8;
 
   return (
@@ -376,21 +352,14 @@ function GraphTooltip({ node, containerRect, svgTransform }: TooltipProps) {
       }}
     >
       <div className="glass rounded-lg px-3 py-2 text-xs max-w-[240px]">
-        <div className="text-slate-100 font-mono font-medium mb-1 break-all">
-          {node.name}
-        </div>
+        <div className="text-slate-100 font-mono font-medium mb-1 break-all">{node.name}</div>
         <div className="flex items-center gap-3 text-slate-400">
           <span>{node.kind}</span>
-          <span
-            className="font-medium"
-            style={{ color: getStatusBorderColor(node.status) }}
-          >
+          <span className="font-medium" style={{ color: getStatusBorderColor(node.status) }}>
             {node.status || "Unknown"}
           </span>
         </div>
-        {node.namespace && (
-          <div className="text-slate-500 mt-0.5">ns: {node.namespace}</div>
-        )}
+        {node.namespace && <div className="text-slate-500 mt-0.5">ns: {node.namespace}</div>}
       </div>
     </div>
   );
@@ -403,10 +372,7 @@ interface ResourceGraphProps {
   onSelectResource?: (kind: string, name: string, namespace: string) => void;
 }
 
-export function ResourceGraphView({
-  namespace,
-  onSelectResource,
-}: ResourceGraphProps) {
+export function ResourceGraphView({ namespace, onSelectResource }: ResourceGraphProps) {
   const [graph, setGraph] = useState<ResourceGraph | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -446,7 +412,11 @@ export function ResourceGraphView({
   }, [namespace]);
 
   // Compute layout
-  const { layoutNodes, width: graphWidth, height: graphHeight } = useMemo(() => {
+  const {
+    layoutNodes,
+    width: graphWidth,
+    height: graphHeight,
+  } = useMemo(() => {
     if (!graph) return { layoutNodes: [], width: 0, height: 0 };
     return computeLayout(graph.nodes, graph.edges);
   }, [graph]);
@@ -634,10 +604,7 @@ export function ResourceGraphView({
       <div className="absolute bottom-3 left-3 z-20 flex items-center gap-3 px-3 py-2 bg-surface/80 border border-slate-800 rounded-lg backdrop-blur-sm">
         {Object.entries(KIND_COLORS).map(([kind, color]) => (
           <div key={kind} className="flex items-center gap-1.5">
-            <div
-              className="w-2.5 h-2.5 rounded-sm"
-              style={{ backgroundColor: color.stroke }}
-            />
+            <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: color.stroke }} />
             <span className="text-[10px] text-slate-400">{kind}</span>
           </div>
         ))}
@@ -653,8 +620,7 @@ export function ResourceGraphView({
         className="w-full h-full"
         style={{
           cursor: isPanning ? "grabbing" : "grab",
-          background:
-            "radial-gradient(circle at 50% 50%, #0f1a2e 0%, #0b1221 100%)",
+          background: "radial-gradient(circle at 50% 50%, #0f1a2e 0%, #0b1221 100%)",
         }}
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
@@ -675,14 +641,7 @@ export function ResourceGraphView({
           </pattern>
 
           {/* Arrow marker for edges */}
-          <marker
-            id="arrowhead"
-            markerWidth={8}
-            markerHeight={6}
-            refX={7}
-            refY={3}
-            orient="auto"
-          >
+          <marker id="arrowhead" markerWidth={8} markerHeight={6} refX={7} refY={3} orient="auto">
             <path d="M 0 0 L 8 3 L 0 6 z" fill="#334155" opacity={0.6} />
           </marker>
           <marker
@@ -701,9 +660,7 @@ export function ResourceGraphView({
         <rect width="100%" height="100%" fill="url(#graph-grid)" />
 
         {/* Transform group for pan/zoom */}
-        <g
-          transform={`translate(${transform.x}, ${transform.y}) scale(${transform.scale})`}
-        >
+        <g transform={`translate(${transform.x}, ${transform.y}) scale(${transform.scale})`}>
           {/* Edges */}
           {graph.edges.map((edge) => {
             const source = nodeMap.get(edge.source);
@@ -726,11 +683,7 @@ export function ResourceGraphView({
                 strokeWidth={isHighlighted ? 2 : 1}
                 strokeDasharray={edge.relation === "owns" ? undefined : "4 3"}
                 opacity={isDimmed ? 0.15 : isHighlighted ? 0.9 : 0.5}
-                markerEnd={
-                  isHighlighted
-                    ? "url(#arrowhead-highlight)"
-                    : "url(#arrowhead)"
-                }
+                markerEnd={isHighlighted ? "url(#arrowhead-highlight)" : "url(#arrowhead)"}
                 style={{
                   transition: "opacity 0.2s, stroke 0.2s, stroke-width 0.2s",
                 }}
@@ -740,15 +693,10 @@ export function ResourceGraphView({
 
           {/* Nodes */}
           {layoutNodes.map((node) => {
-            const isDimmed =
-              hoveredNode !== null && !connectedToHovered.has(node.id);
+            const isDimmed = hoveredNode !== null && !connectedToHovered.has(node.id);
 
             return (
-              <g
-                key={node.id}
-                opacity={isDimmed ? 0.3 : 1}
-                style={{ transition: "opacity 0.2s" }}
-              >
+              <g key={node.id} opacity={isDimmed ? 0.3 : 1} style={{ transition: "opacity 0.2s" }}>
                 <SVGGraphNode
                   node={node}
                   onSelect={() => handleNodeClick(node)}

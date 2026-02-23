@@ -45,10 +45,7 @@ export function LabelFilterBar({ labels, onLabelsChange }: LabelFilterBarProps) 
           className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-accent/10 text-accent border border-accent/30"
         >
           <span className="font-mono">{label}</span>
-          <button
-            onClick={() => handleRemove(label)}
-            className="hover:text-red-400 transition"
-          >
+          <button onClick={() => handleRemove(label)} className="hover:text-red-400 transition">
             <X className="w-3 h-3" />
           </button>
         </span>

@@ -38,10 +38,7 @@ impl K8sState {
     }
 
     /// List all helm releases (optionally in a namespace).
-    pub async fn list_helm_releases(
-        &self,
-        namespace: Option<String>,
-    ) -> Result<Vec<HelmRelease>> {
+    pub async fn list_helm_releases(&self, namespace: Option<String>) -> Result<Vec<HelmRelease>> {
         let mut cmd = Command::new("helm");
         cmd.arg("list").arg("--output").arg("json");
 
@@ -72,11 +69,7 @@ impl K8sState {
     }
 
     /// Get helm release values.
-    pub async fn get_helm_values(
-        &self,
-        release: String,
-        namespace: String,
-    ) -> Result<String> {
+    pub async fn get_helm_values(&self, release: String, namespace: String) -> Result<String> {
         let mut cmd = Command::new("helm");
         cmd.arg("get")
             .arg("values")
@@ -104,11 +97,7 @@ impl K8sState {
     }
 
     /// Get helm release manifest.
-    pub async fn get_helm_manifest(
-        &self,
-        release: String,
-        namespace: String,
-    ) -> Result<String> {
+    pub async fn get_helm_manifest(&self, release: String, namespace: String) -> Result<String> {
         let mut cmd = Command::new("helm");
         cmd.arg("get")
             .arg("manifest")

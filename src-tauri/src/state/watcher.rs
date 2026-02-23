@@ -58,61 +58,100 @@ impl K8sState {
         match kind {
             ResourceKind::Pods => {
                 self.watch_namespaced::<k8s_openapi::api::core::v1::Pod>(
-                    app, "pods", namespace, new_token, label_selector,
+                    app,
+                    "pods",
+                    namespace,
+                    new_token,
+                    label_selector,
                 )
                 .await?
             }
             ResourceKind::Deployments => {
                 self.watch_namespaced::<k8s_openapi::api::apps::v1::Deployment>(
-                    app, "deployments", namespace, new_token, label_selector,
+                    app,
+                    "deployments",
+                    namespace,
+                    new_token,
+                    label_selector,
                 )
                 .await?
             }
             ResourceKind::Services => {
                 self.watch_namespaced::<k8s_openapi::api::core::v1::Service>(
-                    app, "services", namespace, new_token, label_selector,
+                    app,
+                    "services",
+                    namespace,
+                    new_token,
+                    label_selector,
                 )
                 .await?
             }
             ResourceKind::Nodes => {
                 self.watch_cluster_scoped::<k8s_openapi::api::core::v1::Node>(
-                    app, "nodes", new_token, label_selector,
+                    app,
+                    "nodes",
+                    new_token,
+                    label_selector,
                 )
                 .await?
             }
             ResourceKind::Events => {
                 self.watch_namespaced::<k8s_openapi::api::core::v1::Event>(
-                    app, "events", namespace, new_token, label_selector,
+                    app,
+                    "events",
+                    namespace,
+                    new_token,
+                    label_selector,
                 )
                 .await?
             }
             ResourceKind::Configmaps => {
                 self.watch_namespaced::<k8s_openapi::api::core::v1::ConfigMap>(
-                    app, "configmaps", namespace, new_token, label_selector,
+                    app,
+                    "configmaps",
+                    namespace,
+                    new_token,
+                    label_selector,
                 )
                 .await?
             }
             ResourceKind::Secrets => {
                 self.watch_namespaced::<k8s_openapi::api::core::v1::Secret>(
-                    app, "secrets", namespace, new_token, label_selector,
+                    app,
+                    "secrets",
+                    namespace,
+                    new_token,
+                    label_selector,
                 )
                 .await?
             }
             ResourceKind::Ingresses => {
                 self.watch_namespaced::<k8s_openapi::api::networking::v1::Ingress>(
-                    app, "ingresses", namespace, new_token, label_selector,
+                    app,
+                    "ingresses",
+                    namespace,
+                    new_token,
+                    label_selector,
                 )
                 .await?
             }
             ResourceKind::Jobs => {
                 self.watch_namespaced::<k8s_openapi::api::batch::v1::Job>(
-                    app, "jobs", namespace, new_token, label_selector,
+                    app,
+                    "jobs",
+                    namespace,
+                    new_token,
+                    label_selector,
                 )
                 .await?
             }
             ResourceKind::Cronjobs => {
                 self.watch_namespaced::<k8s_openapi::api::batch::v1::CronJob>(
-                    app, "cronjobs", namespace, new_token, label_selector,
+                    app,
+                    "cronjobs",
+                    namespace,
+                    new_token,
+                    label_selector,
                 )
                 .await?
             }

@@ -121,12 +121,8 @@ export function ShortcutOverlay({ open, onClose }: ShortcutOverlayProps) {
                   <Keyboard className="w-4 h-4 text-accent" />
                 </div>
                 <div>
-                  <h2 className="text-sm font-semibold text-slate-100">
-                    Keyboard Shortcuts
-                  </h2>
-                  <p className="text-[10px] text-slate-500">
-                    Quick reference for all shortcuts
-                  </p>
+                  <h2 className="text-sm font-semibold text-slate-100">Keyboard Shortcuts</h2>
+                  <p className="text-[10px] text-slate-500">Quick reference for all shortcuts</p>
                 </div>
               </div>
               <button
@@ -165,8 +161,8 @@ export function ShortcutOverlay({ open, onClose }: ShortcutOverlayProps) {
             {/* Footer */}
             <div className="px-5 py-2.5 border-t border-slate-800/50 flex items-center justify-center">
               <span className="text-[10px] text-slate-600 flex items-center gap-1.5">
-                Press <Kbd className="text-[9px]">?</Kbd> or{" "}
-                <Kbd className="text-[9px]">Esc</Kbd> to close
+                Press <Kbd className="text-[9px]">?</Kbd> or <Kbd className="text-[9px]">Esc</Kbd>{" "}
+                to close
               </span>
             </div>
           </motion.div>

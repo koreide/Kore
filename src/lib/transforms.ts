@@ -172,9 +172,7 @@ export function toResourceItem(obj: KubernetesObject): ResourceItem | null {
   const rules = spec?.rules as Array<Record<string, unknown>> | undefined;
   let hosts: string | undefined;
   if (rules && Array.isArray(rules)) {
-    hosts = rules
-      .map((r) => (r.host as string) || "*")
-      .join(", ");
+    hosts = rules.map((r) => (r.host as string) || "*").join(", ");
   }
   const ingressClassName = spec?.ingressClassName as string | undefined;
 
@@ -208,7 +206,7 @@ export function toResourceItem(obj: KubernetesObject): ResourceItem | null {
     reason,
     message,
     count,
-    lastSeen: lastTimestamp ?? metadata.creationTimestamp as string,
+    lastSeen: lastTimestamp ?? (metadata.creationTimestamp as string),
     involvedObject: involvedName,
     eventType,
     // Job fields

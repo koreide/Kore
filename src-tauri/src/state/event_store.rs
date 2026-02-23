@@ -30,8 +30,7 @@ pub struct EventStore {
 #[allow(dead_code)]
 impl EventStore {
     pub fn new(data_dir: PathBuf) -> Result<Self> {
-        std::fs::create_dir_all(&data_dir)
-            .map_err(K8sError::Io)?;
+        std::fs::create_dir_all(&data_dir).map_err(K8sError::Io)?;
 
         let db_path = data_dir.join("events.db");
         let conn = Connection::open(&db_path)
@@ -158,8 +157,7 @@ impl EventStore {
     /// Prune events older than retention_days.
     pub async fn prune(&self, retention_days: u32) -> Result<u64> {
         let db = self.db.lock().await;
-        let cutoff = chrono::Utc::now()
-            - chrono::Duration::days(retention_days as i64);
+        let cutoff = chrono::Utc::now() - chrono::Duration::days(retention_days as i64);
         let cutoff_str = cutoff.to_rfc3339();
 
         let count = db

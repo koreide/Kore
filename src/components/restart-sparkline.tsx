@@ -65,10 +65,7 @@ export function RestartSparkline({ data, width = 60, height = 16 }: RestartSpark
           strokeLinejoin="round"
         />
       </svg>
-      <span
-        className="font-mono text-xs tabular-nums"
-        style={{ color: lineColor, lineHeight: 1 }}
-      >
+      <span className="font-mono text-xs tabular-nums" style={{ color: lineColor, lineHeight: 1 }}>
         {latestCount}
       </span>
     </span>

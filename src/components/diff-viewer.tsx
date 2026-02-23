@@ -29,9 +29,7 @@ function computeDiff(leftLines: string[], rightLines: string[]): DiffLine[] {
   const n = rightLines.length;
 
   // Build LCS table
-  const dp: number[][] = Array.from({ length: m + 1 }, () =>
-    Array(n + 1).fill(0),
-  );
+  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
 
   for (let i = 1; i <= m; i++) {
     for (let j = 1; j <= n; j++) {
@@ -84,10 +82,7 @@ function computeDiff(leftLines: string[], rightLines: string[]): DiffLine[] {
 }
 
 /** Identify collapsible sections of unchanged lines */
-function findCollapsibleSections(
-  lines: DiffLine[],
-  contextLines: number = 3,
-): CollapsedSection[] {
+function findCollapsibleSections(lines: DiffLine[], contextLines: number = 3): CollapsedSection[] {
   const sections: CollapsedSection[] = [];
   let unchangedStart: number | null = null;
   let unchangedCount = 0;
@@ -130,20 +125,12 @@ export function DiffViewer({
   const leftRef = useRef<HTMLDivElement>(null);
   const rightRef = useRef<HTMLDivElement>(null);
   const isSyncing = useRef(false);
-  const [expandedSections, setExpandedSections] = useState<Set<number>>(
-    new Set(),
-  );
+  const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
 
   const leftLines = useMemo(() => leftYaml.split("\n"), [leftYaml]);
   const rightLines = useMemo(() => rightYaml.split("\n"), [rightYaml]);
-  const diffLines = useMemo(
-    () => computeDiff(leftLines, rightLines),
-    [leftLines, rightLines],
-  );
-  const collapsibleSections = useMemo(
-    () => findCollapsibleSections(diffLines),
-    [diffLines],
-  );
+  const diffLines = useMemo(() => computeDiff(leftLines, rightLines), [leftLines, rightLines]);
+  const collapsibleSections = useMemo(() => findCollapsibleSections(diffLines), [diffLines]);
 
   const stats = useMemo(() => {
     let added = 0;
@@ -167,34 +154,28 @@ export function DiffViewer({
     });
   }, []);
 
-  const handleScroll = useCallback(
-    (source: "left" | "right") => {
-      if (isSyncing.current) return;
-      isSyncing.current = true;
+  const handleScroll = useCallback((source: "left" | "right") => {
+    if (isSyncing.current) return;
+    isSyncing.current = true;
 
-      const sourceEl = source === "left" ? leftRef.current : rightRef.current;
-      const targetEl = source === "left" ? rightRef.current : leftRef.current;
+    const sourceEl = source === "left" ? leftRef.current : rightRef.current;
+    const targetEl = source === "left" ? rightRef.current : leftRef.current;
 
-      if (sourceEl && targetEl) {
-        targetEl.scrollTop = sourceEl.scrollTop;
-      }
+    if (sourceEl && targetEl) {
+      targetEl.scrollTop = sourceEl.scrollTop;
+    }
 
-      requestAnimationFrame(() => {
-        isSyncing.current = false;
-      });
-    },
-    [],
-  );
+    requestAnimationFrame(() => {
+      isSyncing.current = false;
+    });
+  }, []);
 
   /** Check if a line index falls inside a collapsed section */
   const getCollapsedInfo = useCallback(
     (lineIndex: number) => {
       for (let si = 0; si < collapsibleSections.length; si++) {
         const section = collapsibleSections[si];
-        if (
-          lineIndex >= section.startIndex &&
-          lineIndex < section.startIndex + section.count
-        ) {
+        if (lineIndex >= section.startIndex && lineIndex < section.startIndex + section.count) {
           return {
             sectionIndex: si,
             isFirst: lineIndex === section.startIndex,
@@ -265,12 +246,7 @@ export function DiffViewer({
           >
             {prefix}
           </span>
-          <span
-            className={cn(
-              "flex-1 py-px whitespace-pre font-mono text-xs",
-              textClass,
-            )}
-          >
+          <span className={cn("flex-1 py-px whitespace-pre font-mono text-xs", textClass)}>
             {content}
           </span>
         </div>
@@ -309,10 +285,7 @@ export function DiffViewer({
         // For added lines, left side shows empty placeholder
         if (line.type === "added" && side === "left") {
           elements.push(
-            <div
-              key={`${side}-${i}`}
-              className="flex min-h-[20px] bg-green-500/[0.03]"
-            >
+            <div key={`${side}-${i}`} className="flex min-h-[20px] bg-green-500/[0.03]">
               <span className="select-none text-right w-10 shrink-0 pr-2 py-px text-[10px] font-mono border-r border-slate-800/50 text-slate-700" />
               <span className="w-4 shrink-0" />
               <span className="flex-1 py-px" />
@@ -324,10 +297,7 @@ export function DiffViewer({
         // For removed lines, right side shows empty placeholder
         if (line.type === "removed" && side === "right") {
           elements.push(
-            <div
-              key={`${side}-${i}`}
-              className="flex min-h-[20px] bg-red-500/[0.03]"
-            >
+            <div key={`${side}-${i}`} className="flex min-h-[20px] bg-red-500/[0.03]">
               <span className="select-none text-right w-10 shrink-0 pr-2 py-px text-[10px] font-mono border-r border-slate-800/50 text-slate-700" />
               <span className="w-4 shrink-0" />
               <span className="flex-1 py-px" />
@@ -337,9 +307,7 @@ export function DiffViewer({
         }
 
         elements.push(
-          <div key={`${side}-${i}`}>
-            {renderLineContent(content, lineNo, line.type, side)}
-          </div>,
+          <div key={`${side}-${i}`}>{renderLineContent(content, lineNo, line.type, side)}</div>,
         );
       }
 
@@ -349,11 +317,7 @@ export function DiffViewer({
   );
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="flex flex-col h-full"
-    >
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-800 bg-surface/50">
         <div className="flex items-center gap-2 text-sm text-slate-300">
@@ -361,12 +325,8 @@ export function DiffViewer({
           <span className="font-medium">YAML Diff</span>
         </div>
         <div className="flex items-center gap-3 text-xs">
-          {stats.removed > 0 && (
-            <span className="text-red-400">-{stats.removed}</span>
-          )}
-          {stats.added > 0 && (
-            <span className="text-green-400">+{stats.added}</span>
-          )}
+          {stats.removed > 0 && <span className="text-red-400">-{stats.removed}</span>}
+          {stats.added > 0 && <span className="text-green-400">+{stats.added}</span>}
           <span className="text-slate-500">
             {stats.total} line{stats.total !== 1 ? "s" : ""}
           </span>
@@ -409,9 +369,7 @@ export function DiffViewer({
         <div className="flex items-center justify-center gap-4 px-4 py-1.5 border-t border-slate-800 bg-surface/30">
           <button
             onClick={() => {
-              setExpandedSections(
-                new Set(collapsibleSections.map((_, i) => i)),
-              );
+              setExpandedSections(new Set(collapsibleSections.map((_, i) => i)));
             }}
             className="text-[10px] text-slate-500 hover:text-slate-300 transition flex items-center gap-1"
           >

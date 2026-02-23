@@ -72,7 +72,10 @@ export function PinnedResources({ pinned, onSelect, onRemove }: PinnedResourcesP
               >
                 {pin.name}
               </span>
-              <span className="text-[10px] text-slate-600 truncate max-w-[60px]" title={pin.namespace}>
+              <span
+                className="text-[10px] text-slate-600 truncate max-w-[60px]"
+                title={pin.namespace}
+              >
                 {pin.namespace}
               </span>
               <button

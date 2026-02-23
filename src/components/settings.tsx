@@ -1,6 +1,14 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Settings as SettingsIcon, Monitor, Keyboard, Clock, Palette, Globe } from "lucide-react";
+import {
+  ArrowLeft,
+  Settings as SettingsIcon,
+  Monitor,
+  Keyboard,
+  Clock,
+  Palette,
+  Globe,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const SETTINGS_KEY = "kore-settings";
@@ -33,24 +41,33 @@ const ACCENT_PRESETS = [
 ];
 
 const SHORTCUTS = [
-  { category: "Navigation", items: [
-    { keys: "j / k", description: "Navigate up / down" },
-    { keys: "l", description: "Enter detail view" },
-    { keys: "h", description: "Go back" },
-    { keys: "1 - 5", description: "Switch tabs" },
-  ]},
-  { category: "Actions", items: [
-    { keys: "\u2318K", description: "Command palette" },
-    { keys: "\u2318R", description: "Refresh resources" },
-    { keys: "/", description: "Search / filter" },
-    { keys: "\u2318F", description: "Search logs" },
-    { keys: "D", description: "Delete resource" },
-  ]},
-  { category: "General", items: [
-    { keys: "Esc", description: "Close / go back" },
-    { keys: "Enter", description: "Select / confirm" },
-    { keys: "?", description: "Show shortcut overlay" },
-  ]},
+  {
+    category: "Navigation",
+    items: [
+      { keys: "j / k", description: "Navigate up / down" },
+      { keys: "l", description: "Enter detail view" },
+      { keys: "h", description: "Go back" },
+      { keys: "1 - 5", description: "Switch tabs" },
+    ],
+  },
+  {
+    category: "Actions",
+    items: [
+      { keys: "\u2318K", description: "Command palette" },
+      { keys: "\u2318R", description: "Refresh resources" },
+      { keys: "/", description: "Search / filter" },
+      { keys: "\u2318F", description: "Search logs" },
+      { keys: "D", description: "Delete resource" },
+    ],
+  },
+  {
+    category: "General",
+    items: [
+      { keys: "Esc", description: "Close / go back" },
+      { keys: "Enter", description: "Select / confirm" },
+      { keys: "?", description: "Show shortcut overlay" },
+    ],
+  },
 ];
 
 function loadSettings(): KoreSettings {
@@ -189,14 +206,10 @@ export function Settings({ onBack }: SettingsProps) {
 
           <div className="space-y-4">
             <div>
-              <label className="block text-xs text-slate-400 mb-1.5">
-                Event Retention Period
-              </label>
+              <label className="block text-xs text-slate-400 mb-1.5">Event Retention Period</label>
               <select
                 value={settings.eventRetention}
-                onChange={(e) =>
-                  updateSetting("eventRetention", e.target.value)
-                }
+                onChange={(e) => updateSetting("eventRetention", e.target.value)}
                 className="w-full max-w-xs px-3 py-2 bg-background border border-slate-800 rounded-md text-sm text-slate-100 outline-none focus:border-accent transition appearance-none cursor-pointer"
               >
                 {RETENTION_OPTIONS.map((opt) => (
@@ -241,13 +254,9 @@ export function Settings({ onBack }: SettingsProps) {
                       key={ctx}
                       className="flex items-center gap-2 px-3 py-1.5 bg-background/50 border border-slate-800/50 rounded text-xs"
                     >
-                      <span className="font-mono text-slate-300 flex-1 truncate">
-                        {ctx}
-                      </span>
+                      <span className="font-mono text-slate-300 flex-1 truncate">{ctx}</span>
                       <span className="text-slate-600">&rarr;</span>
-                      <span className="font-mono text-accent truncate">
-                        {ns}
-                      </span>
+                      <span className="font-mono text-accent truncate">{ns}</span>
                       <button
                         onClick={() => handleRemoveDefaultNamespace(ctx)}
                         className="text-slate-500 hover:text-red-400 transition ml-1"
@@ -319,9 +328,7 @@ export function Settings({ onBack }: SettingsProps) {
                       )}
                       style={{ backgroundColor: preset.value }}
                     />
-                    <span className="text-[10px] text-slate-500">
-                      {preset.label}
-                    </span>
+                    <span className="text-[10px] text-slate-500">{preset.label}</span>
                   </button>
                 ))}
               </div>
@@ -338,9 +345,7 @@ export function Settings({ onBack }: SettingsProps) {
         >
           <div className="flex items-center gap-2 mb-4">
             <Keyboard className="w-4 h-4 text-accent" />
-            <h2 className="text-sm font-semibold text-slate-100">
-              Keyboard Shortcuts
-            </h2>
+            <h2 className="text-sm font-semibold text-slate-100">Keyboard Shortcuts</h2>
           </div>
 
           <div className="space-y-4">
@@ -355,17 +360,11 @@ export function Settings({ onBack }: SettingsProps) {
                       key={shortcut.keys}
                       className="flex items-center justify-between px-3 py-2 rounded hover:bg-white/[0.02] transition"
                     >
-                      <span className="text-xs text-slate-300">
-                        {shortcut.description}
-                      </span>
+                      <span className="text-xs text-slate-300">{shortcut.description}</span>
                       <div className="flex items-center gap-1">
                         {shortcut.keys.split(" / ").map((key, i) => (
                           <span key={i} className="flex items-center gap-1">
-                            {i > 0 && (
-                              <span className="text-slate-600 text-[10px] mx-0.5">
-                                /
-                              </span>
-                            )}
+                            {i > 0 && <span className="text-slate-600 text-[10px] mx-0.5">/</span>}
                             <Kbd>{key.trim()}</Kbd>
                           </span>
                         ))}

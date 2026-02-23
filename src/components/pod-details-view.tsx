@@ -241,9 +241,7 @@ export function PodDetailsView({ pod, onBack }: PodDetailsViewProps) {
           // Extract container names
           const spec = podData.spec as Record<string, unknown> | undefined;
           const containerList = spec?.containers as Array<Record<string, unknown>> | undefined;
-          const initContainers = spec?.initContainers as
-            | Array<Record<string, unknown>>
-            | undefined;
+          const initContainers = spec?.initContainers as Array<Record<string, unknown>> | undefined;
           const names: string[] = [];
           if (initContainers) {
             initContainers.forEach((c) => {
@@ -280,9 +278,7 @@ export function PodDetailsView({ pod, onBack }: PodDetailsViewProps) {
     let isMounted = true;
 
     // Resolve container name (strip init: prefix for the API call)
-    const containerName = selectedContainer
-      ? selectedContainer.replace(/^init:/, "")
-      : undefined;
+    const containerName = selectedContainer ? selectedContainer.replace(/^init:/, "") : undefined;
 
     const eventName = `pod-logs://${namespace}/${podName}`;
     let unlistenFn: (() => void) | null = null;
@@ -615,9 +611,7 @@ export function PodDetailsView({ pod, onBack }: PodDetailsViewProps) {
               <div className="text-slate-100 font-mono text-xs">{namespace}</div>
             </div>
             <div>
-              <div className="text-slate-500 text-[10px] uppercase tracking-wider mb-1">
-                Status
-              </div>
+              <div className="text-slate-500 text-[10px] uppercase tracking-wider mb-1">Status</div>
               <StatusBadge status={status} />
             </div>
             <div>
@@ -753,8 +747,7 @@ export function PodDetailsView({ pod, onBack }: PodDetailsViewProps) {
                           const isSearchMatch =
                             logSearch && line.toLowerCase().includes(logSearch.toLowerCase());
                           const isCurrentMatch =
-                            logSearchMatches.length > 0 &&
-                            logSearchMatches[logSearchIndex] === i;
+                            logSearchMatches.length > 0 && logSearchMatches[logSearchIndex] === i;
 
                           return (
                             <div

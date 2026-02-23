@@ -1,12 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-} from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import {
   Activity,
   AlertTriangle,
@@ -28,9 +22,9 @@ interface ClusterDashboardProps {
 // ── Colour constants ──────────────────────────────────────────────────
 
 const POD_COLORS: Record<string, string> = {
-  Running: "#10b981",   // emerald-500
-  Pending: "#f59e0b",   // amber-500
-  Failed: "#ef4444",    // red-500
+  Running: "#10b981", // emerald-500
+  Pending: "#f59e0b", // amber-500
+  Failed: "#ef4444", // red-500
   CrashLooping: "#a855f7", // purple-500
   Succeeded: "#64748b", // slate-500
 };
@@ -83,16 +77,11 @@ function DashboardCard({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className={cn(
-        "glass rounded-lg border border-slate-800 p-4 flex flex-col",
-        className,
-      )}
+      className={cn("glass rounded-lg border border-slate-800 p-4 flex flex-col", className)}
     >
       <div className="flex items-center gap-2 mb-3">
         <Icon className="w-4 h-4 text-accent" />
-        <h3 className="text-sm font-semibold text-slate-200 tracking-wide uppercase">
-          {title}
-        </h3>
+        <h3 className="text-sm font-semibold text-slate-200 tracking-wide uppercase">{title}</h3>
       </div>
       <div className="flex-1 min-h-0">{children}</div>
     </motion.div>
@@ -112,7 +101,10 @@ function PieTooltipContent({
   const entry = payload[0];
   return (
     <div className="bg-surface border border-slate-700 rounded px-3 py-2 text-xs shadow-lg">
-      <span className="inline-block w-2 h-2 rounded-full mr-2" style={{ background: entry.payload.fill }} />
+      <span
+        className="inline-block w-2 h-2 rounded-full mr-2"
+        style={{ background: entry.payload.fill }}
+      />
       <span className="text-slate-300">{entry.name}: </span>
       <span className="text-slate-100 font-semibold">{entry.value}</span>
     </div>
@@ -302,10 +294,7 @@ export function ClusterDashboard({ onNavigateToResource }: ClusterDashboardProps
                         <span className="text-slate-300 font-mono truncate max-w-[60%]">
                           {node.name}
                         </span>
-                        <span
-                          className="font-medium"
-                          style={{ color: statusColor }}
-                        >
+                        <span className="font-medium" style={{ color: statusColor }}>
                           {node.status}
                         </span>
                       </div>
@@ -430,7 +419,11 @@ export function ClusterDashboard({ onNavigateToResource }: ClusterDashboardProps
           </DashboardCard>
 
           {/* ── Recent Warnings ──────────────────────────────────────── */}
-          <DashboardCard title="Recent Warnings" icon={Skull} className="md:col-span-2 xl:col-span-1">
+          <DashboardCard
+            title="Recent Warnings"
+            icon={Skull}
+            className="md:col-span-2 xl:col-span-1"
+          >
             {health.recent_warnings.length === 0 ? (
               <div className="flex items-center justify-center h-full text-slate-500 text-sm">
                 No recent warnings

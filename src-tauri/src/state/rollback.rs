@@ -60,11 +60,7 @@ impl K8sState {
                     .and_then(|c| c.image.clone())
                     .unwrap_or_default();
 
-                let replicas = rs
-                    .spec
-                    .as_ref()
-                    .and_then(|s| s.replicas)
-                    .unwrap_or(0);
+                let replicas = rs.spec.as_ref().and_then(|s| s.replicas).unwrap_or(0);
 
                 let created = rs
                     .metadata
@@ -89,14 +85,9 @@ impl K8sState {
     }
 
     /// Get YAML for a specific revision's ReplicaSet.
-    pub async fn get_revision_yaml(
-        &self,
-        namespace: String,
-        rs_name: String,
-    ) -> Result<String> {
+    pub async fn get_revision_yaml(&self, namespace: String, rs_name: String) -> Result<String> {
         let client = self.current_client().await?;
-        let api: Api<k8s_openapi::api::apps::v1::ReplicaSet> =
-            Api::namespaced(client, &namespace);
+        let api: Api<k8s_openapi::api::apps::v1::ReplicaSet> = Api::namespaced(client, &namespace);
         let rs = api.get(&rs_name).await.map_err(K8sError::Kube)?;
         let mut value = serde_json::to_value(&rs).map_err(K8sError::Serde)?;
         if let Some(obj) = value.as_object_mut() {

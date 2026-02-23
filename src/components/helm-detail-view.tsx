@@ -9,12 +9,7 @@ import {
   History,
   StickyNote,
 } from "lucide-react";
-import {
-  getHelmValues,
-  getHelmManifest,
-  getHelmHistory,
-  rollbackHelmRelease,
-} from "@/lib/api";
+import { getHelmValues, getHelmManifest, getHelmHistory, rollbackHelmRelease } from "@/lib/api";
 import type { HelmRevision } from "@/lib/api";
 import { formatError } from "@/lib/errors";
 import { ConfirmDialog } from "./confirm-dialog";
@@ -318,9 +313,7 @@ export function HelmDetailView({ release, onBack }: HelmDetailViewProps) {
           <div className="flex items-center gap-2">
             {(activeTab === "values" || activeTab === "manifest") && (
               <button
-                onClick={() =>
-                  handleCopy(activeTab === "values" ? values : manifest)
-                }
+                onClick={() => handleCopy(activeTab === "values" ? values : manifest)}
                 aria-label="Copy content to clipboard"
                 className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-slate-800 hover:border-accent/50 hover:bg-muted/30 transition text-sm text-slate-300"
               >
@@ -338,7 +331,9 @@ export function HelmDetailView({ release, onBack }: HelmDetailViewProps) {
             <div className="text-slate-100 font-mono text-xs">{name}</div>
           </div>
           <div>
-            <div className="text-slate-500 text-[10px] uppercase tracking-wider mb-1">Namespace</div>
+            <div className="text-slate-500 text-[10px] uppercase tracking-wider mb-1">
+              Namespace
+            </div>
             <div className="text-slate-100 font-mono text-xs">{namespace}</div>
           </div>
         </div>
@@ -472,9 +467,7 @@ export function HelmDetailView({ release, onBack }: HelmDetailViewProps) {
                             key={rev.revision}
                             className={cn(
                               "transition",
-                              isDeployed
-                                ? "bg-emerald-500/5"
-                                : "hover:bg-muted/30",
+                              isDeployed ? "bg-emerald-500/5" : "hover:bg-muted/30",
                             )}
                           >
                             <td className="px-3 py-2 text-slate-100 font-mono text-xs">

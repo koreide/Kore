@@ -44,10 +44,7 @@ function DescribeSkeleton() {
 
 function highlightJson(json: string): string {
   return json
-    .replace(
-      /("(?:[^"\\]|\\.)*")\s*:/g,
-      '<span class="text-accent">$1</span>:',
-    )
+    .replace(/("(?:[^"\\]|\\.)*")\s*:/g, '<span class="text-accent">$1</span>:')
     .replace(
       /:\s*("(?:[^"\\]|\\.)*")/g,
       (match, value) => `: <span class="text-emerald-400">${value}</span>`,
@@ -219,7 +216,9 @@ export function ResourceDetailsView({ resource, kind, onBack }: ResourceDetailsV
             <div className="text-slate-100 font-mono text-xs">{resourceName}</div>
           </div>
           <div>
-            <div className="text-slate-500 text-[10px] uppercase tracking-wider mb-1">Namespace</div>
+            <div className="text-slate-500 text-[10px] uppercase tracking-wider mb-1">
+              Namespace
+            </div>
             <div className="text-slate-100 font-mono text-xs">{namespace}</div>
           </div>
           <div>

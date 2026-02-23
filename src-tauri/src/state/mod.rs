@@ -125,10 +125,7 @@ impl K8sState {
 
     pub async fn list_contexts(&self) -> Result<Vec<String>> {
         let inner = self.inner.read().await;
-        let kubeconfig = inner
-            .kubeconfig
-            .clone()
-            .ok_or(K8sError::ClientMissing)?;
+        let kubeconfig = inner.kubeconfig.clone().ok_or(K8sError::ClientMissing)?;
         Ok(kubeconfig.contexts.iter().map(|c| c.name.clone()).collect())
     }
 
@@ -139,7 +136,11 @@ impl K8sState {
             .list(&kube::api::ListParams::default())
             .await
             .map_err(K8sError::Kube)?;
-        Ok(list.items.iter().map(kube::api::ResourceExt::name_any).collect())
+        Ok(list
+            .items
+            .iter()
+            .map(kube::api::ResourceExt::name_any)
+            .collect())
     }
 
     pub async fn switch_context(&self, name: String) -> Result<String> {

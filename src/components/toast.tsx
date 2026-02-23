@@ -19,7 +19,10 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 
 let nextId = 0;
 
-const typeStyles: Record<ToastType, { icon: typeof CheckCircle2; border: string; iconColor: string }> = {
+const typeStyles: Record<
+  ToastType,
+  { icon: typeof CheckCircle2; border: string; iconColor: string }
+> = {
   success: { icon: CheckCircle2, border: "border-emerald-500/30", iconColor: "text-emerald-400" },
   error: { icon: XCircle, border: "border-red-500/30", iconColor: "text-red-400" },
   info: { icon: Info, border: "border-accent/30", iconColor: "text-accent" },

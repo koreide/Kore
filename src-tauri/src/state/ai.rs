@@ -109,7 +109,9 @@ fn build_user_message(
         } else {
             pretty
         };
-        parts.push(format!("## Resource Description\n```json\n{truncated}\n```"));
+        parts.push(format!(
+            "## Resource Description\n```json\n{truncated}\n```"
+        ));
     }
 
     if !events.is_empty() {
@@ -168,7 +170,9 @@ impl K8sState {
     ) -> Result<()> {
         let session_id: String = {
             let mut rng = rand::thread_rng();
-            (0..16).map(|_| format!("{:02x}", rng.gen::<u8>())).collect()
+            (0..16)
+                .map(|_| format!("{:02x}", rng.gen::<u8>()))
+                .collect()
         };
         let event_name = format!("ai-response://{session_id}");
 
@@ -181,10 +185,7 @@ impl K8sState {
         );
 
         // Emit the session ID so the frontend knows where to listen
-        if let Err(e) = app.emit(
-            "ai-session-started",
-            &json!({ "sessionId": session_id }),
-        ) {
+        if let Err(e) = app.emit("ai-session-started", &json!({ "sessionId": session_id })) {
             error!(error = %e, "Failed to emit session start");
         }
 
@@ -195,11 +196,7 @@ impl K8sState {
         // Describe the resource
         let resource_json = if let Some(ref rk) = resource_kind {
             match self
-                .describe_resource(
-                    rk.clone(),
-                    request.namespace.clone(),
-                    request.name.clone(),
-                )
+                .describe_resource(rk.clone(), request.namespace.clone(), request.name.clone())
                 .await
             {
                 Ok(val) => Some(val),
@@ -230,10 +227,7 @@ impl K8sState {
         };
 
         // Fetch pod logs if the resource is a pod
-        let logs = if matches!(
-            request.kind.to_lowercase().as_str(),
-            "pod" | "pods"
-        ) {
+        let logs = if matches!(request.kind.to_lowercase().as_str(), "pod" | "pods") {
             match self
                 .fetch_logs(
                     request.namespace.clone(),
@@ -255,15 +249,9 @@ impl K8sState {
         };
 
         // Fetch metrics if the resource is a pod
-        let metrics = if matches!(
-            request.kind.to_lowercase().as_str(),
-            "pod" | "pods"
-        ) {
+        let metrics = if matches!(request.kind.to_lowercase().as_str(), "pod" | "pods") {
             match self
-                .get_pod_metrics(
-                    request.namespace.clone(),
-                    request.name.clone(),
-                )
+                .get_pod_metrics(request.namespace.clone(), request.name.clone())
                 .await
             {
                 Ok(m) => Some(m),
@@ -293,11 +281,16 @@ impl K8sState {
         let evt = event_name.clone();
 
         tauri::async_runtime::spawn(async move {
-            if let Err(e) = stream_ai_response(&handle, &evt, &config, &system_prompt, &user_message).await {
+            if let Err(e) =
+                stream_ai_response(&handle, &evt, &config, &system_prompt, &user_message).await
+            {
                 error!(error = %e, "AI streaming failed");
-                let _ = handle.emit(&evt, &AIStreamEvent::Error {
-                    message: e.to_string(),
-                });
+                let _ = handle.emit(
+                    &evt,
+                    &AIStreamEvent::Error {
+                        message: e.to_string(),
+                    },
+                );
             }
         });
 
@@ -342,7 +335,9 @@ impl K8sState {
                     }))
                     .send()
                     .await
-                    .map_err(|e| K8sError::Validation(format!("Anthropic connection failed: {e}")))?;
+                    .map_err(|e| {
+                        K8sError::Validation(format!("Anthropic connection failed: {e}"))
+                    })?;
 
                 resp.status().is_success()
             }
@@ -446,7 +441,12 @@ async fn stream_ai_response(
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
         let msg = format!("AI provider returned HTTP {status}: {body}");
-        app.emit(event_name, &AIStreamEvent::Error { message: msg.clone() })?;
+        app.emit(
+            event_name,
+            &AIStreamEvent::Error {
+                message: msg.clone(),
+            },
+        )?;
         return Err(msg.into());
     }
 
@@ -554,8 +554,11 @@ fn parse_anthropic_sse_line(line: &str) -> SSEContent {
                     SSEContent::Text(text)
                 }
                 "message_stop" => SSEContent::Done,
-                "message_delta" | "message_start" | "content_block_start"
-                | "content_block_stop" | "ping" => SSEContent::Skip,
+                "message_delta"
+                | "message_start"
+                | "content_block_start"
+                | "content_block_stop"
+                | "ping" => SSEContent::Skip,
                 _ => SSEContent::Skip,
             }
         }

@@ -14,9 +14,7 @@ pub struct LogRequest {
 // ── Existing commands ──────────────────────────────────────────────────
 
 #[tauri::command]
-pub async fn list_contexts(
-    state: State<'_, K8sState>,
-) -> std::result::Result<Vec<String>, String> {
+pub async fn list_contexts(state: State<'_, K8sState>) -> std::result::Result<Vec<String>, String> {
     state.list_contexts().await.map_err(|e| e.to_string())
 }
 
@@ -161,15 +159,19 @@ pub async fn start_pod_logs_stream(
         return Err("Namespace and pod name are required".to_string());
     }
     state
-        .stream_pod_logs(app, namespace, podName, container, previous.unwrap_or(false))
+        .stream_pod_logs(
+            app,
+            namespace,
+            podName,
+            container,
+            previous.unwrap_or(false),
+        )
         .await
         .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub async fn stop_pod_logs_stream(
-    state: State<'_, K8sState>,
-) -> std::result::Result<(), String> {
+pub async fn stop_pod_logs_stream(state: State<'_, K8sState>) -> std::result::Result<(), String> {
     state
         .stop_pod_logs_stream()
         .await
@@ -319,10 +321,7 @@ pub async fn stop_exec(
     state: State<'_, K8sState>,
     #[allow(non_snake_case)] sessionId: String,
 ) -> std::result::Result<(), String> {
-    state
-        .stop_exec(sessionId)
-        .await
-        .map_err(|e| e.to_string())
+    state.stop_exec(sessionId).await.map_err(|e| e.to_string())
 }
 
 // ── Phase 1: YAML Editor ──────────────────────────────────────────────
@@ -413,10 +412,7 @@ pub async fn rollback_deployment(
 pub async fn get_cluster_health(
     state: State<'_, K8sState>,
 ) -> std::result::Result<crate::state::dashboard::ClusterHealth, String> {
-    state
-        .get_cluster_health()
-        .await
-        .map_err(|e| e.to_string())
+    state.get_cluster_health().await.map_err(|e| e.to_string())
 }
 
 // ── Phase 2: Event Store ──────────────────────────────────────────────
@@ -524,9 +520,7 @@ pub async fn build_resource_graph(
 // ── Phase 4: Helm Management ──────────────────────────────────────────
 
 #[tauri::command]
-pub async fn helm_available(
-    state: State<'_, K8sState>,
-) -> std::result::Result<bool, String> {
+pub async fn helm_available(state: State<'_, K8sState>) -> std::result::Result<bool, String> {
     Ok(state.helm_available().await)
 }
 

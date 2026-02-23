@@ -69,7 +69,9 @@ function getRecent(): RecentItem[] {
 }
 
 function addRecent(kind: ResourceKind, name: string, namespace: string) {
-  const recent = getRecent().filter((r) => !(r.kind === kind && r.name === name && r.namespace === namespace));
+  const recent = getRecent().filter(
+    (r) => !(r.kind === kind && r.name === name && r.namespace === namespace),
+  );
   recent.unshift({ kind, name, namespace, timestamp: Date.now() });
   localStorage.setItem(RECENT_KEY, JSON.stringify(recent.slice(0, 20)));
 }
@@ -266,33 +268,35 @@ export function CommandPalette({
                 {/* Quick Filters (shown when typing ":") */}
                 {search.startsWith(":") && (
                   <Command.CommandGroup heading="Quick Filters">
-                    {QUICK_FILTERS.filter((f) =>
-                      f.prefix.startsWith(search.toLowerCase()),
-                    ).map((filter) => (
-                      <Command.CommandItem
-                        key={filter.prefix}
-                        value={`filter-${filter.prefix}`}
-                        onSelect={() => {
-                          const kindMap: Record<string, ResourceKind> = {
-                            ":pods": "pods",
-                            ":deployments": "deployments",
-                            ":services": "services",
-                          };
-                          const filterKind = kindMap[filter.prefix];
-                          if (filterKind) {
-                            onNavigateToKind(filterKind);
-                          } else {
-                            onAction?.("quick-filter", { status: filter.prefix.slice(1) });
-                          }
-                          onClose();
-                        }}
-                        className="px-3 py-2 cursor-pointer rounded-md hover:bg-muted/60 text-sm text-slate-200 transition flex items-center gap-3"
-                      >
-                        <Filter className="w-4 h-4 text-slate-500" />
-                        <span className="font-mono text-xs">{filter.label}</span>
-                        <span className="text-[10px] text-slate-500 ml-auto">{filter.description}</span>
-                      </Command.CommandItem>
-                    ))}
+                    {QUICK_FILTERS.filter((f) => f.prefix.startsWith(search.toLowerCase())).map(
+                      (filter) => (
+                        <Command.CommandItem
+                          key={filter.prefix}
+                          value={`filter-${filter.prefix}`}
+                          onSelect={() => {
+                            const kindMap: Record<string, ResourceKind> = {
+                              ":pods": "pods",
+                              ":deployments": "deployments",
+                              ":services": "services",
+                            };
+                            const filterKind = kindMap[filter.prefix];
+                            if (filterKind) {
+                              onNavigateToKind(filterKind);
+                            } else {
+                              onAction?.("quick-filter", { status: filter.prefix.slice(1) });
+                            }
+                            onClose();
+                          }}
+                          className="px-3 py-2 cursor-pointer rounded-md hover:bg-muted/60 text-sm text-slate-200 transition flex items-center gap-3"
+                        >
+                          <Filter className="w-4 h-4 text-slate-500" />
+                          <span className="font-mono text-xs">{filter.label}</span>
+                          <span className="text-[10px] text-slate-500 ml-auto">
+                            {filter.description}
+                          </span>
+                        </Command.CommandItem>
+                      ),
+                    )}
                   </Command.CommandGroup>
                 )}
 
@@ -309,7 +313,9 @@ export function CommandPalette({
                     >
                       <Sparkles className="w-4 h-4 text-slate-500" />
                       <span>Ask AI</span>
-                      <span className="text-[10px] text-slate-500 ml-auto">Troubleshoot with AI</span>
+                      <span className="text-[10px] text-slate-500 ml-auto">
+                        Troubleshoot with AI
+                      </span>
                     </Command.CommandItem>
                   </Command.CommandGroup>
                 )}

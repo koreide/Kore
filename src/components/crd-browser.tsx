@@ -1,20 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Puzzle,
-  ChevronRight,
-  ChevronDown,
-  Trash2,
-  ArrowLeft,
-  Search,
-  Inbox,
-} from "lucide-react";
-import {
-  listCrds,
-  listCrdInstances,
-  getCrdInstance,
-  deleteCrdInstance,
-} from "@/lib/api";
+import { Puzzle, ChevronRight, ChevronDown, Trash2, ArrowLeft, Search, Inbox } from "lucide-react";
+import { listCrds, listCrdInstances, getCrdInstance, deleteCrdInstance } from "@/lib/api";
 import type { CrdInfo } from "@/lib/api";
 import { formatError } from "@/lib/errors";
 import { cn } from "@/lib/utils";
@@ -48,10 +35,7 @@ function formatRelativeAge(timestamp: string | undefined): string {
 
 function highlightJson(json: string): string {
   return json
-    .replace(
-      /("(?:[^"\\]|\\.)*")\s*:/g,
-      '<span class="text-accent">$1</span>:',
-    )
+    .replace(/("(?:[^"\\]|\\.)*")\s*:/g, '<span class="text-accent">$1</span>:')
     .replace(
       /:\s*("(?:[^"\\]|\\.)*")/g,
       (_match, value) => `: <span class="text-emerald-400">${value}</span>`,
@@ -408,8 +392,7 @@ export function CrdBrowser({ namespace, onBack }: CrdBrowserProps) {
                           >
                             {items.map((crd) => {
                               const isSelected =
-                                selectedCrd?.name === crd.name &&
-                                selectedCrd?.group === crd.group;
+                                selectedCrd?.name === crd.name && selectedCrd?.group === crd.group;
                               return (
                                 <button
                                   key={`${crd.group}/${crd.name}`}
@@ -476,10 +459,8 @@ export function CrdBrowser({ namespace, onBack }: CrdBrowserProps) {
                   </button>
                   <span className="text-xs text-slate-500">|</span>
                   <span className="text-xs font-mono text-accent">
-                    {(
-                      (selectedInstance.metadata as Record<string, unknown> | undefined)
-                        ?.name as string
-                    ) || "unknown"}
+                    {((selectedInstance.metadata as Record<string, unknown> | undefined)
+                      ?.name as string) || "unknown"}
                   </span>
                 </div>
               </div>
@@ -574,13 +555,12 @@ export function CrdBrowser({ namespace, onBack }: CrdBrowserProps) {
                       </thead>
                       <tbody className="divide-y divide-slate-800/50">
                         {instances.map((instance, idx) => {
-                          const metadata = instance.metadata as
-                            | Record<string, unknown>
-                            | undefined;
+                          const metadata = instance.metadata as Record<string, unknown> | undefined;
                           const name = (metadata?.name as string) || "-";
                           const ns = (metadata?.namespace as string) || "-";
-                          const creationTimestamp =
-                            metadata?.creationTimestamp as string | undefined;
+                          const creationTimestamp = metadata?.creationTimestamp as
+                            | string
+                            | undefined;
 
                           return (
                             <tr
@@ -588,12 +568,8 @@ export function CrdBrowser({ namespace, onBack }: CrdBrowserProps) {
                               onClick={() => handleSelectInstance(instance)}
                               className="transition cursor-pointer hover:bg-muted/30"
                             >
-                              <td className="px-3 py-2 text-slate-100 font-mono text-xs">
-                                {name}
-                              </td>
-                              <td className="px-3 py-2 text-slate-100 font-mono text-xs">
-                                {ns}
-                              </td>
+                              <td className="px-3 py-2 text-slate-100 font-mono text-xs">{name}</td>
+                              <td className="px-3 py-2 text-slate-100 font-mono text-xs">{ns}</td>
                               <td className="px-3 py-2 text-slate-100 font-mono text-xs">
                                 {formatRelativeAge(creationTimestamp)}
                               </td>

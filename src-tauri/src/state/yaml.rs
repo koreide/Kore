@@ -48,8 +48,7 @@ impl K8sState {
 
         match kind {
             ResourceKind::Pods => {
-                let api: Api<k8s_openapi::api::core::v1::Pod> =
-                    Api::namespaced(client, &namespace);
+                let api: Api<k8s_openapi::api::core::v1::Pod> = Api::namespaced(client, &namespace);
                 api.patch(&name, &pp, &Patch::Apply(&value))
                     .await
                     .map_err(K8sError::Kube)?;

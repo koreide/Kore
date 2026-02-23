@@ -16,11 +16,7 @@ import {
   Users,
   MessageSquare,
 } from "lucide-react";
-import {
-  listDeploymentRevisions,
-  rollbackDeployment,
-  getRevisionYaml,
-} from "@/lib/api";
+import { listDeploymentRevisions, rollbackDeployment, getRevisionYaml } from "@/lib/api";
 import type { DeploymentRevision } from "@/lib/api";
 import { formatError } from "@/lib/errors";
 import { ConfirmDialog } from "./confirm-dialog";
@@ -102,15 +98,11 @@ function escapeHtml(str: string): string {
     .replace(/"/g, "&quot;");
 }
 
-export function DeploymentRollback({
-  namespace,
-  deploymentName,
-}: DeploymentRollbackProps) {
+export function DeploymentRollback({ namespace, deploymentName }: DeploymentRollbackProps) {
   const [revisions, setRevisions] = useState<DeploymentRevision[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [rollbackTarget, setRollbackTarget] =
-    useState<DeploymentRevision | null>(null);
+  const [rollbackTarget, setRollbackTarget] = useState<DeploymentRevision | null>(null);
   const [isRollingBack, setIsRollingBack] = useState(false);
   const [yamlTarget, setYamlTarget] = useState<string | null>(null);
   const [yamlContent, setYamlContent] = useState<string>("");
@@ -141,15 +133,8 @@ export function DeploymentRollback({
     if (!rollbackTarget) return;
     setIsRollingBack(true);
     try {
-      await rollbackDeployment(
-        namespace,
-        deploymentName,
-        rollbackTarget.name,
-      );
-      toast(
-        `Rolled back to revision ${rollbackTarget.revision}`,
-        "success",
-      );
+      await rollbackDeployment(namespace, deploymentName, rollbackTarget.name);
+      toast(`Rolled back to revision ${rollbackTarget.revision}`, "success");
       setRollbackTarget(null);
       // Refresh the list
       fetchRevisions();
@@ -191,11 +176,7 @@ export function DeploymentRollback({
     return (
       <div className="p-4 space-y-3">
         {[...Array(3)].map((_, i) => (
-          <div
-            key={i}
-            className="skeleton h-20 rounded-lg"
-            style={{ opacity: 1 - i * 0.2 }}
-          />
+          <div key={i} className="skeleton h-20 rounded-lg" style={{ opacity: 1 - i * 0.2 }} />
         ))}
       </div>
     );
@@ -225,9 +206,7 @@ export function DeploymentRollback({
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <div className="flex items-center gap-2">
           <History className="w-4 h-4 text-accent" />
-          <h3 className="text-sm font-medium text-slate-200">
-            Revision History
-          </h3>
+          <h3 className="text-sm font-medium text-slate-200">Revision History</h3>
           <span className="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded-full">
             {revisions.length}
           </span>
@@ -254,18 +233,12 @@ export function DeploymentRollback({
                     exit={{ opacity: 0, y: -12 }}
                     transition={{ duration: 0.2, delay: i * 0.03 }}
                   >
-                    <div
-                      className={cn(
-                        "relative pl-9 group",
-                      )}
-                    >
+                    <div className={cn("relative pl-9 group")}>
                       {/* Timeline dot */}
                       <div
                         className={cn(
                           "absolute left-[11px] top-3.5 w-[9px] h-[9px] rounded-full border-2 z-10",
-                          isCurrent
-                            ? "border-accent bg-accent/30"
-                            : "border-slate-600 bg-surface",
+                          isCurrent ? "border-accent bg-accent/30" : "border-slate-600 bg-surface",
                         )}
                       />
 
@@ -280,11 +253,7 @@ export function DeploymentRollback({
                       >
                         {/* Main row */}
                         <button
-                          onClick={() =>
-                            setExpandedRevision(
-                              isExpanded ? null : rev.revision,
-                            )
-                          }
+                          onClick={() => setExpandedRevision(isExpanded ? null : rev.revision)}
                           className="w-full text-left px-3 py-2.5"
                         >
                           <div className="flex items-center gap-3">
@@ -303,9 +272,7 @@ export function DeploymentRollback({
                               <span
                                 className={cn(
                                   "font-mono text-xs font-medium",
-                                  isCurrent
-                                    ? "text-accent"
-                                    : "text-slate-300",
+                                  isCurrent ? "text-accent" : "text-slate-300",
                                 )}
                               >
                                 {rev.revision}
@@ -406,9 +373,7 @@ export function DeploymentRollback({
                                     )}
                                   >
                                     <FileCode2 className="w-3.5 h-3.5" />
-                                    {yamlTarget === rev.name
-                                      ? "Hide YAML"
-                                      : "View YAML"}
+                                    {yamlTarget === rev.name ? "Hide YAML" : "View YAML"}
                                   </button>
 
                                   {!isCurrent && (
@@ -475,9 +440,7 @@ export function DeploymentRollback({
                                             <pre
                                               className="font-mono text-xs leading-relaxed whitespace-pre-wrap"
                                               dangerouslySetInnerHTML={{
-                                                __html: highlightYaml(
-                                                  yamlContent,
-                                                ),
+                                                __html: highlightYaml(yamlContent),
                                               }}
                                             />
                                           </div>

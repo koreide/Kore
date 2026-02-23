@@ -41,8 +41,11 @@ impl K8sState {
                     .await
             }
             ResourceKind::Ingresses => {
-                self.list_typed::<k8s_openapi::api::networking::v1::Ingress>(namespace, label_selector)
-                    .await
+                self.list_typed::<k8s_openapi::api::networking::v1::Ingress>(
+                    namespace,
+                    label_selector,
+                )
+                .await
             }
             ResourceKind::Jobs => {
                 self.list_typed::<k8s_openapi::api::batch::v1::Job>(namespace, label_selector)
@@ -83,16 +86,12 @@ impl K8sState {
             lp = lp.labels(&labels);
         }
 
-        let list = api
-            .list(&lp)
-            .await
-            .map_err(K8sError::Kube)?;
+        let list = api.list(&lp).await.map_err(K8sError::Kube)?;
         let items: Vec<serde_json::Value> = list
             .items
             .iter()
             .map(|obj| {
-                serde_json::to_value(obj)
-                    .unwrap_or_else(|_| json!({ "name": obj.name_any() }))
+                serde_json::to_value(obj).unwrap_or_else(|_| json!({ "name": obj.name_any() }))
             })
             .collect();
 
@@ -123,16 +122,12 @@ impl K8sState {
             lp = lp.labels(&labels);
         }
 
-        let list = api
-            .list(&lp)
-            .await
-            .map_err(K8sError::Kube)?;
+        let list = api.list(&lp).await.map_err(K8sError::Kube)?;
         let items: Vec<serde_json::Value> = list
             .items
             .iter()
             .map(|obj| {
-                serde_json::to_value(obj)
-                    .unwrap_or_else(|_| json!({ "name": obj.name_any() }))
+                serde_json::to_value(obj).unwrap_or_else(|_| json!({ "name": obj.name_any() }))
             })
             .collect();
 
@@ -150,8 +145,7 @@ impl K8sState {
 
         match kind {
             ResourceKind::Pods => {
-                let api: Api<k8s_openapi::api::core::v1::Pod> =
-                    Api::namespaced(client, &namespace);
+                let api: Api<k8s_openapi::api::core::v1::Pod> = Api::namespaced(client, &namespace);
                 api.delete(&name, &dp).await.map_err(K8sError::Kube)?;
             }
             ResourceKind::Deployments => {
@@ -203,11 +197,7 @@ impl K8sState {
         Ok(())
     }
 
-    pub async fn get_pod(
-        &self,
-        namespace: String,
-        pod_name: String,
-    ) -> Result<serde_json::Value> {
+    pub async fn get_pod(&self, namespace: String, pod_name: String) -> Result<serde_json::Value> {
         let client = self.current_client().await?;
         let api: Api<k8s_openapi::api::core::v1::Pod> = Api::namespaced(client, &namespace);
         let pod = api.get(&pod_name).await.map_err(K8sError::Kube)?;
@@ -224,8 +214,7 @@ impl K8sState {
         let client = self.current_client().await?;
         match kind {
             ResourceKind::Pods => {
-                let api: Api<k8s_openapi::api::core::v1::Pod> =
-                    Api::namespaced(client, &namespace);
+                let api: Api<k8s_openapi::api::core::v1::Pod> = Api::namespaced(client, &namespace);
                 let obj = api.get(&name).await.map_err(K8sError::Kube)?;
                 serde_json::to_value(obj).map_err(K8sError::Serde)
             }
@@ -293,12 +282,10 @@ impl K8sState {
         name: String,
     ) -> Result<Vec<serde_json::Value>> {
         let client = self.current_client().await?;
-        let api: Api<k8s_openapi::api::core::v1::Event> =
-            Api::namespaced(client, &namespace);
+        let api: Api<k8s_openapi::api::core::v1::Event> = Api::namespaced(client, &namespace);
 
-        let field_selector = format!(
-            "involvedObject.name={name},involvedObject.namespace={namespace}"
-        );
+        let field_selector =
+            format!("involvedObject.name={name},involvedObject.namespace={namespace}");
         let lp = ListParams::default().fields(&field_selector);
 
         let list = api.list(&lp).await.map_err(K8sError::Kube)?;
@@ -306,8 +293,7 @@ impl K8sState {
             .items
             .iter()
             .map(|obj| {
-                serde_json::to_value(obj)
-                    .unwrap_or_else(|_| json!({ "name": obj.name_any() }))
+                serde_json::to_value(obj).unwrap_or_else(|_| json!({ "name": obj.name_any() }))
             })
             .collect();
 
@@ -322,8 +308,7 @@ impl K8sState {
         replicas: i32,
     ) -> Result<()> {
         let client = self.current_client().await?;
-        let api: Api<k8s_openapi::api::apps::v1::Deployment> =
-            Api::namespaced(client, &namespace);
+        let api: Api<k8s_openapi::api::apps::v1::Deployment> = Api::namespaced(client, &namespace);
 
         let patch = json!({
             "spec": {
@@ -343,14 +328,9 @@ impl K8sState {
     }
 
     /// Restart a deployment (equivalent to kubectl rollout restart).
-    pub async fn restart_deployment(
-        &self,
-        namespace: String,
-        name: String,
-    ) -> Result<()> {
+    pub async fn restart_deployment(&self, namespace: String, name: String) -> Result<()> {
         let client = self.current_client().await?;
-        let api: Api<k8s_openapi::api::apps::v1::Deployment> =
-            Api::namespaced(client, &namespace);
+        let api: Api<k8s_openapi::api::apps::v1::Deployment> = Api::namespaced(client, &namespace);
 
         let now = chrono::Utc::now().to_rfc3339();
         let patch = json!({
@@ -420,7 +400,9 @@ impl K8sState {
                         .to_lowercase();
 
                     if name.contains(&query_lower) {
-                        if let Some(obj) = item.as_object_mut() { obj.insert("_kind".to_string(), json!(kind_name)); }
+                        if let Some(obj) = item.as_object_mut() {
+                            obj.insert("_kind".to_string(), json!(kind_name));
+                        }
                         results.push(item);
                     }
                 }

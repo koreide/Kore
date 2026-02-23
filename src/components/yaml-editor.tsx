@@ -1,15 +1,6 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Copy,
-  RotateCcw,
-  Pencil,
-  Lock,
-  Save,
-  GitCompareArrows,
-  Loader2,
-  X,
-} from "lucide-react";
+import { Copy, RotateCcw, Pencil, Lock, Save, GitCompareArrows, Loader2, X } from "lucide-react";
 import { getResourceYaml, applyResourceYaml, diffResourceYaml } from "@/lib/api";
 import type { DiffLine } from "@/lib/api";
 import { formatError } from "@/lib/errors";
@@ -24,7 +15,20 @@ interface YamlEditorProps {
 }
 
 function YamlSkeleton() {
-  const widths = ["85%", "60%", "75%", "40%", "90%", "50%", "70%", "55%", "80%", "45%", "65%", "35%"];
+  const widths = [
+    "85%",
+    "60%",
+    "75%",
+    "40%",
+    "90%",
+    "50%",
+    "70%",
+    "55%",
+    "80%",
+    "45%",
+    "65%",
+    "35%",
+  ];
   return (
     <div className="p-4 space-y-2.5">
       {widths.map((w, i) => (

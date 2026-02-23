@@ -1,12 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Minus, Plus, RefreshCw, Trash2 } from "lucide-react";
-import {
-  deleteResource,
-  describeResource,
-  scaleDeployment,
-  restartDeployment,
-} from "@/lib/api";
+import { deleteResource, describeResource, scaleDeployment, restartDeployment } from "@/lib/api";
 import { formatError } from "@/lib/errors";
 import type { ResourceItem } from "@/lib/types";
 import { EventsTimeline } from "./events-timeline";
@@ -32,10 +27,7 @@ function Kbd({ children }: { children: React.ReactNode }) {
 
 function highlightJson(json: string): string {
   return json
-    .replace(
-      /("(?:[^"\\]|\\.)*")\s*:/g,
-      '<span class="text-accent">$1</span>:',
-    )
+    .replace(/("(?:[^"\\]|\\.)*")\s*:/g, '<span class="text-accent">$1</span>:')
     .replace(
       /:\s*("(?:[^"\\]|\\.)*")/g,
       (_match, value) => `: <span class="text-emerald-400">${value}</span>`,
@@ -46,7 +38,9 @@ function highlightJson(json: string): string {
 }
 
 export function DeploymentDetailsView({ deployment, onBack }: DeploymentDetailsViewProps) {
-  const [activeTab, setActiveTab] = useState<"describe" | "yaml" | "rollback" | "logs" | "events">("describe");
+  const [activeTab, setActiveTab] = useState<"describe" | "yaml" | "rollback" | "logs" | "events">(
+    "describe",
+  );
   const [describe, setDescribe] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -240,7 +234,9 @@ export function DeploymentDetailsView({ deployment, onBack }: DeploymentDetailsV
             <div className="text-slate-100 font-mono text-xs">{name}</div>
           </div>
           <div>
-            <div className="text-slate-500 text-[10px] uppercase tracking-wider mb-1">Namespace</div>
+            <div className="text-slate-500 text-[10px] uppercase tracking-wider mb-1">
+              Namespace
+            </div>
             <div className="text-slate-100 font-mono text-xs">{namespace}</div>
           </div>
           <div>
@@ -248,11 +244,15 @@ export function DeploymentDetailsView({ deployment, onBack }: DeploymentDetailsV
             <div className="text-slate-100 font-mono text-xs">{deployment.ready || "-"}</div>
           </div>
           <div>
-            <div className="text-slate-500 text-[10px] uppercase tracking-wider mb-1">Up-to-date</div>
+            <div className="text-slate-500 text-[10px] uppercase tracking-wider mb-1">
+              Up-to-date
+            </div>
             <div className="text-slate-100 font-mono text-xs">{deployment.upToDate ?? "-"}</div>
           </div>
           <div>
-            <div className="text-slate-500 text-[10px] uppercase tracking-wider mb-1">Available</div>
+            <div className="text-slate-500 text-[10px] uppercase tracking-wider mb-1">
+              Available
+            </div>
             <div className="text-slate-100 font-mono text-xs">{deployment.available ?? "-"}</div>
           </div>
         </div>

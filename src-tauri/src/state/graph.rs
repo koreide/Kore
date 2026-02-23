@@ -46,29 +46,39 @@ impl K8sState {
         let mut edges = Vec::new();
 
         // Helper to extract pod labels
-        let pod_labels: Vec<(String, String, String, std::collections::HashMap<String, String>)> =
-            pods.as_ref()
-                .unwrap_or(&vec![])
-                .iter()
-                .filter_map(|p| {
-                    let name = p.pointer("/metadata/name")?.as_str()?.to_string();
-                    let ns = p
-                        .pointer("/metadata/namespace")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("")
-                        .to_string();
-                    let status = p
-                        .pointer("/status/phase")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("Unknown")
-                        .to_string();
-                    let labels = p
-                        .pointer("/metadata/labels")
-                        .and_then(|v| serde_json::from_value::<std::collections::HashMap<String, String>>(v.clone()).ok())
-                        .unwrap_or_default();
-                    Some((name, ns, status, labels))
-                })
-                .collect();
+        let pod_labels: Vec<(
+            String,
+            String,
+            String,
+            std::collections::HashMap<String, String>,
+        )> = pods
+            .as_ref()
+            .unwrap_or(&vec![])
+            .iter()
+            .filter_map(|p| {
+                let name = p.pointer("/metadata/name")?.as_str()?.to_string();
+                let ns = p
+                    .pointer("/metadata/namespace")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                let status = p
+                    .pointer("/status/phase")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("Unknown")
+                    .to_string();
+                let labels = p
+                    .pointer("/metadata/labels")
+                    .and_then(|v| {
+                        serde_json::from_value::<std::collections::HashMap<String, String>>(
+                            v.clone(),
+                        )
+                        .ok()
+                    })
+                    .unwrap_or_default();
+                Some((name, ns, status, labels))
+            })
+            .collect();
 
         // Add pod nodes
         for (name, ns, status, _) in &pod_labels {
@@ -142,7 +152,10 @@ impl K8sState {
             });
 
             // Deployment -> ReplicaSet edges
-            if let Some(owners) = rs.pointer("/metadata/ownerReferences").and_then(|v| v.as_array()) {
+            if let Some(owners) = rs
+                .pointer("/metadata/ownerReferences")
+                .and_then(|v| v.as_array())
+            {
                 for owner in owners {
                     if owner.get("kind").and_then(|v| v.as_str()) == Some("Deployment") {
                         let owner_name = owner.get("name").and_then(|v| v.as_str()).unwrap_or("");
@@ -167,7 +180,10 @@ impl K8sState {
                 .and_then(|v| v.as_str())
                 .unwrap_or("");
 
-            if let Some(owners) = pod.pointer("/metadata/ownerReferences").and_then(|v| v.as_array()) {
+            if let Some(owners) = pod
+                .pointer("/metadata/ownerReferences")
+                .and_then(|v| v.as_array())
+            {
                 for owner in owners {
                     let owner_kind = owner.get("kind").and_then(|v| v.as_str()).unwrap_or("");
                     let owner_name = owner.get("name").and_then(|v| v.as_str()).unwrap_or("");
@@ -204,13 +220,14 @@ impl K8sState {
             });
 
             // Match selector to pod labels
-            if let Some(selector) = svc
-                .pointer("/spec/selector")
-                .and_then(|v| serde_json::from_value::<std::collections::HashMap<String, String>>(v.clone()).ok())
-            {
+            if let Some(selector) = svc.pointer("/spec/selector").and_then(|v| {
+                serde_json::from_value::<std::collections::HashMap<String, String>>(v.clone()).ok()
+            }) {
                 for (pod_name, pod_ns, _, labels) in &pod_labels {
                     if pod_ns == ns
-                        && selector.iter().all(|(k, v)| labels.get(k).map(|lv| lv == v).unwrap_or(false))
+                        && selector
+                            .iter()
+                            .all(|(k, v)| labels.get(k).map(|lv| lv == v).unwrap_or(false))
                     {
                         edges.push(GraphEdge {
                             source: make_id("Service", ns, name),
@@ -293,7 +310,10 @@ impl K8sState {
                 status,
             });
 
-            if let Some(owners) = job.pointer("/metadata/ownerReferences").and_then(|v| v.as_array()) {
+            if let Some(owners) = job
+                .pointer("/metadata/ownerReferences")
+                .and_then(|v| v.as_array())
+            {
                 for owner in owners {
                     if owner.get("kind").and_then(|v| v.as_str()) == Some("CronJob") {
                         let owner_name = owner.get("name").and_then(|v| v.as_str()).unwrap_or("");
@@ -331,10 +351,7 @@ impl K8sState {
     }
 
     /// List ReplicaSets (internal helper for graph building).
-    async fn list_replicasets(
-        &self,
-        namespace: Option<String>,
-    ) -> Result<Vec<serde_json::Value>> {
+    async fn list_replicasets(&self, namespace: Option<String>) -> Result<Vec<serde_json::Value>> {
         let client = self.current_client().await?;
         let api: Api<k8s_openapi::api::apps::v1::ReplicaSet> = match namespace {
             Some(ns) => Api::namespaced(client, &ns),

@@ -291,10 +291,7 @@ impl K8sState {
             .collect();
 
         // Calculate health score (0-100)
-        let node_ok = node_health
-            .iter()
-            .filter(|n| n.status == "Ready")
-            .count() as f64;
+        let node_ok = node_health.iter().filter(|n| n.status == "Ready").count() as f64;
         let node_total = node_health.len().max(1) as f64;
         let node_score = (node_ok / node_total) * 30.0;
 
@@ -306,8 +303,9 @@ impl K8sState {
         let pending_penalty = (pending as f64 * 2.0).min(10.0);
         let warning_penalty = (recent_warnings.len() as f64 * 0.5).min(5.0);
 
-        let score = (node_score + pod_score + 30.0 - crash_penalty - pending_penalty - warning_penalty)
-            .clamp(0.0, 100.0) as u32;
+        let score =
+            (node_score + pod_score + 30.0 - crash_penalty - pending_penalty - warning_penalty)
+                .clamp(0.0, 100.0) as u32;
 
         Ok(ClusterHealth {
             score,

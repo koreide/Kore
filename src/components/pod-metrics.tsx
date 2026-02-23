@@ -138,8 +138,7 @@ export function PodMetrics({ namespace, podName }: PodMetricsProps) {
       });
 
       const limits = getLimits();
-      const cpuLimit =
-        limits.cpu > 0 ? limits.cpu : totalCpuUsage > 0 ? totalCpuUsage * 2 : 1000;
+      const cpuLimit = limits.cpu > 0 ? limits.cpu : totalCpuUsage > 0 ? totalCpuUsage * 2 : 1000;
       const memoryLimit =
         limits.memory > 0
           ? limits.memory
@@ -305,9 +304,7 @@ export function PodMetrics({ namespace, podName }: PodMetricsProps) {
                 cy="50"
                 r="40"
                 fill="none"
-                stroke={
-                  memoryPercent > 80 ? "#ef4444" : memoryPercent > 60 ? "#f59e0b" : "#10b981"
-                }
+                stroke={memoryPercent > 80 ? "#ef4444" : memoryPercent > 60 ? "#f59e0b" : "#10b981"}
                 strokeWidth="8"
                 strokeDasharray={`${2 * Math.PI * 40}`}
                 strokeDashoffset={`${2 * Math.PI * 40 * (1 - Math.min(memoryPercent, 100) / 100)}`}
@@ -328,11 +325,7 @@ export function PodMetrics({ namespace, podName }: PodMetricsProps) {
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={history}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgb(51 65 85)" />
-              <XAxis
-                dataKey="timeLabel"
-                stroke="rgb(148 163 184)"
-                style={{ fontSize: "10px" }}
-              />
+              <XAxis dataKey="timeLabel" stroke="rgb(148 163 184)" style={{ fontSize: "10px" }} />
               <YAxis
                 stroke="rgb(148 163 184)"
                 style={{ fontSize: "10px" }}

@@ -64,7 +64,10 @@ function nextSessionId(): string {
 
 const quickActions = [
   { label: "Diagnose", prompt: "Diagnose this resource and identify any issues." },
-  { label: "Why is this failing?", prompt: "Why is this resource failing? Analyze the status, events, and conditions." },
+  {
+    label: "Why is this failing?",
+    prompt: "Why is this resource failing? Analyze the status, events, and conditions.",
+  },
   { label: "Suggest fixes", prompt: "Suggest fixes for the current issues with this resource." },
 ];
 
@@ -192,10 +195,7 @@ export function AIPanel({ open, onClose, resourceContext }: AIPanelProps) {
       } catch (err) {
         setIsStreaming(false);
         const errMsg = err instanceof Error ? err.message : String(err);
-        setMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: `[Error: ${errMsg}]` },
-        ]);
+        setMessages((prev) => [...prev, { role: "assistant", content: `[Error: ${errMsg}]` }]);
       }
     },
     [isStreaming, resourceContext],
@@ -321,9 +321,7 @@ export function AIPanel({ open, onClose, resourceContext }: AIPanelProps) {
                   <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center mb-4">
                     <Bot className="w-7 h-7 text-accent/60" />
                   </div>
-                  <p className="text-sm text-slate-400 mb-1">
-                    Ask about your Kubernetes resources
-                  </p>
+                  <p className="text-sm text-slate-400 mb-1">Ask about your Kubernetes resources</p>
                   <p className="text-xs text-slate-600">
                     Diagnose issues, understand failures, and get fix suggestions.
                   </p>
@@ -393,9 +391,7 @@ export function AIPanel({ open, onClose, resourceContext }: AIPanelProps) {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder={
-                    isStreaming
-                      ? "Waiting for response..."
-                      : "Ask about this resource..."
+                    isStreaming ? "Waiting for response..." : "Ask about this resource..."
                   }
                   disabled={isStreaming}
                   className={cn(

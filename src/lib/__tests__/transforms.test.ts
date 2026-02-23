@@ -155,7 +155,7 @@ describe("toResourceItem", () => {
 
   it("shows <none> for roles when no role labels exist", () => {
     const node: KubernetesObject = {
-      metadata: { name: "worker", labels: { "app": "test" } },
+      metadata: { name: "worker", labels: { app: "test" } },
       status: {},
     };
 

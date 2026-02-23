@@ -71,8 +71,15 @@ function Kbd({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  const { contexts, currentContext, namespaces, namespace, setNamespace, handleContextChange, refreshNamespaces } =
-    useK8sContext();
+  const {
+    contexts,
+    currentContext,
+    namespaces,
+    namespace,
+    setNamespace,
+    handleContextChange,
+    refreshNamespaces,
+  } = useK8sContext();
   const [kind, setKind] = useState<ResourceKind>("pods");
   const [selected, setSelected] = useState<ResourceItem | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -83,7 +90,10 @@ export default function App() {
   const [labelFilters, setLabelFilters] = useState<string[]>([]);
   const [showLabelFilter, setShowLabelFilter] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
-  const [selectedHelmRelease, setSelectedHelmRelease] = useState<{ name: string; namespace: string } | null>(null);
+  const [selectedHelmRelease, setSelectedHelmRelease] = useState<{
+    name: string;
+    namespace: string;
+  } | null>(null);
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
   const [multiCluster, setMultiCluster] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -178,7 +188,11 @@ export default function App() {
         } else if (e.key === "k") {
           e.preventDefault();
           setSelectedRowIndex((i) => Math.max(i - 1, 0));
-        } else if (e.key === "l" && selectedRowIndex >= 0 && selectedRowIndex < filteredResources.length) {
+        } else if (
+          e.key === "l" &&
+          selectedRowIndex >= 0 &&
+          selectedRowIndex < filteredResources.length
+        ) {
           e.preventDefault();
           handleRowSelect(filteredResources[selectedRowIndex]);
         }
@@ -188,7 +202,15 @@ export default function App() {
         handleBack();
       }
     },
-    [viewMode, paletteOpen, shortcutsOpen, filteredResources, selectedRowIndex, handleRowSelect, handleBack],
+    [
+      viewMode,
+      paletteOpen,
+      shortcutsOpen,
+      filteredResources,
+      selectedRowIndex,
+      handleRowSelect,
+      handleBack,
+    ],
   );
 
   useEffect(() => {
@@ -211,14 +233,11 @@ export default function App() {
     [],
   );
 
-  const handlePinSelect = useCallback(
-    (pinKind: string, name: string, ns: string) => {
-      setKind(pinKind as ResourceKind);
-      setSelected({ name, namespace: ns });
-      setViewMode("details");
-    },
-    [],
-  );
+  const handlePinSelect = useCallback((pinKind: string, name: string, ns: string) => {
+    setKind(pinKind as ResourceKind);
+    setSelected({ name, namespace: ns });
+    setViewMode("details");
+  }, []);
 
   const handleRowAction = useCallback(
     (action: string, row: ResourceItem) => {
@@ -229,7 +248,12 @@ export default function App() {
           name: row.name,
           namespace: row.namespace || "default",
         });
-      } else if (action === "logs" || action === "exec" || action === "port-forward" || action === "describe") {
+      } else if (
+        action === "logs" ||
+        action === "exec" ||
+        action === "port-forward" ||
+        action === "describe"
+      ) {
         setSelected(row);
         setViewMode("details");
       } else if (action === "scale" || action === "restart") {
@@ -254,33 +278,27 @@ export default function App() {
     setDeleteConfirm((prev) => ({ ...prev, open: false }));
   }, [deleteConfirm, toast]);
 
-  const handleDashboardNavigate = useCallback(
-    (navKind: string, name: string, ns: string) => {
-      setKind(navKind as ResourceKind);
-      setSelected({ name, namespace: ns });
-      setViewMode("details");
-    },
-    [],
-  );
+  const handleDashboardNavigate = useCallback((navKind: string, name: string, ns: string) => {
+    setKind(navKind as ResourceKind);
+    setSelected({ name, namespace: ns });
+    setViewMode("details");
+  }, []);
 
-  const handleGraphSelect = useCallback(
-    (graphKind: string, name: string, ns: string) => {
-      const kindMap: Record<string, ResourceKind> = {
-        Pod: "pods",
-        Deployment: "deployments",
-        Service: "services",
-        Ingress: "ingresses",
-        Job: "jobs",
-        CronJob: "cronjobs",
-        ReplicaSet: "deployments",
-      };
-      const k = kindMap[graphKind] || "pods";
-      setKind(k);
-      setSelected({ name, namespace: ns });
-      setViewMode("details");
-    },
-    [],
-  );
+  const handleGraphSelect = useCallback((graphKind: string, name: string, ns: string) => {
+    const kindMap: Record<string, ResourceKind> = {
+      Pod: "pods",
+      Deployment: "deployments",
+      Service: "services",
+      Ingress: "ingresses",
+      Job: "jobs",
+      CronJob: "cronjobs",
+      ReplicaSet: "deployments",
+    };
+    const k = kindMap[graphKind] || "pods";
+    setKind(k);
+    setSelected({ name, namespace: ns });
+    setViewMode("details");
+  }, []);
 
   const handleHelmSelect = useCallback((release: { name: string; namespace: string }) => {
     setSelectedHelmRelease(release);
@@ -387,10 +405,7 @@ export default function App() {
         <section className="overflow-hidden relative">
           <AnimatePresence mode="wait">
             {viewMode === "dashboard" ? (
-              <ClusterDashboard
-                key="dashboard"
-                onNavigateToResource={handleDashboardNavigate}
-              />
+              <ClusterDashboard key="dashboard" onNavigateToResource={handleDashboardNavigate} />
             ) : viewMode === "graph" ? (
               <ResourceGraphView
                 key="graph"
@@ -410,16 +425,9 @@ export default function App() {
                 onSelectRelease={handleHelmSelect}
               />
             ) : viewMode === "helm-detail" && selectedHelmRelease ? (
-              <HelmDetailView
-                key="helm-detail"
-                release={selectedHelmRelease}
-                onBack={handleBack}
-              />
+              <HelmDetailView key="helm-detail" release={selectedHelmRelease} onBack={handleBack} />
             ) : viewMode === "settings" ? (
-              <SettingsPage
-                key="settings"
-                onBack={() => setViewMode("table")}
-              />
+              <SettingsPage key="settings" onBack={() => setViewMode("table")} />
             ) : isTableView ? (
               loading ? (
                 <SkeletonTable key="skeleton" />
@@ -474,10 +482,7 @@ export default function App() {
         }}
       />
 
-      <ShortcutOverlay
-        open={shortcutsOpen}
-        onClose={() => setShortcutsOpen(false)}
-      />
+      <ShortcutOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
 
       <ConfirmDialog
         open={deleteConfirm.open}

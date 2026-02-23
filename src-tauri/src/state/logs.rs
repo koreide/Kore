@@ -94,9 +94,7 @@ impl K8sState {
             let stream = match api.log_stream(&pn, &lp).await {
                 Ok(stream) => stream,
                 Err(err) => {
-                    if let Err(e) =
-                        handle.emit(&event_name, &json!({ "error": err.to_string() }))
-                    {
+                    if let Err(e) = handle.emit(&event_name, &json!({ "error": err.to_string() })) {
                         error!(error = %e, "Failed to emit log error");
                     }
                     return;
