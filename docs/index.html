@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kore — A Native Kubernetes IDE</title>
-  <meta name="description" content="Kore is a native Kubernetes IDE built with Tauri v2, Rust, and React. Real-time streaming, AI troubleshooting, dependency graphs, and more. Available for macOS and Windows.">
-  <meta property="og:title" content="Kore — A Native Kubernetes IDE">
-  <meta property="og:description" content="A native Kubernetes IDE that doesn't suck. Tauri v2 + Rust + React. Not Electron. Not a browser tab.">
+  <title>Kore — AI-Powered Kubernetes IDE</title>
+  <meta name="description" content="Kore is an AI-powered Kubernetes IDE. Ask your cluster anything — diagnose crashes, find resources, troubleshoot issues with natural language. Native desktop app built with Tauri v2, Rust, and React.">
+  <meta property="og:title" content="Kore — AI-Powered Kubernetes IDE">
+  <meta property="og:description" content="Ask your cluster anything. AI-powered Kubernetes IDE with native performance. Not Electron. Not a browser tab.">
   <meta property="og:image" content="icon.png">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
@@ -258,8 +258,9 @@
     .col-restarts { flex: 0.8; min-width: 0; text-align: center; }
     .col-age { flex: 0.7; min-width: 0; }
 
-    @media (max-width: 900px) { .app-preview-window { max-width: 100%; } .prev-sidebar { width: 180px; } .app-body { height: 360px; } }
-    @media (max-width: 640px) { .prev-sidebar { display: none; } }
+    @media (max-width: 900px) { .app-preview-window { max-width: 100%; } .prev-sidebar { width: 180px; } .app-body { height: 360px; } .prev-ai-panel { width: 240px !important; } }
+    @media (max-width: 640px) { .prev-sidebar { display: none; } .prev-ai-panel { width: 220px !important; } }
+    @media (max-width: 480px) { .prev-ai-panel { display: none !important; } }
 
     /* ---- Features Grid ---- */
     .features-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
@@ -448,8 +449,8 @@
   <div class="container" style="position:relative;z-index:1;">
     <img src="icon.png" alt="Kore" class="hero-icon">
     <h1 class="gradient-text">Kore</h1>
-    <p class="tagline">A native Kubernetes IDE that doesn't suck</p>
-    <p class="sub">Tauri v2 + Rust + React. macOS &amp; Windows. Not Electron. Not a browser tab.</p>
+    <p class="tagline">The AI-powered Kubernetes IDE</p>
+    <p class="sub">Ask your cluster anything. Diagnose crashes, troubleshoot issues, and manage resources — all with natural language.</p>
     <div class="hero-buttons">
       <a href="https://github.com/eladbash/kore/releases/latest" target="_blank" rel="noopener" class="btn btn-primary">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -536,101 +537,97 @@
         </div>
 
         <!-- Main -->
-        <div class="prev-main">
-          <div class="prev-header">
-            <div class="prev-kind-label">Pods</div>
-            <div class="prev-search">
-              <span class="prev-search-icon">&#128269;</span>
-              <div class="prev-search-input">Search pods...</div>
-              <span class="prev-search-hint">/</span>
+        <div class="prev-main" style="display:flex;flex-direction:row;">
+          <!-- Resource table (narrower) -->
+          <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+            <div class="prev-header">
+              <div class="prev-kind-label">Pods</div>
+              <div class="prev-search">
+                <span class="prev-search-icon">&#128269;</span>
+                <div class="prev-search-input">Search pods...</div>
+                <span class="prev-search-hint">/</span>
+              </div>
+              <div class="prev-header-actions">
+                <div class="prev-ctx-badge">production</div>
+              </div>
             </div>
-            <div class="prev-header-actions">
-              <div class="prev-ctx-badge">production</div>
-              <div class="prev-btn-icon" title="AI">&#10024;</div>
+            <div class="prev-table">
+              <div class="prev-tbl-header">
+                <span class="prev-tbl-th col-pin"></span>
+                <span class="prev-tbl-th col-name">Name</span>
+                <span class="prev-tbl-th col-status">Status</span>
+                <span class="prev-tbl-th col-restarts">Restarts</span>
+              </div>
+              <div class="prev-tbl-row">
+                <span class="col-pin"><span class="prev-star pinned">&#9733;</span></span>
+                <span class="prev-tbl-cell col-name">api-gateway-7f8d4b6c9-x2k</span>
+                <span class="col-status"><span class="prev-status running"><span class="prev-status-dot"></span>Running</span></span>
+                <span class="prev-tbl-cell col-restarts dim" style="text-align:center">0</span>
+              </div>
+              <div class="prev-tbl-row">
+                <span class="col-pin"><span class="prev-star">&#9734;</span></span>
+                <span class="prev-tbl-cell col-name">auth-service-3b2c1d8f7-m9p</span>
+                <span class="col-status"><span class="prev-status running"><span class="prev-status-dot"></span>Running</span></span>
+                <span class="prev-tbl-cell col-restarts dim" style="text-align:center">0</span>
+              </div>
+              <div class="prev-tbl-row selected">
+                <span class="col-pin"><span class="prev-star">&#9734;</span></span>
+                <span class="prev-tbl-cell col-name">payment-worker-9a4f2e1d3-q7</span>
+                <span class="col-status"><span class="prev-status failed"><span class="prev-status-dot"></span>CrashLoopBackOff</span></span>
+                <span class="prev-tbl-cell col-restarts" style="text-align:center;color:#ef4444">14</span>
+              </div>
+              <div class="prev-tbl-row">
+                <span class="col-pin"><span class="prev-star">&#9734;</span></span>
+                <span class="prev-tbl-cell col-name">cache-redis-0</span>
+                <span class="col-status"><span class="prev-status pending"><span class="prev-status-dot"></span>Pending</span></span>
+                <span class="prev-tbl-cell col-restarts dim" style="text-align:center">0</span>
+              </div>
+              <div class="prev-tbl-row">
+                <span class="col-pin"><span class="prev-star">&#9734;</span></span>
+                <span class="prev-tbl-cell col-name">frontend-next-8c3d7a5b2-j4</span>
+                <span class="col-status"><span class="prev-status running"><span class="prev-status-dot"></span>Running</span></span>
+                <span class="prev-tbl-cell col-restarts dim" style="text-align:center">1</span>
+              </div>
+              <div class="prev-tbl-row">
+                <span class="col-pin"><span class="prev-star">&#9734;</span></span>
+                <span class="prev-tbl-cell col-name">postgres-primary-0</span>
+                <span class="col-status"><span class="prev-status running"><span class="prev-status-dot"></span>Running</span></span>
+                <span class="prev-tbl-cell col-restarts dim" style="text-align:center">0</span>
+              </div>
             </div>
           </div>
-
-          <div class="prev-table">
-            <div class="prev-tbl-header">
-              <span class="prev-tbl-th col-pin"></span>
-              <span class="prev-tbl-th col-name">Name</span>
-              <span class="prev-tbl-th col-ns">Namespace</span>
-              <span class="prev-tbl-th col-status">Status</span>
-              <span class="prev-tbl-th col-ready">Ready</span>
-              <span class="prev-tbl-th col-restarts">Restarts</span>
-              <span class="prev-tbl-th col-age">Age</span>
+          <!-- AI Panel (open) -->
+          <div class="prev-ai-panel" style="width:280px;flex-shrink:0;border-left:1px solid var(--border-solid);display:flex;flex-direction:column;background:rgba(16,24,40,0.5);">
+            <div style="padding:10px 14px;border-bottom:1px solid var(--border-solid);background:rgba(16,24,40,0.8);display:flex;align-items:center;gap:8px;">
+              <div style="width:24px;height:24px;border-radius:6px;background:rgba(88,208,255,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#58d0ff" stroke-width="2"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M9 13v2"/><path d="M15 13v2"/></svg>
+              </div>
+              <div style="flex:1;">
+                <div style="font-size:11px;font-weight:600;color:var(--text-primary);">AI Assistant</div>
+                <div style="font-size:8px;color:#475569;">Cluster-aware</div>
+              </div>
+              <div style="color:#475569;font-size:12px;">&times;</div>
             </div>
-            <div class="prev-tbl-row selected">
-              <span class="col-pin"><span class="prev-star pinned">&#9733;</span></span>
-              <span class="prev-tbl-cell col-name">api-gateway-7f8d4b6c9-x2k</span>
-              <span class="prev-tbl-cell col-ns dim">production</span>
-              <span class="col-status"><span class="prev-status running"><span class="prev-status-dot"></span>Running</span></span>
-              <span class="prev-tbl-cell col-ready dim" style="text-align:center">1/1</span>
-              <span class="prev-tbl-cell col-restarts dim" style="text-align:center">0</span>
-              <span class="prev-tbl-cell col-age dim">2d</span>
+            <div style="padding:5px 10px;background:rgba(88,208,255,0.04);border-bottom:1px solid rgba(255,255,255,0.03);font-size:9px;color:var(--accent);font-family:var(--font-mono);display:flex;align-items:center;gap:4px;">
+              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>
+              pod/production/payment-worker-9a4f2
             </div>
-            <div class="prev-tbl-row">
-              <span class="col-pin"><span class="prev-star">&#9734;</span></span>
-              <span class="prev-tbl-cell col-name">auth-service-3b2c1d8f7-m9p</span>
-              <span class="prev-tbl-cell col-ns dim">production</span>
-              <span class="col-status"><span class="prev-status running"><span class="prev-status-dot"></span>Running</span></span>
-              <span class="prev-tbl-cell col-ready dim" style="text-align:center">1/1</span>
-              <span class="prev-tbl-cell col-restarts dim" style="text-align:center">0</span>
-              <span class="prev-tbl-cell col-age dim">5d</span>
+            <div style="flex:1;padding:10px;overflow:hidden;display:flex;flex-direction:column;gap:6px;">
+              <div style="max-width:90%;border-radius:8px;padding:6px 10px;font-size:10px;line-height:1.4;background:rgba(88,208,255,0.12);color:var(--text-primary);margin-left:auto;border-bottom-right-radius:2px;">Why is this pod crashing?</div>
+              <div style="max-width:90%;border-radius:8px;padding:6px 10px;font-size:10px;line-height:1.4;background:rgba(29,41,57,0.6);color:#cbd5e1;border:1px solid rgba(255,255,255,0.03);border-bottom-left-radius:2px;">
+                <span style="color:var(--accent);font-weight:600;">payment-worker-9a4f2</span> is in CrashLoopBackOff (14 restarts).<br><br>
+                <span style="color:#f87171;">Error: REDIS_URL env var not set</span><br><br>
+                ConfigMap <span style="color:var(--accent);">payment-config</span> is missing the <span style="color:var(--accent);">REDIS_URL</span> key. Add it to fix the crash.
+              </div>
+              <div style="max-width:90%;border-radius:8px;padding:6px 10px;font-size:10px;line-height:1.4;background:rgba(88,208,255,0.12);color:var(--text-primary);margin-left:auto;border-bottom-right-radius:2px;">Show me the fix</div>
             </div>
-            <div class="prev-tbl-row">
-              <span class="col-pin"><span class="prev-star">&#9734;</span></span>
-              <span class="prev-tbl-cell col-name">payment-worker-9a4f2e1d3-q7</span>
-              <span class="prev-tbl-cell col-ns dim">production</span>
-              <span class="col-status"><span class="prev-status failed"><span class="prev-status-dot"></span>CrashLoopBackOff</span></span>
-              <span class="prev-tbl-cell col-ready dim" style="text-align:center">0/1</span>
-              <span class="prev-tbl-cell col-restarts" style="text-align:center;color:#ef4444">14</span>
-              <span class="prev-tbl-cell col-age dim">1h</span>
+            <div style="display:flex;align-items:center;gap:4px;font-size:9px;color:#475569;padding:0 10px 4px;">
+              <div style="width:10px;height:10px;border:1.5px solid rgba(88,208,255,0.3);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+              Thinking...
             </div>
-            <div class="prev-tbl-row">
-              <span class="col-pin"><span class="prev-star">&#9734;</span></span>
-              <span class="prev-tbl-cell col-name">cache-redis-0</span>
-              <span class="prev-tbl-cell col-ns dim">production</span>
-              <span class="col-status"><span class="prev-status pending"><span class="prev-status-dot"></span>Pending</span></span>
-              <span class="prev-tbl-cell col-ready dim" style="text-align:center">0/1</span>
-              <span class="prev-tbl-cell col-restarts dim" style="text-align:center">0</span>
-              <span class="prev-tbl-cell col-age dim">3m</span>
-            </div>
-            <div class="prev-tbl-row">
-              <span class="col-pin"><span class="prev-star">&#9734;</span></span>
-              <span class="prev-tbl-cell col-name">frontend-next-8c3d7a5b2-j4</span>
-              <span class="prev-tbl-cell col-ns dim">production</span>
-              <span class="col-status"><span class="prev-status running"><span class="prev-status-dot"></span>Running</span></span>
-              <span class="prev-tbl-cell col-ready dim" style="text-align:center">1/1</span>
-              <span class="prev-tbl-cell col-restarts dim" style="text-align:center">1</span>
-              <span class="prev-tbl-cell col-age dim">12h</span>
-            </div>
-            <div class="prev-tbl-row">
-              <span class="col-pin"><span class="prev-star">&#9734;</span></span>
-              <span class="prev-tbl-cell col-name">metrics-collector-5d9a2c-k8</span>
-              <span class="prev-tbl-cell col-ns dim">production</span>
-              <span class="col-status"><span class="prev-status running"><span class="prev-status-dot"></span>Running</span></span>
-              <span class="prev-tbl-cell col-ready dim" style="text-align:center">1/1</span>
-              <span class="prev-tbl-cell col-restarts dim" style="text-align:center">0</span>
-              <span class="prev-tbl-cell col-age dim">3d</span>
-            </div>
-            <div class="prev-tbl-row">
-              <span class="col-pin"><span class="prev-star">&#9734;</span></span>
-              <span class="prev-tbl-cell col-name">notification-svc-1a7b3e-r2</span>
-              <span class="prev-tbl-cell col-ns dim">production</span>
-              <span class="col-status"><span class="prev-status running"><span class="prev-status-dot"></span>Running</span></span>
-              <span class="prev-tbl-cell col-ready dim" style="text-align:center">1/1</span>
-              <span class="prev-tbl-cell col-restarts dim" style="text-align:center">0</span>
-              <span class="prev-tbl-cell col-age dim">1d</span>
-            </div>
-            <div class="prev-tbl-row">
-              <span class="col-pin"><span class="prev-star pinned">&#9733;</span></span>
-              <span class="prev-tbl-cell col-name">postgres-primary-0</span>
-              <span class="prev-tbl-cell col-ns dim">production</span>
-              <span class="col-status"><span class="prev-status running"><span class="prev-status-dot"></span>Running</span></span>
-              <span class="prev-tbl-cell col-ready dim" style="text-align:center">1/1</span>
-              <span class="prev-tbl-cell col-restarts dim" style="text-align:center">0</span>
-              <span class="prev-tbl-cell col-age dim">7d</span>
+            <div style="padding:8px 10px;border-top:1px solid var(--border-solid);background:rgba(16,24,40,0.8);display:flex;gap:6px;align-items:center;">
+              <div style="flex:1;background:var(--bg);border:1px solid var(--border-solid);border-radius:6px;padding:5px 10px;font-size:10px;color:#475569;font-family:var(--font-sans);">Ask about this resource...</div>
+              <div style="width:24px;height:24px;border-radius:5px;background:rgba(88,208,255,0.15);border:1px solid rgba(88,208,255,0.3);display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:11px;">&#8593;</div>
             </div>
           </div>
         </div>
@@ -648,6 +645,11 @@
       <div class="section-sub">Built for engineers who live in the terminal but want something better.</div>
     </div>
     <div class="features-grid reveal">
+      <div class="feature-card glass" style="border:1px solid rgba(88,208,255,0.25);box-shadow:0 0 24px rgba(88,208,255,0.06);">
+        <div class="feature-icon" style="background:rgba(88,208,255,0.15);">&#10024;</div>
+        <h3 style="color:var(--accent);">AI Chatbot</h3>
+        <p>Built-in AI that understands your cluster. Ask questions in natural language — get instant diagnosis with full context. Supports OpenAI, Anthropic, Ollama, and Claude CLI.</p>
+      </div>
       <div class="feature-card glass">
         <div class="feature-icon">&#9889;</div>
         <h3>Native Performance</h3>
@@ -657,11 +659,6 @@
         <div class="feature-icon">&#9676;</div>
         <h3>Real-Time Streaming</h3>
         <p>Live resource watches, pod logs, and events. See changes the instant they happen.</p>
-      </div>
-      <div class="feature-card glass">
-        <div class="feature-icon">&#10024;</div>
-        <h3>AI Troubleshooting</h3>
-        <p>Pipe cluster context to OpenAI, Anthropic, or Ollama. Get instant diagnosis.</p>
       </div>
       <div class="feature-card glass">
         <div class="feature-icon">&#8984;</div>
@@ -728,12 +725,60 @@
   <div class="container">
     <div class="reveal">
       <div class="section-label">Interface</div>
-      <div class="section-title">Designed for dark mode operators</div>
+      <div class="section-title">AI-powered workflows, designed for dark mode operators</div>
       <div class="section-sub">Glassmorphism, monospace typography, and a color palette that won't burn your retinas at 2 AM.</div>
     </div>
     <div class="showcase-grid reveal">
 
-      <!-- Mockup 1: Cluster Dashboard -->
+      <!-- Mockup 1: AI Panel (star position) -->
+      <div class="mockup-window" style="border:1px solid rgba(88,208,255,0.2);box-shadow:0 8px 32px rgba(88,208,255,0.08),0 8px 32px rgba(0,0,0,0.3);">
+        <div class="mockup-titlebar">
+          <div class="mockup-dot r"></div><div class="mockup-dot y"></div><div class="mockup-dot g"></div>
+          <div class="mockup-label" style="color:var(--accent);">AI Troubleshooting</div>
+        </div>
+        <div class="mockup-body">
+          <div class="m-ai">
+            <div class="m-ai-header">
+              <div class="m-ai-avatar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M9 13v2"/><path d="M15 13v2"/></svg>
+              </div>
+              <div>
+                <div class="m-ai-title">AI Assistant</div>
+                <div class="m-ai-subtitle">Cluster-aware troubleshooting</div>
+              </div>
+              <div class="m-ai-close">&times;</div>
+            </div>
+            <div class="m-ai-ctx">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>
+              Context: pod/production/payment-worker-9a4f2
+            </div>
+            <div class="m-ai-messages">
+              <div class="m-ai-msg user">Why is this pod crashing?</div>
+              <div class="m-ai-msg bot">
+                <div class="m-ai-bot-avatar">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/></svg>
+                </div>
+                <div>
+                  The pod <code style="color:var(--accent);font-size:10px">payment-worker-9a4f2</code> is in CrashLoopBackOff with 14 restarts. Last log shows:<br><br>
+                  <code style="color:#f87171;font-size:10px">Error: REDIS_URL env var not set</code><br><br>
+                  The ConfigMap <code style="color:var(--accent);font-size:10px">payment-config</code> is missing the <code style="color:var(--accent);font-size:10px">REDIS_URL</code> key.
+                </div>
+              </div>
+              <div class="m-ai-msg user">How do I fix it?</div>
+            </div>
+            <div class="m-ai-streaming">
+              <div class="m-ai-spinner"></div>
+              Thinking...
+            </div>
+            <div class="m-ai-input">
+              <div class="m-ai-input-field">Ask about this resource...</div>
+              <div class="m-ai-send">&#8593;</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mockup 2: Cluster Dashboard -->
       <div class="mockup-window">
         <div class="mockup-titlebar">
           <div class="mockup-dot r"></div><div class="mockup-dot y"></div><div class="mockup-dot g"></div>
@@ -790,49 +835,6 @@
               <div class="m-restart-item"><span class="m-restart-idx">1</span><span class="m-restart-name">payment-worker-9a4f2</span><span class="m-restart-count high">14</span></div>
               <div class="m-restart-item"><span class="m-restart-idx">2</span><span class="m-restart-name">metrics-agent-1b2c3</span><span class="m-restart-count med">7</span></div>
               <div class="m-restart-item"><span class="m-restart-idx">3</span><span class="m-restart-name">frontend-next-8c3d7</span><span class="m-restart-count" style="color:#64748b">1</span></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Mockup 2: Pod Detail / Logs -->
-      <div class="mockup-window">
-        <div class="mockup-titlebar">
-          <div class="mockup-dot r"></div><div class="mockup-dot y"></div><div class="mockup-dot g"></div>
-          <div class="mockup-label">Pod Detail &mdash; Logs</div>
-        </div>
-        <div class="mockup-body">
-          <div class="m-detail">
-            <div class="m-detail-header">
-              <div class="m-detail-back">&#8592; Back <span style="font-size:8px;color:#334155;margin-left:4px">Esc</span></div>
-              <div style="flex:1"></div>
-              <div style="font-size:10px;color:#64748b;padding:3px 8px;border:1px solid #1e293b;border-radius:5px">Copy YAML</div>
-              <div style="font-size:10px;color:#f87171;padding:3px 8px;border:1px solid rgba(239,68,68,0.3);border-radius:5px">Delete</div>
-            </div>
-            <div class="m-detail-info">
-              <div class="m-detail-info-item"><label>Name</label><span>api-gateway-7f8d4b6c9-x2k</span></div>
-              <div class="m-detail-info-item"><label>Namespace</label><span>production</span></div>
-              <div class="m-detail-info-item"><label>Status</label><span style="color:#10b981">Running</span></div>
-              <div class="m-detail-info-item"><label>Node</label><span>node-1</span></div>
-              <div class="m-detail-info-item"><label>IP</label><span>10.244.1.23</span></div>
-            </div>
-            <div class="m-detail-tabs">
-              <div class="m-detail-tab active">Logs</div>
-              <div class="m-detail-tab">Describe</div>
-              <div class="m-detail-tab">YAML</div>
-              <div class="m-detail-tab">Metrics</div>
-              <div class="m-detail-tab">Events</div>
-              <div class="m-detail-tab">Shell</div>
-            </div>
-            <div class="m-logs">
-              <div class="m-log-line"><span class="m-log-num">1</span><span class="m-log-text info">2024-03-15T10:23:01Z INFO  Starting api-gateway v2.1.0</span></div>
-              <div class="m-log-line"><span class="m-log-num">2</span><span class="m-log-text info">2024-03-15T10:23:01Z INFO  Listening on 0.0.0.0:8080</span></div>
-              <div class="m-log-line"><span class="m-log-num">3</span><span class="m-log-text">2024-03-15T10:23:02Z DEBUG Connected to upstream services</span></div>
-              <div class="m-log-line"><span class="m-log-num">4</span><span class="m-log-text info">2024-03-15T10:23:15Z INFO  Health check passed</span></div>
-              <div class="m-log-line"><span class="m-log-num">5</span><span class="m-log-text warn">2024-03-15T10:24:03Z WARN  Slow upstream: auth-service 1.2s</span></div>
-              <div class="m-log-line"><span class="m-log-num">6</span><span class="m-log-text">2024-03-15T10:24:05Z DEBUG Request completed 200 /api/users</span></div>
-              <div class="m-log-line"><span class="m-log-num">7</span><span class="m-log-text error">2024-03-15T10:24:12Z ERROR Connection refused: payment-worker:3000</span></div>
-              <div class="m-log-line"><span class="m-log-num">8</span><span class="m-log-text info">2024-03-15T10:24:15Z INFO  Retrying upstream connection...</span></div>
             </div>
           </div>
         </div>
@@ -900,49 +902,44 @@
         </div>
       </div>
 
-      <!-- Mockup 4: AI Panel -->
+      <!-- Mockup 4: Pod Detail / Logs -->
       <div class="mockup-window">
         <div class="mockup-titlebar">
           <div class="mockup-dot r"></div><div class="mockup-dot y"></div><div class="mockup-dot g"></div>
-          <div class="mockup-label">AI Troubleshooting</div>
+          <div class="mockup-label">Pod Detail &mdash; Logs</div>
         </div>
         <div class="mockup-body">
-          <div class="m-ai">
-            <div class="m-ai-header">
-              <div class="m-ai-avatar">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M9 13v2"/><path d="M15 13v2"/></svg>
-              </div>
-              <div>
-                <div class="m-ai-title">AI Assistant</div>
-                <div class="m-ai-subtitle">Cluster-aware troubleshooting</div>
-              </div>
-              <div class="m-ai-close">&times;</div>
+          <div class="m-detail">
+            <div class="m-detail-header">
+              <div class="m-detail-back">&#8592; Back <span style="font-size:8px;color:#334155;margin-left:4px">Esc</span></div>
+              <div style="flex:1"></div>
+              <div style="font-size:10px;color:#64748b;padding:3px 8px;border:1px solid #1e293b;border-radius:5px">Copy YAML</div>
+              <div style="font-size:10px;color:#f87171;padding:3px 8px;border:1px solid rgba(239,68,68,0.3);border-radius:5px">Delete</div>
             </div>
-            <div class="m-ai-ctx">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>
-              Context: pod/production/payment-worker-9a4f2
+            <div class="m-detail-info">
+              <div class="m-detail-info-item"><label>Name</label><span>api-gateway-7f8d4b6c9-x2k</span></div>
+              <div class="m-detail-info-item"><label>Namespace</label><span>production</span></div>
+              <div class="m-detail-info-item"><label>Status</label><span style="color:#10b981">Running</span></div>
+              <div class="m-detail-info-item"><label>Node</label><span>node-1</span></div>
+              <div class="m-detail-info-item"><label>IP</label><span>10.244.1.23</span></div>
             </div>
-            <div class="m-ai-messages">
-              <div class="m-ai-msg user">Why is this pod crashing?</div>
-              <div class="m-ai-msg bot">
-                <div class="m-ai-bot-avatar">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/></svg>
-                </div>
-                <div>
-                  The pod <code style="color:var(--accent);font-size:10px">payment-worker-9a4f2</code> is in CrashLoopBackOff with 14 restarts. Last log shows:<br><br>
-                  <code style="color:#f87171;font-size:10px">Error: REDIS_URL env var not set</code><br><br>
-                  The ConfigMap <code style="color:var(--accent);font-size:10px">payment-config</code> is missing the <code style="color:var(--accent);font-size:10px">REDIS_URL</code> key.
-                </div>
-              </div>
-              <div class="m-ai-msg user">How do I fix it?</div>
+            <div class="m-detail-tabs">
+              <div class="m-detail-tab active">Logs</div>
+              <div class="m-detail-tab">Describe</div>
+              <div class="m-detail-tab">YAML</div>
+              <div class="m-detail-tab">Metrics</div>
+              <div class="m-detail-tab">Events</div>
+              <div class="m-detail-tab">Shell</div>
             </div>
-            <div class="m-ai-streaming">
-              <div class="m-ai-spinner"></div>
-              Thinking...
-            </div>
-            <div class="m-ai-input">
-              <div class="m-ai-input-field">Ask about this resource...</div>
-              <div class="m-ai-send">&#8593;</div>
+            <div class="m-logs">
+              <div class="m-log-line"><span class="m-log-num">1</span><span class="m-log-text info">2024-03-15T10:23:01Z INFO  Starting api-gateway v2.1.0</span></div>
+              <div class="m-log-line"><span class="m-log-num">2</span><span class="m-log-text info">2024-03-15T10:23:01Z INFO  Listening on 0.0.0.0:8080</span></div>
+              <div class="m-log-line"><span class="m-log-num">3</span><span class="m-log-text">2024-03-15T10:23:02Z DEBUG Connected to upstream services</span></div>
+              <div class="m-log-line"><span class="m-log-num">4</span><span class="m-log-text info">2024-03-15T10:23:15Z INFO  Health check passed</span></div>
+              <div class="m-log-line"><span class="m-log-num">5</span><span class="m-log-text warn">2024-03-15T10:24:03Z WARN  Slow upstream: auth-service 1.2s</span></div>
+              <div class="m-log-line"><span class="m-log-num">6</span><span class="m-log-text">2024-03-15T10:24:05Z DEBUG Request completed 200 /api/users</span></div>
+              <div class="m-log-line"><span class="m-log-num">7</span><span class="m-log-text error">2024-03-15T10:24:12Z ERROR Connection refused: payment-worker:3000</span></div>
+              <div class="m-log-line"><span class="m-log-num">8</span><span class="m-log-text info">2024-03-15T10:24:15Z INFO  Retrying upstream connection...</span></div>
             </div>
           </div>
         </div>
@@ -975,9 +972,9 @@
         </thead>
         <tbody>
           <tr><td>Native desktop app</td><td class="kore-col"><span class="check">&#10003;</span></td><td><span class="check">&#10003;</span></td><td><span class="check">&#10003;</span></td><td><span class="cross">&#10005;</span></td><td><span class="cross">&#10005;</span></td></tr>
+          <tr><td>AI chatbot</td><td class="kore-col"><span class="check">&#10003;</span></td><td><span class="cross">&#10005;</span></td><td><span class="cross">&#10005;</span></td><td><span class="cross">&#10005;</span></td><td><span class="cross">&#10005;</span></td></tr>
           <tr><td>GUI + keyboard navigation</td><td class="kore-col"><span class="check">&#10003;</span></td><td><span class="partial">TUI only</span></td><td><span class="check">&#10003;</span></td><td><span class="check">&#10003;</span></td><td><span class="check">&#10003;</span></td></tr>
           <tr><td>Real-time resource watch</td><td class="kore-col"><span class="check">&#10003;</span></td><td><span class="check">&#10003;</span></td><td><span class="check">&#10003;</span></td><td><span class="check">&#10003;</span></td><td><span class="check">&#10003;</span></td></tr>
-          <tr><td>AI troubleshooting</td><td class="kore-col"><span class="check">&#10003;</span></td><td><span class="cross">&#10005;</span></td><td><span class="cross">&#10005;</span></td><td><span class="cross">&#10005;</span></td><td><span class="cross">&#10005;</span></td></tr>
           <tr><td>Dependency graph</td><td class="kore-col"><span class="check">&#10003;</span></td><td><span class="cross">&#10005;</span></td><td><span class="partial">Extension</span></td><td><span class="cross">&#10005;</span></td><td><span class="cross">&#10005;</span></td></tr>
           <tr><td>Deployment rollback UI</td><td class="kore-col"><span class="check">&#10003;</span></td><td><span class="partial">Basic</span></td><td><span class="cross">&#10005;</span></td><td><span class="cross">&#10005;</span></td><td><span class="check">&#10003;</span></td></tr>
           <tr><td>YAML diff before apply</td><td class="kore-col"><span class="check">&#10003;</span></td><td><span class="cross">&#10005;</span></td><td><span class="check">&#10003;</span></td><td><span class="cross">&#10005;</span></td><td><span class="check">&#10003;</span></td></tr>
@@ -1118,7 +1115,7 @@
 <!-- Footer -->
 <footer>
   <div class="container">
-    <p style="margin-bottom:8px;">Built with <span style="color:var(--accent)">Rust</span> &amp; <span style="color:var(--accent-blue)">React</span></p>
+    <p style="margin-bottom:8px;">Built with <span style="color:var(--accent)">AI</span>, <span style="color:var(--accent)">Rust</span> &amp; <span style="color:var(--accent-blue)">React</span></p>
     <p>
       <a href="https://github.com/eladbash/kore" target="_blank" rel="noopener">GitHub</a>
       &nbsp;&middot;&nbsp;

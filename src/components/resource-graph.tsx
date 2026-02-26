@@ -12,6 +12,8 @@ import {
   Timer,
   Clock,
   Layers,
+  Search,
+  X,
 } from "lucide-react";
 import { buildResourceGraph } from "@/lib/api";
 import type { ResourceGraph, GraphNode, GraphEdge } from "@/lib/api";
@@ -378,6 +380,10 @@ export function ResourceGraphView({ namespace, onSelectResource }: ResourceGraph
   const [error, setError] = useState<string | null>(null);
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
 
+  // Filter state
+  const [disabledKinds, setDisabledKinds] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState("");
+
   // Pan and zoom state
   const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
   const [isPanning, setIsPanning] = useState(false);
@@ -441,6 +447,64 @@ export function ResourceGraphView({ namespace, onSelectResource }: ResourceGraph
     }
     return connected;
   }, [hoveredNode, graph]);
+
+  // Unique kinds present in the graph
+  const uniqueKinds = useMemo(() => {
+    if (!graph) return [];
+    const kinds = new Set<string>();
+    for (const node of graph.nodes) kinds.add(node.kind);
+    // Sort by layer order for consistent display
+    return Array.from(kinds).sort(
+      (a, b) => (KIND_LAYER_ORDER[a] ?? 2) - (KIND_LAYER_ORDER[b] ?? 2),
+    );
+  }, [graph]);
+
+  // Filter visibility: "direct" | "connected" | "hidden"
+  const isFilterActive = disabledKinds.size > 0 || searchQuery.length > 0;
+
+  const nodeVisibility = useMemo(() => {
+    const vis = new Map<string, "direct" | "connected" | "hidden">();
+    if (!graph || !isFilterActive) return vis;
+
+    const search = searchQuery.toLowerCase();
+
+    // First pass: find direct matches
+    const directIds = new Set<string>();
+    for (const node of graph.nodes) {
+      const kindEnabled = !disabledKinds.has(node.kind);
+      const nameMatch = search.length === 0 || node.name.toLowerCase().includes(search);
+      if (kindEnabled && nameMatch) {
+        directIds.add(node.id);
+        vis.set(node.id, "direct");
+      }
+    }
+
+    // Second pass: find connected matches (1-hop from direct)
+    for (const edge of graph.edges) {
+      if (directIds.has(edge.source) && !directIds.has(edge.target)) {
+        if (!vis.has(edge.target)) vis.set(edge.target, "connected");
+      }
+      if (directIds.has(edge.target) && !directIds.has(edge.source)) {
+        if (!vis.has(edge.source)) vis.set(edge.source, "connected");
+      }
+    }
+
+    // Everything else is "hidden"
+    for (const node of graph.nodes) {
+      if (!vis.has(node.id)) vis.set(node.id, "hidden");
+    }
+
+    return vis;
+  }, [graph, disabledKinds, searchQuery, isFilterActive]);
+
+  const toggleKind = useCallback((kind: string) => {
+    setDisabledKinds((prev) => {
+      const next = new Set(prev);
+      if (next.has(kind)) next.delete(kind);
+      else next.add(kind);
+      return next;
+    });
+  }, []);
 
   // Fit to view
   const fitToView = useCallback(() => {
@@ -615,6 +679,58 @@ export function ResourceGraphView({ namespace, onSelectResource }: ResourceGraph
         {graph.nodes.length} nodes &middot; {graph.edges.length} edges
       </div>
 
+      {/* Filter bar */}
+      <div className="absolute top-10 left-3 z-20 flex items-center gap-2 mt-1.5">
+        {/* Kind toggle chips */}
+        <div className="flex items-center gap-1 px-2 py-1.5 bg-surface/80 border border-slate-800 rounded-lg backdrop-blur-sm">
+          {uniqueKinds.map((kind) => {
+            const color = getKindColor(kind);
+            const enabled = !disabledKinds.has(kind);
+            return (
+              <button
+                key={kind}
+                onClick={() => toggleKind(kind)}
+                className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono transition-all"
+                style={{
+                  backgroundColor: enabled ? color.fill : "transparent",
+                  borderWidth: 1,
+                  borderStyle: "solid",
+                  borderColor: enabled ? color.stroke : "#334155",
+                  color: enabled ? color.text : "#475569",
+                  opacity: enabled ? 1 : 0.5,
+                }}
+              >
+                <div
+                  className="w-1.5 h-1.5 rounded-full"
+                  style={{ backgroundColor: enabled ? color.stroke : "#475569" }}
+                />
+                {kind}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Name search */}
+        <div className="relative flex items-center">
+          <Search className="absolute left-2 w-3 h-3 text-slate-500 pointer-events-none" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Filter by name..."
+            className="pl-6 pr-6 py-1 w-40 text-[11px] font-mono text-slate-300 bg-surface/80 border border-slate-800 rounded-lg backdrop-blur-sm placeholder:text-slate-600 focus:outline-none focus:border-accent/50 transition"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-1.5 p-0.5 text-slate-500 hover:text-slate-300 transition"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* SVG Canvas */}
       <svg
         className="w-full h-full"
@@ -672,7 +788,17 @@ export function ResourceGraphView({ namespace, onSelectResource }: ResourceGraph
               connectedToHovered.has(edge.source) &&
               connectedToHovered.has(edge.target);
 
-            const isDimmed = hoveredNode !== null && !isHighlighted;
+            const hoverDimmed = hoveredNode !== null && !isHighlighted;
+
+            // Filter: edge is visible if both endpoints are visible (direct or connected)
+            const sourceVis = nodeVisibility.get(edge.source);
+            const targetVis = nodeVisibility.get(edge.target);
+            const filterDimmed =
+              isFilterActive && (sourceVis === "hidden" || targetVis === "hidden");
+
+            let edgeOpacity = isHighlighted ? 0.9 : 0.5;
+            if (filterDimmed) edgeOpacity = 0.05;
+            else if (hoverDimmed) edgeOpacity = 0.15;
 
             return (
               <path
@@ -682,7 +808,7 @@ export function ResourceGraphView({ namespace, onSelectResource }: ResourceGraph
                 stroke={isHighlighted ? "var(--accent)" : "#334155"}
                 strokeWidth={isHighlighted ? 2 : 1}
                 strokeDasharray={edge.relation === "owns" ? undefined : "4 3"}
-                opacity={isDimmed ? 0.15 : isHighlighted ? 0.9 : 0.5}
+                opacity={edgeOpacity}
                 markerEnd={isHighlighted ? "url(#arrowhead-highlight)" : "url(#arrowhead)"}
                 style={{
                   transition: "opacity 0.2s, stroke 0.2s, stroke-width 0.2s",
@@ -693,10 +819,18 @@ export function ResourceGraphView({ namespace, onSelectResource }: ResourceGraph
 
           {/* Nodes */}
           {layoutNodes.map((node) => {
-            const isDimmed = hoveredNode !== null && !connectedToHovered.has(node.id);
+            const hoverDimmed = hoveredNode !== null && !connectedToHovered.has(node.id);
+            const filterVis = nodeVisibility.get(node.id);
+            const filterDimmed = isFilterActive && filterVis === "hidden";
+            const filterConnected = isFilterActive && filterVis === "connected";
+
+            let opacity = 1;
+            if (filterDimmed) opacity = 0.08;
+            else if (filterConnected) opacity = 0.6;
+            if (hoverDimmed && !filterDimmed) opacity = Math.min(opacity, 0.3);
 
             return (
-              <g key={node.id} opacity={isDimmed ? 0.3 : 1} style={{ transition: "opacity 0.2s" }}>
+              <g key={node.id} opacity={opacity} style={{ transition: "opacity 0.2s" }}>
                 <SVGGraphNode
                   node={node}
                   onSelect={() => handleNodeClick(node)}
