@@ -10,7 +10,44 @@ use state::K8sState;
 use tauri::Manager;
 use tracing::error;
 
+/// Enrich PATH so exec-based auth providers (aws, gcloud, az, etc.) work
+/// even when launched from Finder/Spotlight (which gets a minimal PATH).
+fn enrich_path() {
+    let extra_dirs = [
+        "/usr/local/bin",
+        "/opt/homebrew/bin",
+        "/opt/homebrew/sbin",
+        "/usr/local/sbin",
+        // Common install locations for cloud CLIs
+        "/usr/local/aws-cli",
+        "/Library/Frameworks/Python.framework/Versions/Current/bin",
+    ];
+    let current = std::env::var("PATH").unwrap_or_default();
+    let mut paths: Vec<&str> = current.split(':').collect();
+    for dir in &extra_dirs {
+        if !paths.contains(dir) && std::path::Path::new(dir).is_dir() {
+            paths.push(dir);
+        }
+    }
+    // Also try to source the user's shell PATH
+    if let Ok(home) = std::env::var("HOME") {
+        let shell_paths = [
+            format!("{home}/.local/bin"),
+            format!("{home}/bin"),
+        ];
+        for dir in &shell_paths {
+            if !paths.contains(&dir.as_str()) && std::path::Path::new(dir).is_dir() {
+                paths.push(dir.as_str().to_owned().leak());
+            }
+        }
+    }
+    std::env::set_var("PATH", paths.join(":"));
+}
+
 fn main() {
+    // Enrich PATH before anything else so exec-based kubeconfig auth works
+    enrich_path();
+
     // Initialize tracing subscriber
     tracing_subscriber::fmt()
         .with_env_filter(
