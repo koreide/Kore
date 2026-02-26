@@ -49,10 +49,19 @@ jobs:
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
 
+      - name: Find app bundle
+        run: |
+          echo "Looking for .app bundle:"
+          find . -name "kore.app" -type d 2>/dev/null
+          echo "---"
+          echo "Looking for DMG:"
+          find . -name "*.dmg" -type f 2>/dev/null
+
       - name: Notarize
         timeout-minutes: 10
         run: |
-          APP_PATH="target/${{ matrix.target }}/release/bundle/macos/kore.app"
+          APP_PATH=$(find . -name "kore.app" -type d | head -1)
+          echo "Found app at: $APP_PATH"
           ZIP_PATH="/tmp/kore-notarize.zip"
           ditto -c -k --keepParent "$APP_PATH" "$ZIP_PATH"
           xcrun notarytool submit "$ZIP_PATH" \
