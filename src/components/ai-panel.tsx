@@ -86,7 +86,7 @@ export function AIPanel({ open, onClose, resourceContext }: AIPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
-  const [sessionId, setSessionId] = useState(() => nextSessionId());
+  const [, setSessionId] = useState(() => nextSessionId());
   const [showSettings, setShowSettings] = useState(false);
   const [aiConfig, setAiConfig] = useState<AIConfig>(() => loadAIConfig());
 

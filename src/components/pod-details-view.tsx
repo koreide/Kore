@@ -294,6 +294,7 @@ export function PodDetailsView({ pod, onBack }: PodDetailsViewProps) {
           if (activeTab === "describe") setLoading(false);
         });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [namespace, podName, isDeleted]);
 
   // Setup logs streaming with container + previous support

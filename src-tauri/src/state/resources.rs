@@ -379,7 +379,17 @@ impl K8sState {
         let query_lower = query.to_lowercase();
 
         // List all resource types in parallel
-        let (pods, deployments, services, configmaps, secrets, jobs, cronjobs, ingresses, namespaces) = tokio::join!(
+        let (
+            pods,
+            deployments,
+            services,
+            configmaps,
+            secrets,
+            jobs,
+            cronjobs,
+            ingresses,
+            namespaces,
+        ) = tokio::join!(
             self.list_resources(ResourceKind::Pods, namespace.clone(), None),
             self.list_resources(ResourceKind::Deployments, namespace.clone(), None),
             self.list_resources(ResourceKind::Services, namespace.clone(), None),

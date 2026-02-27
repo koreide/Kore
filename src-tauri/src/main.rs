@@ -29,10 +29,7 @@ fn enrich_path() {
         }
     }
     if let Ok(home) = std::env::var("HOME") {
-        let shell_paths = [
-            format!("{home}/.local/bin"),
-            format!("{home}/bin"),
-        ];
+        let shell_paths = [format!("{home}/.local/bin"), format!("{home}/bin")];
         for dir in &shell_paths {
             if !paths.iter().any(|p| p == dir) && std::path::Path::new(dir).is_dir() {
                 paths.push(dir.clone());

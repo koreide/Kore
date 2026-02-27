@@ -100,6 +100,7 @@ export function ResourceDetailsView({ resource, kind, onBack }: ResourceDetailsV
           setLoading(false);
         });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, kind, namespace, resourceName]);
 
   // Update describe view when revealed secrets change

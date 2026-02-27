@@ -85,7 +85,7 @@ fn strip_ansi_codes(s: &str) -> String {
         if c == '\x1b' {
             if chars.peek() == Some(&'[') {
                 chars.next(); // consume '['
-                // Consume until we hit a letter (the terminator)
+                              // Consume until we hit a letter (the terminator)
                 while let Some(&next) = chars.peek() {
                     chars.next();
                     if next.is_ascii_alphabetic() {
@@ -1657,9 +1657,7 @@ impl K8sState {
             .map_err(|e| K8sError::Validation(format!("Failed to run agent models: {e}")))?;
 
         if !output.status.success() {
-            return Err(K8sError::Validation(
-                "agent models command failed".into(),
-            ));
+            return Err(K8sError::Validation("agent models command failed".into()));
         }
 
         let stdout = String::from_utf8_lossy(&output.stdout);
@@ -1673,11 +1671,7 @@ impl K8sState {
             }
             if let Some(id) = trimmed.split(" - ").next() {
                 let id = id.trim();
-                if !id.is_empty()
-                    && !id.contains(' ')
-                    && id != "Available"
-                    && id != "Tip:"
-                {
+                if !id.is_empty() && !id.contains(' ') && id != "Available" && id != "Tip:" {
                     models.push(id.to_string());
                 }
             }

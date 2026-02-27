@@ -113,14 +113,20 @@ impl K8sState {
                     let mut stdout = match attached.stdout() {
                         Some(s) => s,
                         None => {
-                            let _ = handle.emit(&event_exit, &json!({ "error": "No stdout available from exec session" }));
+                            let _ = handle.emit(
+                                &event_exit,
+                                &json!({ "error": "No stdout available from exec session" }),
+                            );
                             return;
                         }
                     };
                     let mut stdin = match attached.stdin() {
                         Some(s) => s,
                         None => {
-                            let _ = handle.emit(&event_exit, &json!({ "error": "No stdin available from exec session" }));
+                            let _ = handle.emit(
+                                &event_exit,
+                                &json!({ "error": "No stdin available from exec session" }),
+                            );
                             return;
                         }
                     };

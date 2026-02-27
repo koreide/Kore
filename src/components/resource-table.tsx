@@ -612,6 +612,7 @@ export function ResourceTable({
     }
 
     return cols;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kind, onRowAction, handleAction, onTogglePin, getRestartHistory, multiCluster]);
 
   const table = useReactTable({

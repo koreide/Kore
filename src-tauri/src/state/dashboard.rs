@@ -334,13 +334,22 @@ impl K8sState {
         );
 
         let pods = pods_result
-            .map_err(|e| { warn!(error = %e, "Failed to fetch pods for cluster health"); e })
+            .map_err(|e| {
+                warn!(error = %e, "Failed to fetch pods for cluster health");
+                e
+            })
             .unwrap_or_default();
         let nodes = nodes_result
-            .map_err(|e| { warn!(error = %e, "Failed to fetch nodes for cluster health"); e })
+            .map_err(|e| {
+                warn!(error = %e, "Failed to fetch nodes for cluster health");
+                e
+            })
             .unwrap_or_default();
         let events = events_result
-            .map_err(|e| { warn!(error = %e, "Failed to fetch events for cluster health"); e })
+            .map_err(|e| {
+                warn!(error = %e, "Failed to fetch events for cluster health");
+                e
+            })
             .unwrap_or_default();
 
         Ok(compute_health(&pods, &nodes, &events))

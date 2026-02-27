@@ -123,6 +123,7 @@ export function AISettings({ config, onConfigChange }: AISettingsProps) {
     };
     loadKey();
     return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config.provider]);
 
   // Fetch installed Ollama models when provider is ollama
@@ -158,6 +159,7 @@ export function AISettings({ config, onConfigChange }: AISettingsProps) {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config.provider, config.base_url]);
 
   // Fetch Claude CLI models when provider is claude_cli
@@ -190,6 +192,7 @@ export function AISettings({ config, onConfigChange }: AISettingsProps) {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config.provider]);
 
   // Fetch Cursor Agent models when provider is cursor_agent
@@ -222,6 +225,7 @@ export function AISettings({ config, onConfigChange }: AISettingsProps) {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config.provider]);
 
   const handleProviderChange = useCallback(

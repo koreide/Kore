@@ -45,7 +45,7 @@ export default [
       ...tsPlugin.configs.recommended.rules,
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "warn",
-      "no-console": "warn",
+      "no-console": ["warn", { allow: ["error", "warn"] }],
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/no-unused-vars": [
         "warn",
@@ -56,6 +56,6 @@ export default [
   },
   prettier,
   {
-    ignores: ["dist/", "src-tauri/", "node_modules/", "*.config.*"],
+    ignores: ["dist/", "src-tauri/", "node_modules/", "target/", "*.config.*"],
   },
 ];

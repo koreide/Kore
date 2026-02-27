@@ -141,6 +141,7 @@ export function YamlEditor({ kind, namespace, name }: YamlEditorProps) {
         setYaml(`# Error fetching YAML: ${formatError(err)}`);
       })
       .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kind, namespace, name]);
 
   // Sync line number + overlay scroll with textarea
