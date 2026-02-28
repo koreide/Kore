@@ -24,6 +24,28 @@ If you spend your day switching between `kubectl`, `k9s`, Lens, and your browser
 - **Multi-cluster** — View and compare resources across multiple contexts side-by-side.
 - **AI-assisted troubleshooting** — Diagnose issues with built-in AI support (OpenAI, Anthropic, or Ollama).
 
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/pods-view.png" alt="Resource Table — Pods view with real-time status, sidebar navigation, and search" width="800" />
+</p>
+<p align="center"><em>Resource table with live status updates, sortable columns, and keyboard navigation</em></p>
+
+<p align="center">
+  <img src="docs/screenshots/dashboard.png" alt="Cluster Dashboard — Health score, pod ring chart, node status, and restart hotlist" width="800" />
+</p>
+<p align="center"><em>Cluster dashboard with health score, pod status ring chart, node resource bars, and restart hotlist</em></p>
+
+<p align="center">
+  <img src="docs/screenshots/command-palette.png" alt="Command Palette — Quick search for resources, views, and actions" width="800" />
+</p>
+<p align="center"><em>Command palette (<code>Cmd+K</code>) for instant access to views, resources, and actions</em></p>
+
+<p align="center">
+  <img src="docs/screenshots/ai-chat.png" alt="AI Troubleshooting — Chat panel with cluster-aware suggestions" width="800" />
+</p>
+<p align="center"><em>AI-assisted troubleshooting with cluster-aware suggestions and live data queries</em></p>
+
 ## Features
 
 | Category | Details |
