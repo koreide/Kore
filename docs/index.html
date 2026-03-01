@@ -4,32 +4,42 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kore — AI-Powered Kubernetes IDE</title>
-  <meta name="description" content="Kore is an AI-powered Kubernetes IDE. Ask your cluster anything — diagnose crashes, find resources, troubleshoot issues with natural language. Native desktop app built with Tauri v2, Rust, and React.">
+  <meta name="description" content="Kore is an AI-powered Kubernetes IDE. Native desktop app with real-time monitoring, AI troubleshooting, and keyboard-driven workflows. Built with Rust and React.">
   <meta property="og:title" content="Kore — AI-Powered Kubernetes IDE">
-  <meta property="og:description" content="Ask your cluster anything. AI-powered Kubernetes IDE with native performance. Not Electron. Not a browser tab.">
+  <meta property="og:description" content="Native Kubernetes IDE with AI troubleshooting, real-time watches, and keyboard-first navigation. Not Electron. Not a browser tab.">
   <meta property="og:image" content="icon.png">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
     :root {
-      --bg: #0b1221;
-      --surface: #101828;
+      --bg: #080d19;
+      --bg-elevated: #0f1629;
+      --surface: #141c30;
       --accent: #58d0ff;
-      --accent-violet: #a78bfa;
       --accent-blue: #3b82f6;
-      --muted: #1d2939;
-      --text-primary: #e2e8f0;
-      --text-secondary: #94a3b8;
-      --border: rgba(255, 255, 255, 0.06);
-      --border-solid: #1e293b;
-      --status-running: #10b981;
-      --status-pending: #f59e0b;
-      --status-failed: #ef4444;
+      --accent-violet: #a78bfa;
+      --accent-warm: #f59e0b;
+      --muted: #1a2236;
+      --text-primary: #e8edf5;
+      --text-secondary: #7a8ba8;
+      --text-muted: #4a5568;
+      --border: rgba(255,255,255,0.06);
+      --border-strong: rgba(255,255,255,0.1);
+      --status-ok: #10b981;
+      --status-warn: #f59e0b;
+      --status-fail: #ef4444;
+      --font-display: 'Outfit', sans-serif;
+      --font-body: 'Figtree', sans-serif;
       --font-mono: 'SFMono-Regular', Menlo, Monaco, Consolas, monospace;
-      --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+      --radius: 16px;
+      --radius-sm: 10px;
+      --radius-xs: 6px;
     }
 
     html { scroll-behavior: smooth; }
@@ -37,10 +47,12 @@
     body {
       background: var(--bg);
       color: var(--text-primary);
-      font-family: var(--font-sans);
+      font-family: var(--font-body);
+      font-size: 16px;
       line-height: 1.6;
       overflow-x: hidden;
       -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
 
     /* Noise overlay */
@@ -50,46 +62,60 @@
       inset: 0;
       z-index: 9999;
       pointer-events: none;
-      opacity: 0.015;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      opacity: 0.012;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
       background-repeat: repeat;
       background-size: 256px 256px;
     }
 
-    /* ---- Shared ---- */
+    /* ---- Typography ---- */
+    h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: -0.02em; line-height: 1.15; }
+
+    /* ---- Layout ---- */
     .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
-    .section { padding: 100px 0; position: relative; }
+    .section { padding: 120px 0; position: relative; }
+
     .section-label {
       font-family: var(--font-mono);
       font-size: 13px;
       color: var(--accent);
       text-transform: uppercase;
-      letter-spacing: 2px;
-      margin-bottom: 12px;
+      letter-spacing: 2.5px;
+      margin-bottom: 16px;
+      font-weight: 500;
     }
     .section-title {
-      font-size: clamp(28px, 4vw, 42px);
+      font-size: clamp(32px, 4.5vw, 48px);
       font-weight: 700;
       margin-bottom: 16px;
-      letter-spacing: -0.5px;
     }
     .section-sub {
       color: var(--text-secondary);
-      font-size: 17px;
-      max-width: 600px;
-      margin-bottom: 48px;
+      font-size: 18px;
+      max-width: 560px;
+      margin-bottom: 56px;
+      line-height: 1.7;
     }
 
+    .section-divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border-strong), transparent);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* ---- Glass ---- */
     .glass {
-      background: rgba(16, 24, 40, 0.7);
-      backdrop-filter: blur(12px);
+      background: rgba(15, 22, 41, 0.65);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
       border: 1px solid var(--border);
-      box-shadow: 0 0 0 1px rgba(255,255,255,0.02), 0 4px 24px rgba(0,0,0,0.3);
-      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.25);
+      border-radius: var(--radius);
     }
 
     .gradient-text {
-      background: linear-gradient(135deg, var(--accent), var(--accent-blue), var(--accent-violet));
+      background: linear-gradient(135deg, #58d0ff 0%, #3b82f6 50%, #a78bfa 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
@@ -98,328 +124,458 @@
     a { color: var(--accent); text-decoration: none; }
     a:hover { text-decoration: underline; }
 
+    /* ---- Buttons ---- */
     .btn {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 12px 24px;
-      border-radius: 8px;
+      padding: 13px 28px;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-display);
       font-weight: 600;
       font-size: 15px;
       cursor: pointer;
       border: none;
-      transition: transform 0.15s, box-shadow 0.15s, background 0.2s;
+      transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
       text-decoration: none;
     }
     .btn:hover { transform: translateY(-1px); text-decoration: none; }
+
     .btn-primary {
       background: linear-gradient(135deg, #1570cd, #2563eb);
       color: #ffffff;
     }
-    .btn-primary:hover { box-shadow: 0 4px 20px rgba(37, 99, 235, 0.4); background: linear-gradient(135deg, #1d7ee0, #3b82f6); }
+    .btn-primary:hover { box-shadow: 0 8px 28px rgba(37, 99, 235, 0.35); }
+
     .btn-secondary {
       background: var(--muted);
       color: var(--text-primary);
-      border: 1px solid var(--border);
+      border: 1px solid var(--border-strong);
     }
-    .btn-secondary:hover { background: #283548; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+    .btn-secondary:hover { background: #222d44; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+
+    .btn-sponsor {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #0a0f1a;
+      font-weight: 700;
+    }
+    .btn-sponsor:hover { box-shadow: 0 8px 28px rgba(245,158,11,0.3); }
 
     /* ---- Reveal ---- */
-    .reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.7s ease, transform 0.7s ease; }
+    .reveal { opacity: 0; transform: translateY(28px); transition: opacity 0.8s cubic-bezier(0.25,0.46,0.45,0.94), transform 0.8s cubic-bezier(0.25,0.46,0.45,0.94); }
     .reveal.visible { opacity: 1; transform: translateY(0); }
+
+    /* Mouse glow */
+    #mouse-glow {
+      position: fixed; width: 700px; height: 700px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(88,208,255,0.03) 0%, transparent 70%);
+      pointer-events: none; z-index: 0; transform: translate(-50%, -50%);
+      transition: left 0.25s ease, top 0.25s ease;
+    }
 
     /* ---- Nav ---- */
     nav {
       position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
-      padding: 0 24px; height: 60px; display: flex; align-items: center;
-      background: rgba(11, 18, 33, 0.85); backdrop-filter: blur(16px);
+      padding: 0 24px; height: 64px; display: flex; align-items: center;
+      background: rgba(8, 13, 25, 0.8);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       border-bottom: 1px solid var(--border);
     }
-    .nav-inner { max-width: 1200px; margin: 0 auto; width: 100%; display: flex; align-items: center; justify-content: space-between; }
-    .nav-logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; color: var(--text-primary); }
-    .nav-logo img { width: 28px; height: 28px; border-radius: 6px; }
-    .nav-links { display: flex; align-items: center; gap: 32px; }
-    .nav-links a { color: var(--text-secondary); font-size: 14px; font-weight: 500; transition: color 0.2s; }
+    .nav-inner {
+      max-width: 1200px; margin: 0 auto; width: 100%;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-logo {
+      display: flex; align-items: center; gap: 10px;
+      font-family: var(--font-display); font-weight: 700; font-size: 18px;
+      color: var(--text-primary); text-decoration: none;
+    }
+    .nav-logo:hover { text-decoration: none; }
+    .nav-logo img { width: 28px; height: 28px; border-radius: 7px; }
+    .nav-links { display: flex; align-items: center; gap: 28px; }
+    .nav-links a {
+      color: var(--text-secondary); font-size: 14px; font-weight: 500;
+      font-family: var(--font-body); transition: color 0.2s;
+    }
     .nav-links a:hover { color: var(--text-primary); text-decoration: none; }
-    .nav-cta { padding: 8px 18px !important; font-size: 13px !important; border-radius: 6px !important; background: #ffffff !important; color: #0b1221 !important; }
-    .nav-cta:hover { background: #e2e8f0 !important; box-shadow: 0 4px 16px rgba(255,255,255,0.15) !important; }
-    @media (max-width: 768px) { .nav-links { gap: 16px; } .nav-links a.hide-mobile { display: none; } }
+    .nav-sponsor {
+      display: inline-flex; align-items: center; gap: 5px;
+    }
+    .nav-sponsor svg { color: #f59e0b; }
+    .nav-cta {
+      padding: 8px 20px !important; font-size: 13px !important;
+      border-radius: 8px !important;
+      background: #ffffff !important; color: #080d19 !important;
+      font-family: var(--font-display) !important; font-weight: 600 !important;
+    }
+    .nav-cta:hover { background: #e8edf5 !important; box-shadow: 0 4px 16px rgba(255,255,255,0.12) !important; }
+    .nav-github {
+      display: inline-flex; align-items: center; padding: 6px;
+      border-radius: 8px; color: var(--text-secondary) !important;
+      transition: color 0.2s, background 0.2s;
+    }
+    .nav-github:hover { color: var(--text-primary) !important; background: var(--muted); }
+
+    @media (max-width: 768px) {
+      .nav-links { gap: 14px; }
+      .nav-links a.hide-mobile { display: none; }
+    }
 
     /* ---- Hero ---- */
-    .hero { padding-top: 160px; padding-bottom: 80px; text-align: center; position: relative; overflow: hidden; }
+    .hero {
+      padding-top: 160px; padding-bottom: 40px;
+      text-align: center; position: relative; overflow: hidden;
+    }
     .hero-glow {
-      position: absolute; top: -200px; left: 50%; transform: translateX(-50%);
-      width: 800px; height: 600px;
-      background: radial-gradient(ellipse, rgba(88,208,255,0.08) 0%, transparent 70%);
+      position: absolute; top: -300px; left: 50%; transform: translateX(-50%);
+      width: 1000px; height: 700px;
+      background: radial-gradient(ellipse, rgba(88,208,255,0.06) 0%, rgba(59,130,246,0.03) 40%, transparent 70%);
       pointer-events: none;
     }
-    .hero-icon { width: 120px; height: 120px; border-radius: 28px; margin-bottom: 32px; box-shadow: 0 8px 40px rgba(88, 208, 255, 0.15); }
-    .hero h1 { font-size: clamp(52px, 8vw, 88px); font-weight: 800; letter-spacing: -2px; line-height: 1; margin-bottom: 20px; }
-    .hero .tagline { font-size: clamp(18px, 3vw, 26px); color: var(--text-primary); font-weight: 500; margin-bottom: 12px; }
-    .hero .sub { font-size: 16px; color: var(--text-secondary); font-family: var(--font-mono); margin-bottom: 40px; }
-    .hero-buttons { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+    .hero-icon {
+      width: 80px; height: 80px; border-radius: 20px;
+      margin-bottom: 28px;
+      box-shadow: 0 8px 40px rgba(88,208,255,0.12);
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 16px; border-radius: 20px;
+      background: var(--muted); border: 1px solid var(--border-strong);
+      font-size: 13px; color: var(--text-secondary);
+      font-family: var(--font-mono);
+      margin-bottom: 32px;
+    }
+    .hero-badge-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--status-ok); }
+    .hero h1 {
+      font-size: clamp(48px, 7vw, 80px);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.05;
+      margin-bottom: 24px;
+    }
+    .hero .tagline {
+      font-size: clamp(17px, 2.5vw, 20px);
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin: 0 auto 40px;
+      line-height: 1.7;
+    }
+    .hero-buttons { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
 
-    #mouse-glow {
-      position: fixed; width: 600px; height: 600px; border-radius: 50%;
-      background: radial-gradient(circle, rgba(88,208,255,0.04) 0%, transparent 70%);
-      pointer-events: none; z-index: 0; transform: translate(-50%, -50%);
-      transition: left 0.3s ease, top 0.3s ease;
+    /* ---- Hero Screenshot ---- */
+    .hero-screenshot {
+      max-width: 1060px; margin: 64px auto 0;
+      position: relative;
+    }
+    .hero-screenshot-glow {
+      position: absolute; inset: -60px; z-index: 0;
+      background: radial-gradient(ellipse at 50% 60%, rgba(88,208,255,0.06) 0%, transparent 70%);
+      pointer-events: none;
     }
 
-    /* ---- Hero App Preview ---- */
-    .app-preview-section { padding: 0 0 100px; }
-    .app-preview-window {
-      border-radius: 12px; overflow: hidden;
-      max-width: 1060px; margin: 0 auto;
-      border: 1px solid var(--border-solid);
-      box-shadow: 0 24px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03);
+    /* ---- Screenshot Frame ---- */
+    .screenshot-frame {
+      position: relative; z-index: 1;
+      border-radius: 14px; overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow:
+        0 24px 80px rgba(0,0,0,0.5),
+        0 0 0 1px rgba(255,255,255,0.03),
+        0 0 60px rgba(88,208,255,0.04);
     }
-    .app-titlebar {
+    .frame-titlebar {
       background: #1a1f2e; padding: 12px 16px;
       display: flex; align-items: center; gap: 8px;
     }
-    .app-dot { width: 12px; height: 12px; border-radius: 50%; }
-    .app-dot.r { background: #ff5f57; } .app-dot.y { background: #febc2e; } .app-dot.g { background: #28c840; }
-    .app-titlebar-text { flex: 1; text-align: center; font-size: 13px; color: #475569; font-family: var(--font-mono); }
-    .app-body { display: flex; background: var(--bg); height: 420px; overflow: hidden; }
-
-    /* Sidebar in preview */
-    .prev-sidebar {
-      width: 220px; flex-shrink: 0; border-right: 1px solid var(--border-solid);
-      background: rgba(16,24,40,0.8); display: flex; flex-direction: column; overflow: hidden;
+    .frame-dot { width: 12px; height: 12px; border-radius: 50%; }
+    .frame-dot.r { background: #ff5f57; }
+    .frame-dot.y { background: #febc2e; }
+    .frame-dot.g { background: #28c840; }
+    .frame-title {
+      flex: 1; text-align: center;
+      font-size: 13px; color: var(--text-muted);
+      font-family: var(--font-mono);
     }
-    .prev-sb-brand { padding: 14px 16px 10px; border-bottom: 1px solid rgba(255,255,255,0.04); display: flex; align-items: center; gap: 8px; }
-    .prev-sb-logo { width: 28px; height: 28px; border-radius: 8px; background: rgba(88,208,255,0.15); display: flex; align-items: center; justify-content: center; }
-    .prev-sb-logo svg { width: 16px; height: 16px; }
-    .prev-sb-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
-    .prev-sb-sub { font-size: 9px; color: #475569; }
-    .prev-sb-dropdown { margin: 12px 12px 0; padding: 7px 10px; border: 1px solid var(--border-solid); border-radius: 6px; font-size: 11px; font-family: var(--font-mono); color: var(--text-secondary); display: flex; justify-content: space-between; align-items: center; }
-    .prev-sb-dropdown.active { border-color: rgba(88,208,255,0.4); color: var(--accent); background: rgba(88,208,255,0.06); }
-    .prev-sb-chevron { font-size: 9px; color: #475569; }
-    .prev-sb-group-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: #475569; padding: 14px 16px 4px; font-weight: 500; }
-    .prev-sb-item { padding: 5px 16px; font-size: 12px; color: #64748b; display: flex; align-items: center; gap: 8px; position: relative; cursor: default; }
-    .prev-sb-item.active { color: var(--accent); }
-    .prev-sb-item.active::before { content: ''; position: absolute; left: 0; top: 4px; bottom: 4px; width: 2px; background: var(--accent); border-radius: 1px; }
-    .prev-sb-icon { width: 14px; height: 14px; opacity: 0.6; }
-    .prev-sb-item.active .prev-sb-icon { opacity: 1; }
-    .prev-sb-badge { margin-left: auto; font-size: 9px; background: rgba(88,208,255,0.12); color: var(--accent); padding: 1px 6px; border-radius: 10px; font-family: var(--font-mono); }
-    .prev-sb-footer { margin-top: auto; padding: 10px 16px; border-top: 1px solid rgba(255,255,255,0.04); font-size: 10px; color: #475569; display: flex; align-items: center; gap: 6px; }
-
-    /* Main content in preview */
-    .prev-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-    .prev-header { padding: 12px 16px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border-solid); }
-    .prev-kind-label { font-size: 13px; font-weight: 600; color: var(--text-primary); }
-    .prev-search { flex: 1; max-width: 320px; margin: 0 auto; position: relative; }
-    .prev-search-input { width: 100%; background: rgba(16,24,40,0.6); border: 1px solid var(--border-solid); border-radius: 8px; padding: 6px 32px; font-size: 12px; color: #475569; font-family: var(--font-sans); }
-    .prev-search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #475569; font-size: 12px; }
-    .prev-search-hint { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 10px; color: #334155; background: rgba(30,41,59,0.8); padding: 1px 5px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.06); font-family: var(--font-mono); }
-    .prev-header-actions { display: flex; gap: 8px; align-items: center; }
-    .prev-ctx-badge { font-size: 10px; font-family: var(--font-mono); color: var(--accent); background: rgba(88,208,255,0.08); padding: 3px 8px; border-radius: 5px; border: 1px solid rgba(88,208,255,0.2); }
-    .prev-btn-icon { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border-solid); display: flex; align-items: center; justify-content: center; color: #64748b; font-size: 13px; }
-
-    /* Table in preview */
-    .prev-table { flex: 1; overflow: hidden; }
-    .prev-tbl-header { display: flex; padding: 8px 16px; background: rgba(16,24,40,0.8); border-bottom: 1px solid var(--border-solid); position: sticky; top: 0; }
-    .prev-tbl-th { font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; font-family: var(--font-sans); }
-    .prev-tbl-row { display: flex; padding: 7px 16px; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.03); }
-    .prev-tbl-row:hover { background: rgba(29,41,57,0.3); }
-    .prev-tbl-row.selected { background: rgba(88,208,255,0.06); border-left: 2px solid var(--accent); padding-left: 14px; }
-    .prev-tbl-cell { font-family: var(--font-mono); font-size: 11px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .prev-tbl-cell.dim { color: #64748b; }
-
-    /* Status badge in preview */
-    .prev-status {
-      display: inline-flex; align-items: center; gap: 5px;
-      padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 500;
+    .screenshot-frame img {
+      display: block; width: 100%; height: auto;
+      background: var(--bg);
     }
-    .prev-status.running { background: rgba(16,185,129,0.1); color: #10b981; }
-    .prev-status.failed { background: rgba(239,68,68,0.1); color: #ef4444; }
-    .prev-status.pending { background: rgba(245,158,11,0.1); color: #f59e0b; }
-    .prev-status-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; position: relative; }
-    .prev-status.running .prev-status-dot { background: #10b981; }
-    .prev-status.failed .prev-status-dot { background: #ef4444; }
-    .prev-status.pending .prev-status-dot { background: #f59e0b; }
-    .prev-status.running .prev-status-dot::before {
-      content: ''; position: absolute; inset: -2px; border-radius: 50%; background: #10b981; opacity: 0.4;
-      animation: pulse-dot 2s ease-in-out infinite;
+
+    /* Showcase variant frames */
+    .showcase-frame .screenshot-frame {
+      box-shadow: 0 16px 48px rgba(0,0,0,0.4), 0 0 40px rgba(88,208,255,0.03);
     }
-    @keyframes pulse-dot { 0%, 100% { transform: scale(1); opacity: 0.4; } 50% { transform: scale(1.8); opacity: 0; } }
 
-    /* Pin star */
-    .prev-star { color: #334155; font-size: 12px; cursor: default; }
-    .prev-star.pinned { color: #fbbf24; }
-
-    /* Column widths */
-    .col-pin { width: 28px; flex-shrink: 0; text-align: center; }
-    .col-name { flex: 2.5; min-width: 0; }
-    .col-ns { flex: 1.2; min-width: 0; }
-    .col-status { flex: 1.4; min-width: 0; }
-    .col-ready { flex: 0.6; min-width: 0; text-align: center; }
-    .col-restarts { flex: 0.8; min-width: 0; text-align: center; }
-    .col-age { flex: 0.7; min-width: 0; }
-
-    @media (max-width: 900px) { .app-preview-window { max-width: 100%; } .prev-sidebar { width: 180px; } .app-body { height: 360px; } .prev-ai-panel { width: 240px !important; } }
-    @media (max-width: 640px) { .prev-sidebar { display: none; } .prev-ai-panel { width: 220px !important; } }
-    @media (max-width: 480px) { .prev-ai-panel { display: none !important; } }
+    /* ---- Tech Strip ---- */
+    .tech-strip {
+      text-align: center; padding: 48px 0 0;
+    }
+    .tech-strip-label {
+      font-size: 12px; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 2px;
+      font-family: var(--font-mono);
+      margin-bottom: 14px;
+    }
+    .tech-strip-items {
+      display: flex; align-items: center; justify-content: center;
+      gap: 32px; flex-wrap: wrap;
+    }
+    .tech-strip-item {
+      font-size: 14px; font-family: var(--font-mono);
+      color: var(--text-secondary); font-weight: 500;
+    }
+    .tech-strip-sep { color: var(--text-muted); }
 
     /* ---- Features Grid ---- */
-    .features-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
-    .feature-card { padding: 24px; border-radius: 12px; transition: transform 0.2s, box-shadow 0.2s; }
-    .feature-card:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
-    .feature-icon { width: 40px; height: 40px; border-radius: 10px; background: rgba(88, 208, 255, 0.1); display: flex; align-items: center; justify-content: center; margin-bottom: 14px; font-size: 18px; }
-    .feature-card h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
-    .feature-card p { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
-    .also-strip { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
-    .also-chip { padding: 6px 14px; border-radius: 20px; font-size: 13px; color: var(--text-secondary); background: var(--muted); border: 1px solid var(--border); }
+    .features-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 16px; margin-bottom: 36px;
+    }
+    .feature-card {
+      padding: 28px; border-radius: var(--radius);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .feature-card:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(0,0,0,0.3); }
+    .feature-icon {
+      width: 42px; height: 42px; border-radius: var(--radius-sm);
+      background: rgba(88,208,255,0.08);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 16px;
+    }
+    .feature-icon svg { width: 20px; height: 20px; color: var(--accent); }
+    .feature-card h3 {
+      font-family: var(--font-display);
+      font-size: 15px; font-weight: 600; margin-bottom: 8px;
+    }
+    .feature-card p { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+    .feature-card.highlight {
+      border-color: rgba(88,208,255,0.2);
+      box-shadow: 0 0 32px rgba(88,208,255,0.05);
+    }
+    .feature-card.highlight .feature-icon { background: rgba(88,208,255,0.15); }
+    .feature-card.highlight h3 { color: var(--accent); }
+
+    .also-strip {
+      display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
+    }
+    .also-chip {
+      padding: 7px 16px; border-radius: 20px;
+      font-size: 13px; color: var(--text-secondary);
+      background: var(--muted); border: 1px solid var(--border);
+      font-family: var(--font-body);
+    }
+
     @media (max-width: 1024px) { .features-grid { grid-template-columns: repeat(3, 1fr); } }
     @media (max-width: 768px) { .features-grid { grid-template-columns: repeat(2, 1fr); } }
     @media (max-width: 480px) { .features-grid { grid-template-columns: 1fr; } }
 
-    /* ---- UI Showcase ---- */
-    .showcase-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
-    .mockup-window { border-radius: 12px; overflow: hidden; border: 1px solid var(--border-solid); box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
-    .mockup-titlebar { background: #1a1f2e; padding: 10px 14px; display: flex; align-items: center; gap: 6px; }
-    .mockup-dot { width: 10px; height: 10px; border-radius: 50%; }
-    .mockup-dot.r { background: #ff5f57; } .mockup-dot.y { background: #febc2e; } .mockup-dot.g { background: #28c840; }
-    .mockup-label { flex: 1; text-align: center; font-size: 12px; color: var(--text-secondary); font-family: var(--font-mono); }
-    .mockup-body { background: var(--bg); min-height: 280px; overflow: hidden; }
-    @media (max-width: 768px) { .showcase-grid { grid-template-columns: 1fr; } }
-
-    /* Mockup: Dashboard */
-    .m-dash { padding: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .m-dash-card { background: rgba(16,24,40,0.7); border: 1px solid var(--border-solid); border-radius: 10px; padding: 14px; }
-    .m-dash-card-title { font-size: 9px; text-transform: uppercase; letter-spacing: 0.8px; color: #64748b; font-weight: 500; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
-    .m-dash-card-icon { color: var(--accent); font-size: 12px; }
-    .m-health-circle {
-      width: 90px; height: 90px; border-radius: 50%; border: 3px solid rgba(16,185,129,0.3);
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      margin: 0 auto 8px; box-shadow: 0 0 20px rgba(16,185,129,0.08);
+    /* ---- Showcase (Alternating) ---- */
+    .showcase-item {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 64px;
+      align-items: center;
+      padding: 80px 0;
     }
-    .m-health-score { font-size: 28px; font-weight: 800; font-family: var(--font-mono); color: #10b981; line-height: 1; }
-    .m-health-label { font-size: 8px; color: #10b981; font-weight: 500; margin-top: 2px; }
-    .m-pod-ring { display: flex; align-items: center; gap: 12px; }
-    .m-pod-legend { font-size: 10px; font-family: var(--font-mono); }
-    .m-pod-legend-item { display: flex; align-items: center; gap: 5px; margin-bottom: 3px; color: #94a3b8; }
-    .m-pod-legend-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-    .m-pod-legend-count { margin-left: auto; color: var(--text-primary); font-weight: 500; }
-    .m-node-item { margin-bottom: 8px; }
-    .m-node-row { display: flex; justify-content: space-between; font-size: 10px; font-family: var(--font-mono); margin-bottom: 3px; }
-    .m-node-name { color: var(--text-primary); }
-    .m-node-status { display: inline-flex; align-items: center; gap: 3px; }
-    .m-node-status-dot { width: 4px; height: 4px; border-radius: 50%; background: #10b981; }
-    .m-node-bar { height: 5px; background: #1e293b; border-radius: 3px; overflow: hidden; }
-    .m-node-fill { height: 100%; border-radius: 3px; }
-    .m-restart-item { display: flex; align-items: center; gap: 8px; padding: 3px 0; font-size: 10px; font-family: var(--font-mono); }
-    .m-restart-idx { color: #475569; width: 12px; }
-    .m-restart-name { color: var(--text-secondary); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .m-restart-count { font-weight: 600; }
-    .m-restart-count.high { color: #ef4444; }
-    .m-restart-count.med { color: #f59e0b; }
+    .showcase-item:not(:last-child) {
+      border-bottom: 1px solid var(--border);
+    }
+    .showcase-item.reverse .showcase-text { order: 2; }
+    .showcase-item.reverse .showcase-frame-wrap { order: 1; }
+    .showcase-text .section-label { margin-bottom: 12px; }
+    .showcase-text h3 {
+      font-size: clamp(24px, 3vw, 32px);
+      font-weight: 700; margin-bottom: 16px;
+      font-family: var(--font-display);
+    }
+    .showcase-text p {
+      font-size: 16px; color: var(--text-secondary);
+      line-height: 1.7; max-width: 460px;
+    }
+    .showcase-features {
+      list-style: none; margin-top: 20px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .showcase-features li {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 14px; color: var(--text-secondary);
+    }
+    .showcase-features li svg { width: 16px; height: 16px; color: var(--status-ok); flex-shrink: 0; }
 
-    /* Mockup: Graph */
-    .m-graph-body { background: radial-gradient(circle at 50% 50%, #0f1a2e 0%, var(--bg) 100%); padding: 12px; position: relative; min-height: 280px; }
-    .m-graph-svg { width: 100%; height: 256px; }
-    .m-graph-svg text { font-family: var(--font-mono); }
-    .m-graph-node { cursor: default; }
-    .m-graph-edge { fill: none; stroke: #334155; stroke-width: 1.5; }
-    .m-graph-edge-dash { fill: none; stroke: #334155; stroke-width: 1.5; stroke-dasharray: 4 3; }
-    .m-graph-legend { position: absolute; bottom: 10px; left: 14px; display: flex; gap: 12px; }
-    .m-graph-legend-item { display: flex; align-items: center; gap: 4px; font-size: 9px; color: #64748b; font-family: var(--font-mono); }
-    .m-graph-legend-dot { width: 7px; height: 7px; border-radius: 3px; }
-    .m-graph-count { position: absolute; top: 10px; left: 14px; font-size: 9px; color: #475569; font-family: var(--font-mono); background: rgba(16,24,40,0.8); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border-solid); }
-    .m-graph-toolbar { position: absolute; top: 10px; right: 14px; display: flex; gap: 4px; }
-    .m-graph-btn { font-size: 9px; color: #64748b; background: rgba(16,24,40,0.8); padding: 3px 8px; border-radius: 5px; border: 1px solid var(--border-solid); font-family: var(--font-mono); }
-
-    /* Mockup: AI Panel */
-    .m-ai { display: flex; flex-direction: column; height: 280px; }
-    .m-ai-header { padding: 10px 14px; border-bottom: 1px solid var(--border-solid); background: rgba(16,24,40,0.8); display: flex; align-items: center; gap: 10px; }
-    .m-ai-avatar { width: 28px; height: 28px; border-radius: 8px; background: rgba(88,208,255,0.12); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .m-ai-avatar svg { width: 14px; height: 14px; color: var(--accent); }
-    .m-ai-title { font-size: 12px; font-weight: 600; color: var(--text-primary); }
-    .m-ai-subtitle { font-size: 9px; color: #475569; }
-    .m-ai-close { margin-left: auto; color: #475569; font-size: 14px; }
-    .m-ai-ctx { padding: 6px 14px; background: rgba(88,208,255,0.04); border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 10px; color: var(--accent); font-family: var(--font-mono); display: flex; align-items: center; gap: 6px; }
-    .m-ai-messages { flex: 1; padding: 12px 14px; overflow: hidden; display: flex; flex-direction: column; gap: 8px; }
-    .m-ai-msg { max-width: 88%; border-radius: 10px; padding: 8px 12px; font-size: 11px; line-height: 1.5; }
-    .m-ai-msg.user { background: rgba(88,208,255,0.12); color: var(--text-primary); margin-left: auto; border-bottom-right-radius: 2px; }
-    .m-ai-msg.bot { background: rgba(29,41,57,0.6); color: #cbd5e1; border: 1px solid rgba(255,255,255,0.03); border-bottom-left-radius: 2px; display: flex; gap: 8px; }
-    .m-ai-bot-avatar { width: 20px; height: 20px; border-radius: 5px; background: rgba(88,208,255,0.12); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
-    .m-ai-bot-avatar svg { width: 10px; height: 10px; color: var(--accent); }
-    .m-ai-streaming { font-size: 10px; color: #475569; display: flex; align-items: center; gap: 6px; padding: 0 14px 4px; }
-    .m-ai-spinner { width: 12px; height: 12px; border: 1.5px solid rgba(88,208,255,0.3); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .m-ai-input { padding: 10px 14px; border-top: 1px solid var(--border-solid); background: rgba(16,24,40,0.8); display: flex; gap: 8px; align-items: center; }
-    .m-ai-input-field { flex: 1; background: var(--bg); border: 1px solid var(--border-solid); border-radius: 8px; padding: 7px 12px; font-size: 11px; color: #475569; font-family: var(--font-sans); }
-    .m-ai-send { width: 30px; height: 30px; border-radius: 7px; background: rgba(88,208,255,0.15); border: 1px solid rgba(88,208,255,0.3); display: flex; align-items: center; justify-content: center; color: var(--accent); font-size: 14px; }
-
-    /* Mockup: Pod Logs Detail */
-    .m-detail { display: flex; flex-direction: column; height: 280px; }
-    .m-detail-header { padding: 10px 14px; border-bottom: 1px solid var(--border-solid); background: rgba(16,24,40,0.5); display: flex; align-items: center; gap: 8px; }
-    .m-detail-back { font-size: 10px; color: #64748b; padding: 3px 8px; border: 1px solid var(--border-solid); border-radius: 5px; display: flex; align-items: center; gap: 4px; }
-    .m-detail-info { display: flex; gap: 20px; padding: 8px 14px; border-bottom: 1px solid rgba(255,255,255,0.03); }
-    .m-detail-info-item label { display: block; font-size: 8px; text-transform: uppercase; letter-spacing: 0.8px; color: #475569; margin-bottom: 1px; }
-    .m-detail-info-item span { font-size: 11px; font-family: var(--font-mono); color: var(--text-primary); }
-    .m-detail-tabs { display: flex; border-bottom: 1px solid var(--border-solid); padding: 0 14px; position: relative; }
-    .m-detail-tab { padding: 7px 12px; font-size: 11px; color: #64748b; position: relative; cursor: default; }
-    .m-detail-tab.active { color: var(--accent); }
-    .m-detail-tab.active::after { content: ''; position: absolute; bottom: -1px; left: 8px; right: 8px; height: 2px; background: var(--accent); border-radius: 1px; }
-    .m-logs { flex: 1; overflow: hidden; margin: 8px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-solid); border-radius: 8px; font-family: var(--font-mono); font-size: 10px; line-height: 1.7; }
-    .m-log-line { display: flex; padding: 0 8px; }
-    .m-log-line:hover { background: rgba(255,255,255,0.01); }
-    .m-log-num { width: 28px; text-align: right; color: #334155; padding-right: 8px; border-right: 1px solid rgba(255,255,255,0.03); flex-shrink: 0; user-select: none; }
-    .m-log-text { padding-left: 8px; color: #4ade80; white-space: nowrap; }
-    .m-log-text.warn { color: #fbbf24; }
-    .m-log-text.error { color: #f87171; }
-    .m-log-text.info { color: #60a5fa; }
+    @media (max-width: 768px) {
+      .showcase-item { grid-template-columns: 1fr; gap: 32px; }
+      .showcase-item.reverse .showcase-text { order: 1; }
+      .showcase-item.reverse .showcase-frame-wrap { order: 2; }
+    }
 
     /* ---- Comparison Table ---- */
     .compare-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .compare-table { width: 100%; min-width: 700px; border-collapse: collapse; font-size: 14px; }
-    .compare-table th, .compare-table td { padding: 12px 16px; text-align: center; border-bottom: 1px solid var(--border); }
-    .compare-table th { font-weight: 600; color: var(--text-secondary); font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; position: sticky; top: 0; background: var(--surface); }
-    .compare-table td:first-child { text-align: left; font-weight: 500; color: var(--text-primary); }
-    .compare-table th.kore-col, .compare-table td.kore-col { background: rgba(88, 208, 255, 0.05); }
-    .compare-table th.kore-col { color: var(--accent); box-shadow: inset 0 2px 0 var(--accent); }
-    .check { color: var(--status-running); font-size: 18px; }
-    .cross { color: var(--status-failed); font-size: 18px; }
-    .partial { color: var(--status-pending); font-size: 13px; }
+    .compare-table {
+      width: 100%; min-width: 700px; border-collapse: collapse; font-size: 14px;
+    }
+    .compare-table th, .compare-table td {
+      padding: 14px 18px; text-align: center;
+      border-bottom: 1px solid var(--border);
+    }
+    .compare-table th {
+      font-family: var(--font-display); font-weight: 600;
+      color: var(--text-secondary); font-size: 13px;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      background: var(--bg-elevated);
+    }
+    .compare-table td:first-child {
+      text-align: left; font-weight: 500; color: var(--text-primary);
+    }
+    .compare-table th.kore-col, .compare-table td.kore-col {
+      background: rgba(88,208,255,0.04);
+    }
+    .compare-table th.kore-col {
+      color: var(--accent);
+      box-shadow: inset 0 2px 0 var(--accent);
+    }
+    .check { color: var(--status-ok); font-weight: 700; font-size: 18px; }
+    .cross { color: var(--status-fail); font-size: 18px; opacity: 0.6; }
+    .partial { color: var(--status-warn); font-size: 13px; font-family: var(--font-mono); }
 
     /* ---- Performance Stats ---- */
     .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
-    .stat-card { padding: 32px 24px; text-align: center; }
-    .stat-value { font-size: 42px; font-weight: 800; font-family: var(--font-mono); margin-bottom: 4px; }
+    .stat-card { padding: 36px 28px; text-align: center; }
+    .stat-value {
+      font-family: var(--font-display); font-size: 48px; font-weight: 800;
+      margin-bottom: 8px;
+    }
     .stat-value .accent { color: var(--accent); }
-    .stat-label { font-size: 14px; color: var(--text-secondary); margin-bottom: 4px; }
-    .stat-compare { font-size: 12px; color: var(--text-secondary); font-family: var(--font-mono); opacity: 0.6; }
+    .stat-label { font-size: 15px; color: var(--text-secondary); margin-bottom: 6px; }
+    .stat-compare {
+      font-size: 12px; color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
     @media (max-width: 768px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 480px) { .stats-grid { grid-template-columns: 1fr; } }
 
     /* ---- Keyboard Shortcuts ---- */
-    .shortcuts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
-    .shortcut-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 8px; background: var(--muted); border: 1px solid var(--border); }
-    kbd { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; background: var(--surface); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; font-family: var(--font-mono); font-size: 12px; color: var(--text-primary); box-shadow: 0 2px 0 rgba(0,0,0,0.3); white-space: nowrap; }
+    .shortcuts-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 14px;
+    }
+    .shortcut-item {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 18px; border-radius: var(--radius-sm);
+      background: var(--muted); border: 1px solid var(--border);
+    }
+    kbd {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 5px 10px;
+      background: var(--bg-elevated); border: 1px solid var(--border-strong);
+      border-radius: var(--radius-xs);
+      font-family: var(--font-mono); font-size: 12px;
+      color: var(--text-primary);
+      box-shadow: 0 2px 0 rgba(0,0,0,0.4);
+      white-space: nowrap;
+    }
     .shortcut-desc { font-size: 13px; color: var(--text-secondary); }
 
-    /* ---- Tech Stack ---- */
-    .stack-grid { display: grid; grid-template-columns: 1fr auto 1fr; gap: 32px; align-items: center; }
-    .stack-column h3 { font-size: 14px; font-weight: 600; margin-bottom: 16px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; }
-    .stack-item { padding: 10px 16px; border-radius: 8px; background: var(--muted); border: 1px solid var(--border); margin-bottom: 8px; font-size: 14px; font-family: var(--font-mono); }
-    .stack-bridge { text-align: center; padding: 24px; }
-    .stack-bridge-label { font-size: 13px; color: var(--accent); font-family: var(--font-mono); font-weight: 600; }
-    .stack-bridge-line { width: 2px; height: 40px; background: var(--border); margin: 8px auto; }
-    @media (max-width: 768px) { .stack-grid { grid-template-columns: 1fr; } .stack-bridge-line { width: 40px; height: 2px; margin: 0 auto; } }
+    /* ---- Sponsor Section ---- */
+    .sponsor-section {
+      position: relative;
+      overflow: hidden;
+    }
+    .sponsor-section::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 50% 50%, rgba(245,158,11,0.04) 0%, transparent 65%);
+      pointer-events: none;
+    }
+    .sponsor-inner {
+      text-align: center;
+      max-width: 640px; margin: 0 auto;
+      position: relative; z-index: 1;
+    }
+    .sponsor-icon {
+      width: 56px; height: 56px; border-radius: 14px;
+      background: rgba(245,158,11,0.1);
+      border: 1px solid rgba(245,158,11,0.2);
+      display: inline-flex; align-items: center; justify-content: center;
+      margin-bottom: 24px;
+    }
+    .sponsor-icon svg { width: 24px; height: 24px; color: #f59e0b; }
+    .sponsor-inner .section-label { color: #f59e0b; }
+    .sponsor-inner .section-title { margin-bottom: 16px; }
+    .sponsor-desc {
+      font-size: 17px; color: var(--text-secondary);
+      line-height: 1.7; margin-bottom: 32px;
+    }
+    .sponsor-benefits {
+      display: flex; flex-wrap: wrap; justify-content: center;
+      gap: 12px; margin-top: 28px;
+    }
+    .sponsor-benefit {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 13px; color: var(--text-secondary);
+      padding: 6px 14px; border-radius: 20px;
+      background: var(--muted); border: 1px solid var(--border);
+    }
+    .sponsor-benefit svg { width: 14px; height: 14px; color: #f59e0b; }
 
     /* ---- Install ---- */
-    .install-block { max-width: 640px; margin: 0 auto; text-align: center; }
-    .install-code { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 24px; font-family: var(--font-mono); font-size: 14px; text-align: left; margin-bottom: 24px; color: var(--text-secondary); overflow-x: auto; }
-    .install-code .comment { color: #475569; }
+    .install-block {
+      max-width: 680px; margin: 0 auto; text-align: center;
+    }
+    .install-code {
+      background: var(--bg-elevated); border: 1px solid var(--border-strong);
+      border-radius: 12px; padding: 28px;
+      font-family: var(--font-mono); font-size: 14px;
+      text-align: left; margin-bottom: 28px;
+      color: var(--text-secondary); overflow-x: auto;
+      line-height: 1.8;
+    }
+    .install-code .comment { color: var(--text-muted); }
     .install-code .cmd { color: var(--text-primary); }
-    .install-prereqs { font-size: 13px; color: var(--text-secondary); margin-top: 16px; }
+    .install-prereqs {
+      font-size: 14px; color: var(--text-muted);
+      margin-top: 20px;
+    }
 
     /* ---- Footer ---- */
-    footer { padding: 40px 0; text-align: center; border-top: 1px solid var(--border); color: var(--text-secondary); font-size: 13px; }
-    footer a { color: var(--text-secondary); } footer a:hover { color: var(--text-primary); }
+    footer {
+      padding: 48px 0;
+      border-top: 1px solid var(--border);
+    }
+    .footer-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 16px;
+    }
+    .footer-brand {
+      display: flex; align-items: center; gap: 10px;
+      font-family: var(--font-display); font-weight: 600; font-size: 15px;
+      color: var(--text-secondary);
+    }
+    .footer-brand img { width: 22px; height: 22px; border-radius: 6px; opacity: 0.7; }
+    .footer-links {
+      display: flex; align-items: center; gap: 24px;
+    }
+    .footer-links a {
+      color: var(--text-muted); font-size: 13px;
+      transition: color 0.2s;
+    }
+    .footer-links a:hover { color: var(--text-secondary); text-decoration: none; }
+    .footer-note {
+      font-size: 13px; color: var(--text-muted);
+    }
 
-    .section-divider { height: 1px; background: linear-gradient(90deg, transparent, var(--border), transparent); max-width: 600px; margin: 0 auto; }
+    /* ---- Responsive ---- */
+    @media (max-width: 768px) {
+      .section { padding: 80px 0; }
+      .hero { padding-top: 120px; }
+      .hero h1 { font-size: clamp(36px, 8vw, 52px); }
+      .footer-inner { flex-direction: column; text-align: center; }
+    }
+    @media (max-width: 480px) {
+      .hero-buttons { flex-direction: column; align-items: center; }
+      .hero-buttons .btn { width: 100%; justify-content: center; }
+      .tech-strip-items { gap: 16px; }
+    }
   </style>
 </head>
 <body>
@@ -429,16 +585,23 @@
 <!-- Nav -->
 <nav>
   <div class="nav-inner">
-    <div class="nav-logo">
+    <a href="#" class="nav-logo">
       <img src="icon.png" alt="Kore" width="28" height="28">
       <span>Kore</span>
-    </div>
+    </a>
     <div class="nav-links">
       <a href="#features" class="hide-mobile">Features</a>
+      <a href="#showcase" class="hide-mobile">Screenshots</a>
       <a href="#compare" class="hide-mobile">Compare</a>
       <a href="#install">Install</a>
-      <a href="https://github.com/eladbash/kore" target="_blank" rel="noopener">GitHub</a>
-      <a href="https://github.com/eladbash/kore/releases/latest" target="_blank" rel="noopener" class="btn btn-primary nav-cta">Download</a>
+      <a href="https://github.com/sponsors/eladbash" target="_blank" rel="noopener" class="nav-sponsor hide-mobile">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+        Sponsor
+      </a>
+      <a href="https://github.com/eladbash/kore" target="_blank" rel="noopener" class="nav-github" aria-label="GitHub">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+      </a>
+      <a href="https://github.com/eladbash/kore/releases/latest" target="_blank" rel="noopener" class="btn nav-cta">Download</a>
     </div>
   </div>
 </nav>
@@ -448,13 +611,16 @@
   <div class="hero-glow"></div>
   <div class="container" style="position:relative;z-index:1;">
     <img src="icon.png" alt="Kore" class="hero-icon">
-    <h1 class="gradient-text">Kore</h1>
-    <p class="tagline">The AI-powered Kubernetes IDE</p>
-    <p class="sub">Ask your cluster anything. Diagnose crashes, troubleshoot issues, and manage resources — all with natural language.</p>
+    <div class="hero-badge">
+      <span class="hero-badge-dot"></span>
+      Open Source &middot; MIT License &middot; macOS &amp; Windows
+    </div>
+    <h1>The AI-Powered<br><span class="gradient-text">Kubernetes IDE</span></h1>
+    <p class="tagline">Native desktop app that combines real-time cluster monitoring, AI troubleshooting, and keyboard-driven workflows. Stop switching between kubectl, k9s, and your browser.</p>
     <div class="hero-buttons">
       <a href="https://github.com/eladbash/kore/releases/latest" target="_blank" rel="noopener" class="btn btn-primary">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Download
+        Download for Free
       </a>
       <a href="https://github.com/eladbash/kore" target="_blank" rel="noopener" class="btn btn-secondary">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
@@ -462,179 +628,37 @@
       </a>
     </div>
   </div>
-</section>
-
-<!-- Full App Preview -->
-<section class="app-preview-section">
+  <!-- Hero Screenshot -->
   <div class="container">
-    <div class="app-preview-window reveal">
-      <div class="app-titlebar">
-        <div class="app-dot r"></div>
-        <div class="app-dot y"></div>
-        <div class="app-dot g"></div>
-        <div class="app-titlebar-text">Kore</div>
-      </div>
-      <div class="app-body">
-        <!-- Sidebar -->
-        <div class="prev-sidebar">
-          <div class="prev-sb-brand">
-            <div class="prev-sb-logo">
-              <svg viewBox="0 0 24 24" fill="none" stroke="#58d0ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
-            </div>
-            <div>
-              <div class="prev-sb-name">Kore</div>
-              <div class="prev-sb-sub">Kubernetes Desktop</div>
-            </div>
-          </div>
-
-          <div class="prev-sb-dropdown active">
-            <span>production-cluster</span>
-            <span class="prev-sb-chevron">&#9662;</span>
-          </div>
-          <div class="prev-sb-dropdown" style="margin-top:6px;">
-            <span style="color:#64748b">production</span>
-            <span class="prev-sb-chevron">&#9662;</span>
-          </div>
-
-          <div class="prev-sb-group-label">Workloads</div>
-          <div class="prev-sb-item active">
-            <svg class="prev-sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
-            Pods
-            <span class="prev-sb-badge">12</span>
-          </div>
-          <div class="prev-sb-item">
-            <svg class="prev-sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 16v1a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2h1"/><rect x="8" y="2" width="13" height="13" rx="2"/></svg>
-            Deployments
-          </div>
-          <div class="prev-sb-item">
-            <svg class="prev-sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>
-            Jobs
-          </div>
-          <div class="prev-sb-item">
-            <svg class="prev-sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            CronJobs
-          </div>
-
-          <div class="prev-sb-group-label">Network</div>
-          <div class="prev-sb-item">
-            <svg class="prev-sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
-            Services
-          </div>
-          <div class="prev-sb-item">
-            <svg class="prev-sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 16 12 14 15 10 9 8 12 2 12"/></svg>
-            Ingresses
-          </div>
-
-          <div class="prev-sb-group-label">Config</div>
-          <div class="prev-sb-item">
-            <svg class="prev-sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            ConfigMaps
-          </div>
-
-          <div class="prev-sb-footer">
-            <span>&#8984;K</span> Command Palette
-          </div>
+    <div class="hero-screenshot reveal">
+      <div class="hero-screenshot-glow"></div>
+      <div class="screenshot-frame">
+        <div class="frame-titlebar">
+          <span class="frame-dot r"></span>
+          <span class="frame-dot y"></span>
+          <span class="frame-dot g"></span>
+          <span class="frame-title">Kore &mdash; Pods</span>
         </div>
-
-        <!-- Main -->
-        <div class="prev-main" style="display:flex;flex-direction:row;">
-          <!-- Resource table (narrower) -->
-          <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
-            <div class="prev-header">
-              <div class="prev-kind-label">Pods</div>
-              <div class="prev-search">
-                <span class="prev-search-icon">&#128269;</span>
-                <div class="prev-search-input">Search pods...</div>
-                <span class="prev-search-hint">/</span>
-              </div>
-              <div class="prev-header-actions">
-                <div class="prev-ctx-badge">production</div>
-              </div>
-            </div>
-            <div class="prev-table">
-              <div class="prev-tbl-header">
-                <span class="prev-tbl-th col-pin"></span>
-                <span class="prev-tbl-th col-name">Name</span>
-                <span class="prev-tbl-th col-status">Status</span>
-                <span class="prev-tbl-th col-restarts">Restarts</span>
-              </div>
-              <div class="prev-tbl-row">
-                <span class="col-pin"><span class="prev-star pinned">&#9733;</span></span>
-                <span class="prev-tbl-cell col-name">api-gateway-7f8d4b6c9-x2k</span>
-                <span class="col-status"><span class="prev-status running"><span class="prev-status-dot"></span>Running</span></span>
-                <span class="prev-tbl-cell col-restarts dim" style="text-align:center">0</span>
-              </div>
-              <div class="prev-tbl-row">
-                <span class="col-pin"><span class="prev-star">&#9734;</span></span>
-                <span class="prev-tbl-cell col-name">auth-service-3b2c1d8f7-m9p</span>
-                <span class="col-status"><span class="prev-status running"><span class="prev-status-dot"></span>Running</span></span>
-                <span class="prev-tbl-cell col-restarts dim" style="text-align:center">0</span>
-              </div>
-              <div class="prev-tbl-row selected">
-                <span class="col-pin"><span class="prev-star">&#9734;</span></span>
-                <span class="prev-tbl-cell col-name">payment-worker-9a4f2e1d3-q7</span>
-                <span class="col-status"><span class="prev-status failed"><span class="prev-status-dot"></span>CrashLoopBackOff</span></span>
-                <span class="prev-tbl-cell col-restarts" style="text-align:center;color:#ef4444">14</span>
-              </div>
-              <div class="prev-tbl-row">
-                <span class="col-pin"><span class="prev-star">&#9734;</span></span>
-                <span class="prev-tbl-cell col-name">cache-redis-0</span>
-                <span class="col-status"><span class="prev-status pending"><span class="prev-status-dot"></span>Pending</span></span>
-                <span class="prev-tbl-cell col-restarts dim" style="text-align:center">0</span>
-              </div>
-              <div class="prev-tbl-row">
-                <span class="col-pin"><span class="prev-star">&#9734;</span></span>
-                <span class="prev-tbl-cell col-name">frontend-next-8c3d7a5b2-j4</span>
-                <span class="col-status"><span class="prev-status running"><span class="prev-status-dot"></span>Running</span></span>
-                <span class="prev-tbl-cell col-restarts dim" style="text-align:center">1</span>
-              </div>
-              <div class="prev-tbl-row">
-                <span class="col-pin"><span class="prev-star">&#9734;</span></span>
-                <span class="prev-tbl-cell col-name">postgres-primary-0</span>
-                <span class="col-status"><span class="prev-status running"><span class="prev-status-dot"></span>Running</span></span>
-                <span class="prev-tbl-cell col-restarts dim" style="text-align:center">0</span>
-              </div>
-            </div>
-          </div>
-          <!-- AI Panel (open) -->
-          <div class="prev-ai-panel" style="width:280px;flex-shrink:0;border-left:1px solid var(--border-solid);display:flex;flex-direction:column;background:rgba(16,24,40,0.5);">
-            <div style="padding:10px 14px;border-bottom:1px solid var(--border-solid);background:rgba(16,24,40,0.8);display:flex;align-items:center;gap:8px;">
-              <div style="width:24px;height:24px;border-radius:6px;background:rgba(88,208,255,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#58d0ff" stroke-width="2"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M9 13v2"/><path d="M15 13v2"/></svg>
-              </div>
-              <div style="flex:1;">
-                <div style="font-size:11px;font-weight:600;color:var(--text-primary);">AI Assistant</div>
-                <div style="font-size:8px;color:#475569;">Cluster-aware</div>
-              </div>
-              <div style="color:#475569;font-size:12px;">&times;</div>
-            </div>
-            <div style="padding:5px 10px;background:rgba(88,208,255,0.04);border-bottom:1px solid rgba(255,255,255,0.03);font-size:9px;color:var(--accent);font-family:var(--font-mono);display:flex;align-items:center;gap:4px;">
-              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>
-              pod/production/payment-worker-9a4f2
-            </div>
-            <div style="flex:1;padding:10px;overflow:hidden;display:flex;flex-direction:column;gap:6px;">
-              <div style="max-width:90%;border-radius:8px;padding:6px 10px;font-size:10px;line-height:1.4;background:rgba(88,208,255,0.12);color:var(--text-primary);margin-left:auto;border-bottom-right-radius:2px;">Why is this pod crashing?</div>
-              <div style="max-width:90%;border-radius:8px;padding:6px 10px;font-size:10px;line-height:1.4;background:rgba(29,41,57,0.6);color:#cbd5e1;border:1px solid rgba(255,255,255,0.03);border-bottom-left-radius:2px;">
-                <span style="color:var(--accent);font-weight:600;">payment-worker-9a4f2</span> is in CrashLoopBackOff (14 restarts).<br><br>
-                <span style="color:#f87171;">Error: REDIS_URL env var not set</span><br><br>
-                ConfigMap <span style="color:var(--accent);">payment-config</span> is missing the <span style="color:var(--accent);">REDIS_URL</span> key. Add it to fix the crash.
-              </div>
-              <div style="max-width:90%;border-radius:8px;padding:6px 10px;font-size:10px;line-height:1.4;background:rgba(88,208,255,0.12);color:var(--text-primary);margin-left:auto;border-bottom-right-radius:2px;">Show me the fix</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:4px;font-size:9px;color:#475569;padding:0 10px 4px;">
-              <div style="width:10px;height:10px;border:1.5px solid rgba(88,208,255,0.3);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;"></div>
-              Thinking...
-            </div>
-            <div style="padding:8px 10px;border-top:1px solid var(--border-solid);background:rgba(16,24,40,0.8);display:flex;gap:6px;align-items:center;">
-              <div style="flex:1;background:var(--bg);border:1px solid var(--border-solid);border-radius:6px;padding:5px 10px;font-size:10px;color:#475569;font-family:var(--font-sans);">Ask about this resource...</div>
-              <div style="width:24px;height:24px;border-radius:5px;background:rgba(88,208,255,0.15);border:1px solid rgba(88,208,255,0.3);display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:11px;">&#8593;</div>
-            </div>
-          </div>
-        </div>
+        <img src="screenshots/pods-view.png" alt="Kore resource table showing pods with real-time status, sidebar navigation, and search" width="1060" height="auto" loading="eager">
       </div>
     </div>
   </div>
+  <!-- Tech Strip -->
+  <div class="tech-strip">
+    <div class="tech-strip-label">Powered by</div>
+    <div class="tech-strip-items">
+      <span class="tech-strip-item">Rust</span>
+      <span class="tech-strip-sep">&middot;</span>
+      <span class="tech-strip-item">React</span>
+      <span class="tech-strip-sep">&middot;</span>
+      <span class="tech-strip-item">Tauri v2</span>
+      <span class="tech-strip-sep">&middot;</span>
+      <span class="tech-strip-item">kube-rs</span>
+    </div>
+  </div>
 </section>
+
+<div class="section-divider"></div>
 
 <!-- Features -->
 <section class="section" id="features">
@@ -645,63 +669,87 @@
       <div class="section-sub">Built for engineers who live in the terminal but want something better.</div>
     </div>
     <div class="features-grid reveal">
-      <div class="feature-card glass" style="border:1px solid rgba(88,208,255,0.25);box-shadow:0 0 24px rgba(88,208,255,0.06);">
-        <div class="feature-icon" style="background:rgba(88,208,255,0.15);">&#10024;</div>
-        <h3 style="color:var(--accent);">AI Chatbot</h3>
-        <p>Built-in AI that understands your cluster. Ask questions in natural language — get instant diagnosis with full context. Supports OpenAI, Anthropic, Ollama, and Claude CLI.</p>
+      <div class="feature-card glass highlight">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M9 13v2"/><path d="M15 13v2"/></svg>
+        </div>
+        <h3>AI Troubleshooting</h3>
+        <p>Built-in AI that understands your cluster. Ask questions in natural language and get instant diagnosis with full context. Supports OpenAI, Anthropic, and Ollama.</p>
       </div>
       <div class="feature-card glass">
-        <div class="feature-icon">&#9889;</div>
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
         <h3>Native Performance</h3>
-        <p>Rust backend, ~80MB memory. Starts in under a second. No Electron bloat.</p>
+        <p>Rust backend, ~80MB memory. Starts in under a second. No Electron overhead, no Chromium fork.</p>
       </div>
       <div class="feature-card glass">
-        <div class="feature-icon">&#9676;</div>
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
         <h3>Real-Time Streaming</h3>
-        <p>Live resource watches, pod logs, and events. See changes the instant they happen.</p>
+        <p>Live resource watches, pod logs, and events via Kubernetes watch API. See changes the instant they happen.</p>
       </div>
       <div class="feature-card glass">
-        <div class="feature-icon">&#8984;</div>
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </div>
         <h3>Command Palette</h3>
-        <p>Cmd+K to search resources, switch views, filter namespaces. Keyboard-first UX.</p>
+        <p>Cmd+K to search resources, switch views, and filter namespaces. Everything, one shortcut away.</p>
       </div>
       <div class="feature-card glass">
-        <div class="feature-icon">&#9881;</div>
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        </div>
         <h3>Cluster Dashboard</h3>
-        <p>Health score, pod distribution ring, node capacity bars, restart hotlist. One glance.</p>
+        <p>Health score, pod distribution ring chart, node capacity bars, and restart hotlist. At a glance.</p>
       </div>
       <div class="feature-card glass">
-        <div class="feature-icon">&#9672;</div>
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        </div>
         <h3>Resource Graph</h3>
-        <p>Interactive SVG dependency graph. Trace Ingress &rarr; Service &rarr; Deployment &rarr; Pods.</p>
+        <p>Interactive dependency graph. Trace Ingress to Service to Deployment to Pods visually.</p>
       </div>
       <div class="feature-card glass">
-        <div class="feature-icon">&#9998;</div>
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        </div>
         <h3>YAML Editor + Diff</h3>
-        <p>Edit YAML in-app with syntax highlighting. Side-by-side diff before applying.</p>
+        <p>Edit YAML in-app with syntax highlighting. Side-by-side diff preview before applying changes.</p>
       </div>
       <div class="feature-card glass">
-        <div class="feature-icon">&#8634;</div>
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+        </div>
         <h3>Deployment Rollback</h3>
-        <p>Visual revision timeline with image diffs. One-click rollback to any revision.</p>
+        <p>Visual revision timeline with image diffs. One-click rollback to any previous revision.</p>
       </div>
       <div class="feature-card glass">
-        <div class="feature-icon">&#9875;</div>
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        </div>
         <h3>Helm Management</h3>
-        <p>Browse releases, view values/manifests/history, upgrade, and rollback.</p>
+        <p>Browse releases, inspect values and manifests, view history, and rollback with a click.</p>
       </div>
       <div class="feature-card glass">
-        <div class="feature-icon">&#9741;</div>
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+        </div>
         <h3>Multi-Cluster</h3>
-        <p>Aggregate resources across multiple contexts. One table, all clusters.</p>
+        <p>Aggregate resources across multiple contexts. One table, all your clusters side-by-side.</p>
       </div>
       <div class="feature-card glass">
-        <div class="feature-icon">&#9638;</div>
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+        </div>
         <h3>CRD Browser</h3>
         <p>Discover and browse Custom Resource Definitions and their instances dynamically.</p>
       </div>
       <div class="feature-card glass">
-        <div class="feature-icon">&#8651;</div>
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+        </div>
         <h3>Port Forwarding</h3>
         <p>One-click port forwards with TCP proxying. Manage all forwards from a single panel.</p>
       </div>
@@ -712,7 +760,7 @@
       <div class="also-chip">Pod exec shell</div>
       <div class="also-chip">Multi-pod logs</div>
       <div class="also-chip">Label filtering</div>
-      <div class="also-chip">Favorites</div>
+      <div class="also-chip">Pinned resources</div>
       <div class="also-chip">Restart sparklines</div>
     </div>
   </div>
@@ -720,228 +768,86 @@
 
 <div class="section-divider"></div>
 
-<!-- UI Showcase -->
+<!-- Showcase -->
 <section class="section" id="showcase">
   <div class="container">
     <div class="reveal">
       <div class="section-label">Interface</div>
-      <div class="section-title">AI-powered workflows, designed for dark mode operators</div>
-      <div class="section-sub">Glassmorphism, monospace typography, and a color palette that won't burn your retinas at 2 AM.</div>
+      <div class="section-title">See it in action</div>
+      <div class="section-sub">Dark theme, monospace typography, and interfaces designed for engineers working at 2 AM.</div>
     </div>
-    <div class="showcase-grid reveal">
 
-      <!-- Mockup 1: AI Panel (star position) -->
-      <div class="mockup-window" style="border:1px solid rgba(88,208,255,0.2);box-shadow:0 8px 32px rgba(88,208,255,0.08),0 8px 32px rgba(0,0,0,0.3);">
-        <div class="mockup-titlebar">
-          <div class="mockup-dot r"></div><div class="mockup-dot y"></div><div class="mockup-dot g"></div>
-          <div class="mockup-label" style="color:var(--accent);">AI Troubleshooting</div>
-        </div>
-        <div class="mockup-body">
-          <div class="m-ai">
-            <div class="m-ai-header">
-              <div class="m-ai-avatar">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M9 13v2"/><path d="M15 13v2"/></svg>
-              </div>
-              <div>
-                <div class="m-ai-title">AI Assistant</div>
-                <div class="m-ai-subtitle">Cluster-aware troubleshooting</div>
-              </div>
-              <div class="m-ai-close">&times;</div>
-            </div>
-            <div class="m-ai-ctx">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>
-              Context: pod/production/payment-worker-9a4f2
-            </div>
-            <div class="m-ai-messages">
-              <div class="m-ai-msg user">Why is this pod crashing?</div>
-              <div class="m-ai-msg bot">
-                <div class="m-ai-bot-avatar">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/></svg>
-                </div>
-                <div>
-                  The pod <code style="color:var(--accent);font-size:10px">payment-worker-9a4f2</code> is in CrashLoopBackOff with 14 restarts. Last log shows:<br><br>
-                  <code style="color:#f87171;font-size:10px">Error: REDIS_URL env var not set</code><br><br>
-                  The ConfigMap <code style="color:var(--accent);font-size:10px">payment-config</code> is missing the <code style="color:var(--accent);font-size:10px">REDIS_URL</code> key.
-                </div>
-              </div>
-              <div class="m-ai-msg user">How do I fix it?</div>
-            </div>
-            <div class="m-ai-streaming">
-              <div class="m-ai-spinner"></div>
-              Thinking...
-            </div>
-            <div class="m-ai-input">
-              <div class="m-ai-input-field">Ask about this resource...</div>
-              <div class="m-ai-send">&#8593;</div>
-            </div>
+    <!-- AI Chat -->
+    <div class="showcase-item reveal">
+      <div class="showcase-text">
+        <div class="section-label">AI Troubleshooting</div>
+        <h3>Ask your cluster anything</h3>
+        <p>Built-in AI assistant with full cluster context. Diagnose CrashLoopBackOff, trace networking issues, and get actionable fixes in natural language.</p>
+        <ul class="showcase-features">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>OpenAI, Anthropic, and Ollama</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Streaming responses</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Context-aware per resource</li>
+        </ul>
+      </div>
+      <div class="showcase-frame-wrap">
+        <div class="screenshot-frame">
+          <div class="frame-titlebar">
+            <span class="frame-dot r"></span>
+            <span class="frame-dot y"></span>
+            <span class="frame-dot g"></span>
+            <span class="frame-title">AI Assistant</span>
           </div>
+          <img src="screenshots/ai-chat.png" alt="AI troubleshooting panel with cluster-aware suggestions" width="600" height="auto" loading="lazy">
         </div>
       </div>
+    </div>
 
-      <!-- Mockup 2: Cluster Dashboard -->
-      <div class="mockup-window">
-        <div class="mockup-titlebar">
-          <div class="mockup-dot r"></div><div class="mockup-dot y"></div><div class="mockup-dot g"></div>
-          <div class="mockup-label">Cluster Dashboard</div>
-        </div>
-        <div class="mockup-body">
-          <div class="m-dash">
-            <!-- Health -->
-            <div class="m-dash-card">
-              <div class="m-dash-card-title"><span class="m-dash-card-icon">&#9829;</span> Cluster Health</div>
-              <div class="m-health-circle">
-                <div class="m-health-score">87</div>
-                <div class="m-health-label">Healthy</div>
-              </div>
-            </div>
-            <!-- Pod Health -->
-            <div class="m-dash-card">
-              <div class="m-dash-card-title"><span class="m-dash-card-icon">&#9679;</span> Pod Health</div>
-              <div class="m-pod-ring">
-                <svg width="70" height="70" viewBox="0 0 70 70">
-                  <circle cx="35" cy="35" r="25" fill="none" stroke="#1e293b" stroke-width="8"/>
-                  <circle cx="35" cy="35" r="25" fill="none" stroke="#10b981" stroke-width="8" stroke-dasharray="125.6 157" stroke-dashoffset="0" transform="rotate(-90 35 35)"/>
-                  <circle cx="35" cy="35" r="25" fill="none" stroke="#f59e0b" stroke-width="8" stroke-dasharray="7.8 157" stroke-dashoffset="-125.6" transform="rotate(-90 35 35)"/>
-                  <circle cx="35" cy="35" r="25" fill="none" stroke="#ef4444" stroke-width="8" stroke-dasharray="7.8 157" stroke-dashoffset="-133.4" transform="rotate(-90 35 35)"/>
-                  <circle cx="35" cy="35" r="25" fill="none" stroke="#a855f7" stroke-width="8" stroke-dasharray="7.8 157" stroke-dashoffset="-141.2" transform="rotate(-90 35 35)"/>
-                </svg>
-                <div class="m-pod-legend">
-                  <div class="m-pod-legend-item"><span class="m-pod-legend-dot" style="background:#10b981"></span>Running<span class="m-pod-legend-count">8</span></div>
-                  <div class="m-pod-legend-item"><span class="m-pod-legend-dot" style="background:#f59e0b"></span>Pending<span class="m-pod-legend-count">1</span></div>
-                  <div class="m-pod-legend-item"><span class="m-pod-legend-dot" style="background:#ef4444"></span>Failed<span class="m-pod-legend-count">1</span></div>
-                  <div class="m-pod-legend-item"><span class="m-pod-legend-dot" style="background:#a855f7"></span>CrashLoop<span class="m-pod-legend-count">1</span></div>
-                </div>
-              </div>
-            </div>
-            <!-- Node Status -->
-            <div class="m-dash-card">
-              <div class="m-dash-card-title"><span class="m-dash-card-icon">&#9632;</span> Node Status</div>
-              <div class="m-node-item">
-                <div class="m-node-row"><span class="m-node-name">node-1</span><span class="m-node-status"><span class="m-node-status-dot"></span> Ready</span></div>
-                <div class="m-node-bar"><div class="m-node-fill" style="width:62%;background:linear-gradient(90deg,#58d0ff,#3b82f6)"></div></div>
-              </div>
-              <div class="m-node-item">
-                <div class="m-node-row"><span class="m-node-name">node-2</span><span class="m-node-status"><span class="m-node-status-dot"></span> Ready</span></div>
-                <div class="m-node-bar"><div class="m-node-fill" style="width:45%;background:linear-gradient(90deg,#58d0ff,#3b82f6)"></div></div>
-              </div>
-              <div class="m-node-item">
-                <div class="m-node-row"><span class="m-node-name">node-3</span><span class="m-node-status"><span class="m-node-status-dot"></span> Ready</span></div>
-                <div class="m-node-bar"><div class="m-node-fill" style="width:78%;background:linear-gradient(90deg,#f59e0b,#ef4444)"></div></div>
-              </div>
-            </div>
-            <!-- Restart Hotlist -->
-            <div class="m-dash-card">
-              <div class="m-dash-card-title"><span class="m-dash-card-icon">&#8635;</span> Restart Hotlist</div>
-              <div class="m-restart-item"><span class="m-restart-idx">1</span><span class="m-restart-name">payment-worker-9a4f2</span><span class="m-restart-count high">14</span></div>
-              <div class="m-restart-item"><span class="m-restart-idx">2</span><span class="m-restart-name">metrics-agent-1b2c3</span><span class="m-restart-count med">7</span></div>
-              <div class="m-restart-item"><span class="m-restart-idx">3</span><span class="m-restart-name">frontend-next-8c3d7</span><span class="m-restart-count" style="color:#64748b">1</span></div>
-            </div>
+    <!-- Dashboard -->
+    <div class="showcase-item reverse reveal">
+      <div class="showcase-text">
+        <div class="section-label">Cluster Dashboard</div>
+        <h3>Cluster health at a glance</h3>
+        <p>Health score from 0 to 100, pod status distribution, node resource utilization, and a restart hotlist that surfaces problems before they escalate.</p>
+        <ul class="showcase-features">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Pod ring chart</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Node capacity bars</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Restart hotlist</li>
+        </ul>
+      </div>
+      <div class="showcase-frame-wrap">
+        <div class="screenshot-frame">
+          <div class="frame-titlebar">
+            <span class="frame-dot r"></span>
+            <span class="frame-dot y"></span>
+            <span class="frame-dot g"></span>
+            <span class="frame-title">Dashboard</span>
           </div>
+          <img src="screenshots/dashboard.png" alt="Cluster dashboard with health score, pod ring chart, and node status" width="600" height="auto" loading="lazy">
         </div>
       </div>
+    </div>
 
-      <!-- Mockup 3: Dependency Graph -->
-      <div class="mockup-window">
-        <div class="mockup-titlebar">
-          <div class="mockup-dot r"></div><div class="mockup-dot y"></div><div class="mockup-dot g"></div>
-          <div class="mockup-label">Dependency Graph</div>
-        </div>
-        <div class="mockup-body">
-          <div class="m-graph-body">
-            <div class="m-graph-count">6 resources</div>
-            <div class="m-graph-toolbar">
-              <div class="m-graph-btn">Fit</div>
-              <div class="m-graph-btn">100%</div>
-            </div>
-            <svg class="m-graph-svg" viewBox="0 0 520 256">
-              <defs>
-                <marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#334155"/></marker>
-                <marker id="arr-hl" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#58d0ff"/></marker>
-              </defs>
-              <!-- Edges -->
-              <line class="m-graph-edge" x1="108" y1="128" x2="168" y2="128" marker-end="url(#arr)"/>
-              <line class="m-graph-edge" x1="348" y1="128" x2="390" y2="68" marker-end="url(#arr)"/>
-              <line class="m-graph-edge" x1="348" y1="128" x2="390" y2="128" marker-end="url(#arr)"/>
-              <line class="m-graph-edge" x1="348" y1="128" x2="390" y2="188" marker-end="url(#arr)"/>
-              <!-- Dashed: Service -> Deployment (label selector) -->
-              <line class="m-graph-edge-dash" x1="168" y1="128" x2="168" y2="128" marker-end="url(#arr)"/>
-              <!-- Ingress -> Service -->
-              <!-- Ingress node -->
-              <rect x="10" y="100" width="98" height="56" rx="10" fill="rgba(12,54,66,0.9)" stroke="#22d3ee" stroke-width="1.5"/>
-              <text x="20" y="118" fill="#67e8f9" font-size="8">Ingress</text>
-              <text x="20" y="140" fill="#67e8f9" font-size="10">app-ingress</text>
-              <circle cx="100" cy="106" r="3" fill="#10b981"/>
-              <!-- Service node -->
-              <rect x="168" y="100" width="180" height="56" rx="10" fill="rgba(45,27,78,0.9)" stroke="#a855f7" stroke-width="1.5"/>
-              <text x="178" y="118" fill="#d8b4fe" font-size="8">Service</text>
-              <text x="178" y="140" fill="#d8b4fe" font-size="10">api-gateway</text>
-              <circle cx="340" cy="106" r="3" fill="#10b981"/>
-              <!-- Pod nodes -->
-              <rect x="390" y="40" width="120" height="56" rx="10" fill="rgba(26,58,42,0.9)" stroke="#10b981" stroke-width="1.5"/>
-              <text x="400" y="58" fill="#6ee7b7" font-size="8">Pod</text>
-              <text x="400" y="78" fill="#6ee7b7" font-size="10">pod-7f8d4</text>
-              <circle cx="502" cy="46" r="3" fill="#10b981"/>
-
-              <rect x="390" y="100" width="120" height="56" rx="10" fill="rgba(26,58,42,0.9)" stroke="#10b981" stroke-width="1.5"/>
-              <text x="400" y="118" fill="#6ee7b7" font-size="8">Pod</text>
-              <text x="400" y="138" fill="#6ee7b7" font-size="10">pod-3b2c1</text>
-              <circle cx="502" cy="106" r="3" fill="#10b981"/>
-
-              <rect x="390" y="160" width="120" height="56" rx="10" fill="rgba(26,58,42,0.9)" stroke="#ef4444" stroke-width="1.5"/>
-              <text x="400" y="178" fill="#6ee7b7" font-size="8">Pod</text>
-              <text x="400" y="198" fill="#6ee7b7" font-size="10">pod-9a4f2</text>
-              <circle cx="502" cy="166" r="3" fill="#ef4444"/>
-            </svg>
-            <div class="m-graph-legend">
-              <div class="m-graph-legend-item"><span class="m-graph-legend-dot" style="background:#22d3ee"></span>Ingress</div>
-              <div class="m-graph-legend-item"><span class="m-graph-legend-dot" style="background:#a855f7"></span>Service</div>
-              <div class="m-graph-legend-item"><span class="m-graph-legend-dot" style="background:#10b981"></span>Pod</div>
-              <div class="m-graph-legend-item"><span class="m-graph-legend-dot" style="background:#3b82f6"></span>Deployment</div>
-            </div>
-          </div>
-        </div>
+    <!-- Command Palette -->
+    <div class="showcase-item reveal">
+      <div class="showcase-text">
+        <div class="section-label">Command Palette</div>
+        <h3>Everything, one shortcut away</h3>
+        <p>Press Cmd+K to open instant access to resources, views, namespaces, and actions. Navigate your cluster without leaving the keyboard.</p>
+        <ul class="showcase-features">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Fuzzy resource search</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>View switching</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Quick filters and actions</li>
+        </ul>
       </div>
-
-      <!-- Mockup 4: Pod Detail / Logs -->
-      <div class="mockup-window">
-        <div class="mockup-titlebar">
-          <div class="mockup-dot r"></div><div class="mockup-dot y"></div><div class="mockup-dot g"></div>
-          <div class="mockup-label">Pod Detail &mdash; Logs</div>
-        </div>
-        <div class="mockup-body">
-          <div class="m-detail">
-            <div class="m-detail-header">
-              <div class="m-detail-back">&#8592; Back <span style="font-size:8px;color:#334155;margin-left:4px">Esc</span></div>
-              <div style="flex:1"></div>
-              <div style="font-size:10px;color:#64748b;padding:3px 8px;border:1px solid #1e293b;border-radius:5px">Copy YAML</div>
-              <div style="font-size:10px;color:#f87171;padding:3px 8px;border:1px solid rgba(239,68,68,0.3);border-radius:5px">Delete</div>
-            </div>
-            <div class="m-detail-info">
-              <div class="m-detail-info-item"><label>Name</label><span>api-gateway-7f8d4b6c9-x2k</span></div>
-              <div class="m-detail-info-item"><label>Namespace</label><span>production</span></div>
-              <div class="m-detail-info-item"><label>Status</label><span style="color:#10b981">Running</span></div>
-              <div class="m-detail-info-item"><label>Node</label><span>node-1</span></div>
-              <div class="m-detail-info-item"><label>IP</label><span>10.244.1.23</span></div>
-            </div>
-            <div class="m-detail-tabs">
-              <div class="m-detail-tab active">Logs</div>
-              <div class="m-detail-tab">Describe</div>
-              <div class="m-detail-tab">YAML</div>
-              <div class="m-detail-tab">Metrics</div>
-              <div class="m-detail-tab">Events</div>
-              <div class="m-detail-tab">Shell</div>
-            </div>
-            <div class="m-logs">
-              <div class="m-log-line"><span class="m-log-num">1</span><span class="m-log-text info">2024-03-15T10:23:01Z INFO  Starting api-gateway v2.1.0</span></div>
-              <div class="m-log-line"><span class="m-log-num">2</span><span class="m-log-text info">2024-03-15T10:23:01Z INFO  Listening on 0.0.0.0:8080</span></div>
-              <div class="m-log-line"><span class="m-log-num">3</span><span class="m-log-text">2024-03-15T10:23:02Z DEBUG Connected to upstream services</span></div>
-              <div class="m-log-line"><span class="m-log-num">4</span><span class="m-log-text info">2024-03-15T10:23:15Z INFO  Health check passed</span></div>
-              <div class="m-log-line"><span class="m-log-num">5</span><span class="m-log-text warn">2024-03-15T10:24:03Z WARN  Slow upstream: auth-service 1.2s</span></div>
-              <div class="m-log-line"><span class="m-log-num">6</span><span class="m-log-text">2024-03-15T10:24:05Z DEBUG Request completed 200 /api/users</span></div>
-              <div class="m-log-line"><span class="m-log-num">7</span><span class="m-log-text error">2024-03-15T10:24:12Z ERROR Connection refused: payment-worker:3000</span></div>
-              <div class="m-log-line"><span class="m-log-num">8</span><span class="m-log-text info">2024-03-15T10:24:15Z INFO  Retrying upstream connection...</span></div>
-            </div>
+      <div class="showcase-frame-wrap">
+        <div class="screenshot-frame">
+          <div class="frame-titlebar">
+            <span class="frame-dot r"></span>
+            <span class="frame-dot y"></span>
+            <span class="frame-dot g"></span>
+            <span class="frame-title">Command Palette</span>
           </div>
+          <img src="screenshots/command-palette.png" alt="Command palette for instant access to resources, views, and actions" width="600" height="auto" loading="lazy">
         </div>
       </div>
     </div>
@@ -1003,22 +909,22 @@
     </div>
     <div class="stats-grid reveal">
       <div class="stat-card glass">
-        <div class="stat-value"><span class="accent" data-target="80">0</span><span style="font-size:24px;color:var(--text-secondary)">MB</span></div>
+        <div class="stat-value"><span class="accent" data-target="80">0</span><span style="font-size:24px;color:var(--text-muted)">MB</span></div>
         <div class="stat-label">Memory Usage</div>
         <div class="stat-compare">vs ~400 MB (Lens)</div>
       </div>
       <div class="stat-card glass">
-        <div class="stat-value"><span class="accent" data-target="15">0</span><span style="font-size:24px;color:var(--text-secondary)">MB</span></div>
+        <div class="stat-value"><span class="accent" data-target="15">0</span><span style="font-size:24px;color:var(--text-muted)">MB</span></div>
         <div class="stat-label">Binary Size</div>
         <div class="stat-compare">vs ~200 MB (Electron)</div>
       </div>
       <div class="stat-card glass">
-        <div class="stat-value">&lt;<span class="accent" data-target="1">0</span><span style="font-size:24px;color:var(--text-secondary)">s</span></div>
+        <div class="stat-value">&lt;<span class="accent" data-target="1">0</span><span style="font-size:24px;color:var(--text-muted)">s</span></div>
         <div class="stat-label">Startup Time</div>
         <div class="stat-compare">vs 3-5s (Lens)</div>
       </div>
       <div class="stat-card glass">
-        <div class="stat-value" style="font-size:28px;"><span class="accent">Rust</span></div>
+        <div class="stat-value" style="font-size:32px;"><span class="accent">Rust</span></div>
         <div class="stat-label">Backend Runtime</div>
         <div class="stat-compare">vs Node.js / Go</div>
       </div>
@@ -1051,34 +957,37 @@
 
 <div class="section-divider"></div>
 
-<!-- Tech Stack -->
-<section class="section" id="stack">
+<!-- Sponsor Section -->
+<section class="section sponsor-section" id="sponsor">
   <div class="container">
-    <div class="reveal" style="text-align:center;">
-      <div class="section-label">Under the Hood</div>
-      <div class="section-title">Tech Stack</div>
-    </div>
-    <div class="stack-grid reveal">
-      <div class="stack-column">
-        <h3>Backend</h3>
-        <div class="stack-item">Rust (stable)</div>
-        <div class="stack-item">kube-rs + k8s-openapi</div>
-        <div class="stack-item">Tokio async runtime</div>
-        <div class="stack-item">SQLite (rusqlite)</div>
-        <div class="stack-item">reqwest (AI streaming)</div>
+    <div class="sponsor-inner reveal">
+      <div class="sponsor-icon">
+        <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
       </div>
-      <div class="stack-bridge">
-        <div class="stack-bridge-label">Tauri v2</div>
-        <div class="stack-bridge-line"></div>
-        <div style="font-size:12px;color:var(--text-secondary);">IPC Bridge</div>
-      </div>
-      <div class="stack-column">
-        <h3>Frontend</h3>
-        <div class="stack-item">React 18 + TypeScript</div>
-        <div class="stack-item">TanStack Table</div>
-        <div class="stack-item">Recharts (charts)</div>
-        <div class="stack-item">cmdk (palette)</div>
-        <div class="stack-item">Framer Motion</div>
+      <div class="section-label">Support</div>
+      <div class="section-title">Support Kore's development</div>
+      <p class="sponsor-desc">Kore is free, open-source, and MIT licensed. Your sponsorship helps sustain active development, fund new features, and keep the project independent.</p>
+      <a href="https://github.com/sponsors/eladbash" target="_blank" rel="noopener" class="btn btn-sponsor">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+        Become a Sponsor on GitHub
+      </a>
+      <div class="sponsor-benefits">
+        <div class="sponsor-benefit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+          Priority issues
+        </div>
+        <div class="sponsor-benefit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+          Early access
+        </div>
+        <div class="sponsor-benefit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+          Sponsor badge
+        </div>
+        <div class="sponsor-benefit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+          Direct support
+        </div>
       </div>
     </div>
   </div>
@@ -1092,7 +1001,7 @@
     <div class="install-block reveal">
       <div class="section-label">Get Started</div>
       <div class="section-title">Install Kore</div>
-      <div class="section-sub" style="margin-left:auto;margin-right:auto;">Build from source in two commands.</div>
+      <div class="section-sub" style="margin-left:auto;margin-right:auto;">Download a prebuilt binary or build from source in two commands.</div>
       <div class="install-code">
 <span class="comment"># Clone and build</span>
 <span class="cmd">git clone https://github.com/eladbash/kore && cd kore</span>
@@ -1106,7 +1015,7 @@
       </a>
       <div class="install-prereqs">
         Available for macOS 14+ and Windows 10+<br>
-        A valid <code style="color:var(--accent)">~/.kube/config</code> with at least one reachable context
+        Requires a valid <code style="color:var(--accent)">~/.kube/config</code> with at least one reachable context
       </div>
     </div>
   </div>
@@ -1115,12 +1024,21 @@
 <!-- Footer -->
 <footer>
   <div class="container">
-    <p style="margin-bottom:8px;">Built with <span style="color:var(--accent)">AI</span>, <span style="color:var(--accent)">Rust</span> &amp; <span style="color:var(--accent-blue)">React</span></p>
-    <p>
-      <a href="https://github.com/eladbash/kore" target="_blank" rel="noopener">GitHub</a>
-      &nbsp;&middot;&nbsp;
-      MIT License
-    </p>
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <img src="icon.png" alt="Kore" width="22" height="22">
+        <span>Kore</span>
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/eladbash/kore" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/eladbash/kore/releases" target="_blank" rel="noopener">Releases</a>
+        <a href="https://github.com/sponsors/eladbash" target="_blank" rel="noopener">Sponsor</a>
+        <a href="https://github.com/eladbash/kore/issues" target="_blank" rel="noopener">Issues</a>
+      </div>
+      <div class="footer-note">
+        Built with <span style="color:var(--accent)">Rust</span> &amp; <span style="color:var(--accent-blue)">React</span> &middot; MIT License
+      </div>
+    </div>
   </div>
 </footer>
 
@@ -1144,7 +1062,7 @@
         revealObserver.unobserve(entry.target);
       }
     });
-  }, { threshold: 0.1 });
+  }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
   revealEls.forEach(function(el) { revealObserver.observe(el); });
 
   // Counter animation
@@ -1155,12 +1073,17 @@
         var el = entry.target;
         var target = parseInt(el.getAttribute('data-target'), 10);
         var current = 0;
-        var step = Math.max(1, Math.floor(target / 75));
-        var timer = setInterval(function() {
-          current += step;
-          if (current >= target) { current = target; clearInterval(timer); }
+        var duration = 1200;
+        var startTime = null;
+        function animate(ts) {
+          if (!startTime) startTime = ts;
+          var progress = Math.min((ts - startTime) / duration, 1);
+          var eased = 1 - Math.pow(1 - progress, 3);
+          current = Math.round(eased * target);
           el.textContent = current;
-        }, 16);
+          if (progress < 1) requestAnimationFrame(animate);
+        }
+        requestAnimationFrame(animate);
         counterObserver.unobserve(el);
       }
     });
@@ -1171,7 +1094,10 @@
   document.querySelectorAll('a[href^="#"]').forEach(function(a) {
     a.addEventListener('click', function(e) {
       var target = document.querySelector(this.getAttribute('href'));
-      if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     });
   });
 })();
