@@ -234,9 +234,10 @@
       pointer-events: none;
     }
     .hero-icon {
-      width: 80px; height: 80px; border-radius: 20px;
-      margin-bottom: 28px;
-      box-shadow: 0 8px 40px rgba(88,208,255,0.12);
+      display: none;
+    }
+    .hero-badge-icon {
+      width: 20px; height: 20px; border-radius: 5px;
     }
     .hero-badge {
       display: inline-flex; align-items: center; gap: 8px;
@@ -244,7 +245,7 @@
       background: var(--muted); border: 1px solid var(--border-strong);
       font-size: 13px; color: var(--text-secondary);
       font-family: var(--font-mono);
-      margin-bottom: 32px;
+      margin-bottom: 36px;
     }
     .hero-badge-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--status-ok); }
     .hero h1 {
@@ -612,7 +613,7 @@
   <div class="container" style="position:relative;z-index:1;">
     <img src="icon.png" alt="Kore" class="hero-icon">
     <div class="hero-badge">
-      <span class="hero-badge-dot"></span>
+      <img src="icon.png" alt="Kore" class="hero-badge-icon">
       Open Source &middot; MIT License &middot; macOS &amp; Windows
     </div>
     <h1>The AI-Powered<br><span class="gradient-text">Kubernetes IDE</span></h1>
@@ -753,6 +754,20 @@
         <h3>Port Forwarding</h3>
         <p>One-click port forwards with TCP proxying. Manage all forwards from a single panel.</p>
       </div>
+      <div class="feature-card glass">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><path d="M7 10h0"/><path d="M12 10h0"/><path d="M17 10h0"/></svg>
+        </div>
+        <h3>Debug Containers</h3>
+        <p>Inject ephemeral debug containers into running pods with one click. Pre-built images for network, HTTP, and shell debugging. No kubectl required.</p>
+      </div>
+      <div class="feature-card glass">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12h6"/><path d="M12 9v6"/></svg>
+        </div>
+        <h3>Network Policy Visualizer</h3>
+        <p>Interactive force-directed graph of network policies. See ingress/egress rules, pod isolation, CIDR blocks, and simulate traffic between pods.</p>
+      </div>
     </div>
     <div class="also-strip reveal">
       <div class="also-chip">Vim navigation</div>
@@ -762,6 +777,8 @@
       <div class="also-chip">Label filtering</div>
       <div class="also-chip">Pinned resources</div>
       <div class="also-chip">Restart sparklines</div>
+      <div class="also-chip">Debug containers</div>
+      <div class="also-chip">Traffic simulation</div>
     </div>
   </div>
 </section>
@@ -890,6 +907,8 @@
           <tr><td>Persistent event history</td><td class="kore-col"><span class="check">&#10003;</span></td><td><span class="cross">&#10005;</span></td><td><span class="cross">&#10005;</span></td><td><span class="cross">&#10005;</span></td><td><span class="cross">&#10005;</span></td></tr>
           <tr><td>Command palette</td><td class="kore-col"><span class="check">&#10003;</span></td><td><span class="partial">Fuzzy</span></td><td><span class="cross">&#10005;</span></td><td><span class="cross">&#10005;</span></td><td><span class="cross">&#10005;</span></td></tr>
           <tr><td>Port forwarding UI</td><td class="kore-col"><span class="check">&#10003;</span></td><td><span class="check">&#10003;</span></td><td><span class="check">&#10003;</span></td><td><span class="cross">&#10005;</span></td><td><span class="cross">&#10005;</span></td></tr>
+          <tr><td>Ephemeral debug containers</td><td class="kore-col"><span class="check">&#10003;</span></td><td><span class="cross">&#10005;</span></td><td><span class="cross">&#10005;</span></td><td><span class="cross">&#10005;</span></td><td><span class="cross">&#10005;</span></td></tr>
+          <tr><td>Network policy visualizer</td><td class="kore-col"><span class="check">&#10003;</span></td><td><span class="cross">&#10005;</span></td><td><span class="partial">Extension</span></td><td><span class="cross">&#10005;</span></td><td><span class="cross">&#10005;</span></td></tr>
           <tr><td>Memory usage</td><td class="kore-col" style="color:var(--accent);font-family:var(--font-mono);font-size:13px">~80 MB</td><td style="font-family:var(--font-mono);font-size:13px;color:var(--text-secondary)">~30 MB</td><td style="font-family:var(--font-mono);font-size:13px;color:var(--text-secondary)">~400 MB</td><td style="font-family:var(--font-mono);font-size:13px;color:var(--text-secondary)">~50 MB</td><td style="font-family:var(--font-mono);font-size:13px;color:var(--text-secondary)">~300 MB</td></tr>
         </tbody>
       </table>
@@ -951,6 +970,7 @@
       <div class="shortcut-item"><kbd>1</kbd> &ndash; <kbd>6</kbd><span class="shortcut-desc">Switch tabs</span></div>
       <div class="shortcut-item"><kbd>?</kbd><span class="shortcut-desc">Shortcut overlay</span></div>
       <div class="shortcut-item"><kbd>&#8984; P</kbd><span class="shortcut-desc">Pin resource</span></div>
+      <div class="shortcut-item"><kbd>B</kbd><span class="shortcut-desc">Debug container</span></div>
     </div>
   </div>
 </section>

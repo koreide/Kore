@@ -21,7 +21,8 @@ impl K8sState {
         let api: Api<Pod> = Api::namespaced(client, &namespace);
 
         // Generate unique debug container name
-        let debug_name = format!("debugger-{}", &Uuid::new_v4().to_string()[..8]);
+        let id = &Uuid::new_v4().to_string()[..8];
+        let debug_name = format!("debugger-{id}");
 
         // Build strategic merge patch JSON
         let mut container = json!({
@@ -64,7 +65,7 @@ impl K8sState {
                     )
                 } else if msg.contains("422") || msg.contains("Invalid") {
                     K8sError::Validation(
-                        format!("Pod does not support ephemeral containers: {}", msg),
+                        format!("Pod does not support ephemeral containers: {msg}"),
                     )
                 } else {
                     K8sError::Kube(e)
@@ -79,7 +80,7 @@ impl K8sState {
                 if let Some(ecs) = &status.ephemeral_container_statuses {
                     for cs in ecs {
                         if cs.name == debug_name {
-                            if cs.state.as_ref().map_or(false, |s| s.running.is_some()) {
+                            if cs.state.as_ref().is_some_and(|s| s.running.is_some()) {
                                 return Ok(debug_name);
                             }
                             // Check for terminal failure (image pull error, etc.)
@@ -98,7 +99,7 @@ impl K8sState {
                                     )));
                                 }
                             }
-                            if cs.state.as_ref().map_or(false, |s| s.terminated.is_some()) {
+                            if cs.state.as_ref().is_some_and(|s| s.terminated.is_some()) {
                                 return Err(K8sError::Validation(
                                     "Debug container terminated unexpectedly".into(),
                                 ));
@@ -137,8 +138,8 @@ impl K8sState {
                         "name": ec.name,
                         "image": ec.image,
                         "targetContainer": ec.target_container_name,
-                        "running": status.map_or(false, |s| {
-                            s.state.as_ref().map_or(false, |st| st.running.is_some())
+                        "running": status.is_some_and(|s| {
+                            s.state.as_ref().is_some_and(|st| st.running.is_some())
                         }),
                     }));
                 }
@@ -196,8 +197,8 @@ impl K8sState {
                 .as_ref()
                 .and_then(|s| s.ephemeral_container_statuses.as_ref())
                 .and_then(|statuses| statuses.iter().find(|s| s.name == container_name))
-                .map_or(false, |cs| {
-                    cs.state.as_ref().map_or(false, |s| s.running.is_some())
+                .is_some_and(|cs| {
+                    cs.state.as_ref().is_some_and(|s| s.running.is_some())
                 });
             if !still_running {
                 return Ok(());

@@ -1,7 +1,7 @@
 pub mod ai;
 pub mod crd;
-pub mod debug;
 pub mod dashboard;
+pub mod debug;
 pub mod event_store;
 pub mod exec;
 pub mod graph;

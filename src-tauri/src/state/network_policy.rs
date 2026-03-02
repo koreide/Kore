@@ -62,6 +62,7 @@ pub struct TrafficEdge {
 #[derive(Debug, Clone, Serialize)]
 pub struct PortInfo {
     pub port: Option<i32>,
+    pub named_port: Option<String>,
     pub protocol: String,
     pub end_port: Option<i32>,
 }
@@ -160,12 +161,14 @@ fn extract_ports(ports: Option<&[NetworkPolicyPort]>) -> Vec<PortInfo> {
         Some(ports) => ports
             .iter()
             .map(|p| {
-                let port = p.port.as_ref().and_then(|v| match v {
-                    IntOrString::Int(i) => Some(*i),
-                    IntOrString::String(_) => None,
-                });
+                let (port, named_port) = match p.port.as_ref() {
+                    Some(IntOrString::Int(i)) => (Some(*i), None),
+                    Some(IntOrString::String(s)) => (None, Some(s.clone())),
+                    None => (None, None),
+                };
                 PortInfo {
                     port,
+                    named_port,
                     protocol: p.protocol.clone().unwrap_or_else(|| "TCP".to_string()),
                     end_port: p.end_port,
                 }
@@ -245,6 +248,11 @@ fn port_matches(target_port: Option<i32>, target_protocol: &str, policy_ports: &
     }
     policy_ports.iter().any(|pp| {
         if !pp.protocol.eq_ignore_ascii_case(target_protocol) {
+            return false;
+        }
+        // Named ports cannot be resolved without pod container spec; treat as
+        // non-matching to avoid silently allowing all traffic.
+        if pp.named_port.is_some() {
             return false;
         }
         match (pp.port, pp.end_port, target_port) {

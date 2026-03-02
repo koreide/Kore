@@ -21,7 +21,6 @@ import {
 } from "lucide-react";
 import { useNetworkPolicyGraph } from "@/hooks/use-network-policy-graph";
 import type {
-  NetworkPolicyGraph,
   NetworkPolicyPodGroup,
   NetworkPolicyCidrNode,
   NetworkPolicyTrafficEdge,
@@ -470,12 +469,13 @@ export function NetworkPolicyView({ namespace, currentContext }: NetworkPolicyVi
   }, [simNodes]);
 
   // Fit on initial load
+  const hasSimNodes = simNodes.length > 0;
   useEffect(() => {
-    if (simNodes.length > 0 && alphaRef.current < 0.5) {
+    if (hasSimNodes && alphaRef.current < 0.5) {
       const t = setTimeout(fitToView, 100);
       return () => clearTimeout(t);
     }
-  }, [simNodes.length > 0, fitToView]);
+  }, [hasSimNodes, fitToView]);
 
   // Mouse handlers
   const handleWheel = useCallback((e: React.WheelEvent) => {

@@ -40,19 +40,28 @@ export function useNetworkPolicyGraph(
   // Listen for pod watch events to trigger debounced refresh
   useEffect(() => {
     let unlistenFn: (() => void) | null = null;
+    let isMounted = true;
 
-    listen<WatchEventPayload>("resource://event", (event) => {
-      if (event.payload.kind === "pods") {
-        if (debounceRef.current) clearTimeout(debounceRef.current);
-        debounceRef.current = setTimeout(() => {
-          fetchGraph();
-        }, 2000);
+    const setup = async () => {
+      const unlisten = await listen<WatchEventPayload>("resource://event", (event) => {
+        if (!isMounted) return;
+        if (event.payload.kind === "pods") {
+          if (debounceRef.current) clearTimeout(debounceRef.current);
+          debounceRef.current = setTimeout(() => {
+            fetchGraph();
+          }, 2000);
+        }
+      });
+      if (!isMounted) {
+        unlisten();
+        return;
       }
-    }).then((fn) => {
-      unlistenFn = fn;
-    });
+      unlistenFn = unlisten;
+    };
+    setup();
 
     return () => {
+      isMounted = false;
       if (unlistenFn) unlistenFn();
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };

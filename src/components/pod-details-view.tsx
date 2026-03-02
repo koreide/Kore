@@ -438,6 +438,21 @@ export function PodDetailsView({ pod, onBack }: PodDetailsViewProps) {
     };
   }, [podName, namespace]);
 
+  const handleStopDebug = useCallback(async () => {
+    const dc = debugContainer;
+    if (!dc) return;
+    setStoppingDebug(true);
+    try {
+      await stopDebugContainer(namespace, podName, dc.name);
+      setDebugContainer(undefined);
+      toast("Debug container stopped", "success");
+    } catch (err) {
+      toast(`Failed to stop debug container: ${formatError(err)}`, "error");
+    } finally {
+      setStoppingDebug(false);
+    }
+  }, [debugContainer, namespace, podName, toast]);
+
   // Handle keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -487,7 +502,7 @@ export function PodDetailsView({ pod, onBack }: PodDetailsViewProps) {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onBack, isDeleted, isStaticPod, showDeleteConfirm, showDebugModal, logSearchVisible, activeTab]);
+  }, [onBack, isDeleted, isStaticPod, showDeleteConfirm, showDebugModal, logSearchVisible, activeTab, debugContainer, handleStopDebug]);
 
   // Clean up focus timeout on unmount
   useEffect(() => {
@@ -545,21 +560,6 @@ export function PodDetailsView({ pod, onBack }: PodDetailsViewProps) {
     setShowDebugModal(false);
     setActiveTab("shell");
     toast(`Debug container "${containerName}" is ready`, "success");
-  };
-
-  const handleStopDebug = async () => {
-    const dc = debugContainer;
-    if (!dc) return;
-    setStoppingDebug(true);
-    try {
-      await stopDebugContainer(namespace, podName, dc.name);
-      setDebugContainer(undefined);
-      toast("Debug container stopped", "success");
-    } catch (err) {
-      toast(`Failed to stop debug container: ${formatError(err)}`, "error");
-    } finally {
-      setStoppingDebug(false);
-    }
   };
 
   const navigateLogSearch = useCallback(
@@ -647,7 +647,7 @@ export function PodDetailsView({ pod, onBack }: PodDetailsViewProps) {
                       setShowDebugModal(true);
                     }
                   }}
-                  disabled={isStaticPod && !debugContainer}
+                  disabled={(isStaticPod && !debugContainer) || stoppingDebug}
                   title={
                     debugContainer
                       ? `Stop debug container "${debugContainer.name}"`
@@ -666,7 +666,7 @@ export function PodDetailsView({ pod, onBack }: PodDetailsViewProps) {
                   )}
                 >
                   <Bug className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">{debugContainer ? "Stop Debug" : "Debug"}</span>
+                  <span className="hidden sm:inline">{stoppingDebug ? "Stopping…" : debugContainer ? "Stop Debug" : "Debug"}</span>
                   {debugContainer ? (
                     <span className="relative flex h-2 w-2">
                       <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
