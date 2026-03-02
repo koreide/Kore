@@ -546,6 +546,112 @@ export async function stopDebugContainer(
   return invoke("stop_debug_container", { namespace, podName, containerName });
 }
 
+// ── Network Policy Visualization ──────────────────────────────────────
+
+export interface NetworkPolicyPodInfo {
+  name: string;
+  namespace: string;
+  labels: Record<string, string>;
+  status: string;
+}
+
+export interface NetworkPolicyPodGroup {
+  id: string;
+  name: string;
+  namespace: string;
+  kind: string;
+  pod_count: number;
+  labels: Record<string, string>;
+  is_isolated_ingress: boolean;
+  is_isolated_egress: boolean;
+  matching_policies: string[];
+  pods: NetworkPolicyPodInfo[];
+}
+
+export interface NetworkPolicyCidrNode {
+  id: string;
+  cidr: string;
+  except: string[];
+  from_policy: string;
+}
+
+export interface NetworkPolicyTrafficEdge {
+  source: string;
+  target: string;
+  direction: "ingress" | "egress";
+  ports: NetworkPolicyPortInfo[];
+  policy_name: string;
+  policy_namespace: string;
+}
+
+export interface NetworkPolicyPortInfo {
+  port: number | null;
+  protocol: string;
+  end_port: number | null;
+}
+
+export interface NetworkPolicySummary {
+  name: string;
+  namespace: string;
+  pod_selector: Record<string, string>;
+  policy_types: string[];
+  ingress_rule_count: number;
+  egress_rule_count: number;
+  affected_pod_count: number;
+}
+
+export interface NetworkPolicyGraph {
+  groups: NetworkPolicyPodGroup[];
+  external_cidrs: NetworkPolicyCidrNode[];
+  edges: NetworkPolicyTrafficEdge[];
+  policies: NetworkPolicySummary[];
+}
+
+export interface TrafficSimulationResult {
+  allowed: boolean;
+  ingress_evaluation: DirectionEvaluation;
+  egress_evaluation: DirectionEvaluation;
+  summary: string;
+}
+
+export interface DirectionEvaluation {
+  isolated: boolean;
+  policy_results: PolicyEvaluation[];
+}
+
+export interface PolicyEvaluation {
+  policy_name: string;
+  policy_namespace: string;
+  selects_pod: boolean;
+  allows_traffic: boolean;
+  reason: string;
+  matching_rule_index: number | null;
+}
+
+export async function buildNetworkPolicyGraph(
+  namespace?: string,
+): Promise<NetworkPolicyGraph> {
+  return invoke("build_network_policy_graph", { namespace });
+}
+
+export async function simulateNetworkTraffic(
+  sourceNamespace: string,
+  sourcePod: string,
+  destNamespace: string,
+  destPod: string,
+  port?: number,
+  protocol?: string,
+): Promise<TrafficSimulationResult> {
+  return invoke("simulate_network_traffic", {
+    sourceNamespace,
+    sourcePod,
+    destNamespace,
+    destPod,
+    port,
+    protocol,
+  });
+}
+
 // ── Favorites Persistence ────────────────────────────────────────────
 
 export async function loadFavorites(key: string): Promise<string[]> {

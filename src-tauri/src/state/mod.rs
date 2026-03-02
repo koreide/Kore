@@ -10,6 +10,7 @@ pub mod logs;
 pub mod metrics;
 pub mod multi_cluster;
 pub mod multi_logs;
+pub mod network_policy;
 pub mod port_forward;
 pub mod resources;
 pub mod rollback;

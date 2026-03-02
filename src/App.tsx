@@ -16,6 +16,7 @@ import { ShortcutOverlay } from "./components/shortcut-overlay";
 import { AIPanel } from "./components/ai-panel";
 import { AIChatView } from "./components/ai-chat-view";
 import { ConnectionSetup } from "./components/connection-setup";
+import { NetworkPolicyView } from "./components/network-policy-view";
 import { useK8sContext } from "./hooks/use-k8s-context";
 import { useResourceWatch } from "./hooks/use-resource-watch";
 import { useKeyboardShortcuts } from "./hooks/use-keyboard-shortcuts";
@@ -457,6 +458,12 @@ export default function App() {
                 key="graph"
                 namespace={namespace === "*" ? undefined : namespace}
                 onSelectResource={handleGraphSelect}
+              />
+            ) : viewMode === "network-policies" ? (
+              <NetworkPolicyView
+                key="network-policies"
+                namespace={namespace === "*" ? undefined : namespace}
+                currentContext={currentContext}
               />
             ) : viewMode === "crds" ? (
               <CrdBrowser

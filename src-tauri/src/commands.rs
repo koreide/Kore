@@ -785,6 +785,35 @@ pub async fn stop_debug_container(
         .map_err(|e| e.to_string())
 }
 
+// ── Network Policy Visualization ─────────────────────────────────────
+
+#[tauri::command]
+pub async fn build_network_policy_graph(
+    state: State<'_, K8sState>,
+    namespace: Option<String>,
+) -> std::result::Result<crate::state::network_policy::NetworkPolicyGraph, String> {
+    state
+        .build_network_policy_graph(namespace)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn simulate_network_traffic(
+    state: State<'_, K8sState>,
+    #[allow(non_snake_case)] sourceNamespace: String,
+    #[allow(non_snake_case)] sourcePod: String,
+    #[allow(non_snake_case)] destNamespace: String,
+    #[allow(non_snake_case)] destPod: String,
+    port: Option<i32>,
+    protocol: Option<String>,
+) -> std::result::Result<crate::state::network_policy::TrafficSimulationResult, String> {
+    state
+        .simulate_network_traffic(sourceNamespace, sourcePod, destNamespace, destPod, port, protocol)
+        .await
+        .map_err(|e| e.to_string())
+}
+
 // ── Favorites Persistence ────────────────────────────────────────────
 
 fn favorites_path() -> std::result::Result<std::path::PathBuf, String> {

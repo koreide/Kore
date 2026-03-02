@@ -20,7 +20,8 @@ export type AppView =
   | "helm"
   | "helm-detail"
   | "settings"
-  | "chat";
+  | "chat"
+  | "network-policies";
 
 export interface ResourceItem {
   name: string;
