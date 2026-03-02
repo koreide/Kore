@@ -98,7 +98,7 @@ function initNodes(
 
   const nodes: SimNode[] = groups.map((g, i) => {
     const nsIdx = nsByIdx.get(g.namespace) ?? 0;
-    const angle = ((nsIdx / nsCount) * 2 * Math.PI) + (i * 0.3);
+    const angle = (nsIdx / nsCount) * 2 * Math.PI + i * 0.3;
     const r = 150 + Math.random() * 100;
     return {
       id: g.id,
@@ -175,8 +175,14 @@ function tickSimulation(
       const force = (REPULSION * alpha) / (dist * dist);
       dx = (dx / dist) * force;
       dy = (dy / dist) * force;
-      if (a.fx === null) { a.vx -= dx; a.vy -= dy; }
-      if (b.fx === null) { b.vx += dx; b.vy += dy; }
+      if (a.fx === null) {
+        a.vx -= dx;
+        a.vy -= dy;
+      }
+      if (b.fx === null) {
+        b.vx += dx;
+        b.vy += dy;
+      }
     }
   }
 
@@ -193,8 +199,14 @@ function tickSimulation(
     const force = (dist - REST_LENGTH) * ATTRACTION * alpha;
     dx = (dx / dist) * force;
     dy = (dy / dist) * force;
-    if (a.fx === null) { a.vx += dx; a.vy += dy; }
-    if (b.fx === null) { b.vx -= dx; b.vy -= dy; }
+    if (a.fx === null) {
+      a.vx += dx;
+      a.vy += dy;
+    }
+    if (b.fx === null) {
+      b.vx -= dx;
+      b.vy -= dy;
+    }
   }
 
   // Namespace gravity
@@ -214,7 +226,13 @@ function tickSimulation(
 
   // Apply velocities
   for (const n of nodes) {
-    if (n.fx !== null) { n.x = n.fx; n.y = n.fy!; n.vx = 0; n.vy = 0; continue; }
+    if (n.fx !== null) {
+      n.x = n.fx;
+      n.y = n.fy!;
+      n.vx = 0;
+      n.vy = 0;
+      continue;
+    }
     n.vx *= DAMPING;
     n.vy *= DAMPING;
     n.x += n.vx;
@@ -244,7 +262,10 @@ function computeNsBounds(nodes: SimNode[]): NsBounds[] {
   }
   const bounds: NsBounds[] = [];
   for (const [ns, arr] of nsNodes) {
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    let minX = Infinity,
+      minY = Infinity,
+      maxX = -Infinity,
+      maxY = -Infinity;
     for (const n of arr) {
       minX = Math.min(minX, n.x - NODE_RADIUS);
       minY = Math.min(minY, n.y - NODE_RADIUS);
@@ -264,9 +285,7 @@ function computeNsBounds(nodes: SimNode[]): NsBounds[] {
 
 // ── Edge path ────────────────────────────────────────────────────────
 
-function edgePath(
-  sx: number, sy: number, tx: number, ty: number,
-): string {
+function edgePath(sx: number, sy: number, tx: number, ty: number): string {
   const mx = (sx + tx) / 2;
   const my = (sy + ty) / 2;
   const dx = tx - sx;
@@ -281,11 +300,16 @@ function edgePath(
 function KindIcon({ kind, color }: { kind: string; color: string }) {
   const props = { width: 14, height: 14, color, strokeWidth: 1.5 };
   switch (kind) {
-    case "Deployment": return <Container {...props} />;
-    case "Pod": return <Box {...props} />;
-    case "CIDR": return <Globe {...props} />;
-    case "ReplicaSet": return <Layers {...props} />;
-    default: return <Server {...props} />;
+    case "Deployment":
+      return <Container {...props} />;
+    case "Pod":
+      return <Box {...props} />;
+    case "CIDR":
+      return <Globe {...props} />;
+    case "ReplicaSet":
+      return <Layers {...props} />;
+    default:
+      return <Server {...props} />;
   }
 }
 
@@ -297,7 +321,10 @@ interface NetworkPolicyViewProps {
 }
 
 export function NetworkPolicyView({ namespace, currentContext }: NetworkPolicyViewProps) {
-  const { graph, loading, error, refresh, simulate } = useNetworkPolicyGraph(namespace, currentContext);
+  const { graph, loading, error, refresh, simulate } = useNetworkPolicyGraph(
+    namespace,
+    currentContext,
+  );
 
   // Simulation nodes
   const [simNodes, setSimNodes] = useState<SimNode[]>([]);
@@ -349,7 +376,12 @@ export function NetworkPolicyView({ namespace, currentContext }: NetworkPolicyVi
   // Initialize simulation when graph changes
   useEffect(() => {
     if (!graph) return;
-    const nodes = initNodes(graph.groups, graph.external_cidrs, containerSize.width, containerSize.height);
+    const nodes = initNodes(
+      graph.groups,
+      graph.external_cidrs,
+      containerSize.width,
+      containerSize.height,
+    );
     simNodesRef.current = nodes;
     setSimNodes([...nodes]);
     alphaRef.current = 1;
@@ -450,7 +482,10 @@ export function NetworkPolicyView({ namespace, currentContext }: NetworkPolicyVi
   // Fit to view
   const fitToView = useCallback(() => {
     if (simNodes.length === 0 || !containerRef.current) return;
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    let minX = Infinity,
+      minY = Infinity,
+      maxX = -Infinity,
+      maxY = -Infinity;
     for (const n of simNodes) {
       minX = Math.min(minX, n.x - 50);
       minY = Math.min(minY, n.y - 50);
@@ -492,49 +527,69 @@ export function NetworkPolicyView({ namespace, currentContext }: NetworkPolicyVi
     });
   }, []);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.button !== 0 || dragNode.current) return;
-    setIsPanning(true);
-    panStart.current = { x: e.clientX, y: e.clientY, tx: transform.x, ty: transform.y };
-  }, [transform]);
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.button !== 0 || dragNode.current) return;
+      setIsPanning(true);
+      panStart.current = { x: e.clientX, y: e.clientY, tx: transform.x, ty: transform.y };
+    },
+    [transform],
+  );
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (dragNode.current) {
-      const rect = containerRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      const svgX = (e.clientX - rect.left - transform.x) / transform.scale;
-      const svgY = (e.clientY - rect.top - transform.y) / transform.scale;
-      const node = simNodesRef.current.find((n) => n.id === dragNode.current);
-      if (node) { node.fx = svgX; node.fy = svgY; node.x = svgX; node.y = svgY; }
-      alphaRef.current = Math.max(alphaRef.current, 0.3);
-      return;
-    }
-    if (!isPanning) return;
-    const dx = e.clientX - panStart.current.x;
-    const dy = e.clientY - panStart.current.y;
-    setTransform((t) => ({ ...t, x: panStart.current.tx + dx, y: panStart.current.ty + dy }));
-  }, [isPanning, transform]);
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      if (dragNode.current) {
+        const rect = containerRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        const svgX = (e.clientX - rect.left - transform.x) / transform.scale;
+        const svgY = (e.clientY - rect.top - transform.y) / transform.scale;
+        const node = simNodesRef.current.find((n) => n.id === dragNode.current);
+        if (node) {
+          node.fx = svgX;
+          node.fy = svgY;
+          node.x = svgX;
+          node.y = svgY;
+        }
+        alphaRef.current = Math.max(alphaRef.current, 0.3);
+        return;
+      }
+      if (!isPanning) return;
+      const dx = e.clientX - panStart.current.x;
+      const dy = e.clientY - panStart.current.y;
+      setTransform((t) => ({ ...t, x: panStart.current.tx + dx, y: panStart.current.ty + dy }));
+    },
+    [isPanning, transform],
+  );
 
   const handleMouseUp = useCallback(() => {
     if (dragNode.current) {
       const node = simNodesRef.current.find((n) => n.id === dragNode.current);
-      if (node) { node.fx = null; node.fy = null; }
+      if (node) {
+        node.fx = null;
+        node.fy = null;
+      }
       dragNode.current = null;
     }
     setIsPanning(false);
   }, []);
 
-  const handleNodeMouseDown = useCallback((e: React.MouseEvent, nodeId: string) => {
-    e.stopPropagation();
-    dragNode.current = nodeId;
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const svgX = (e.clientX - rect.left - transform.x) / transform.scale;
-    const svgY = (e.clientY - rect.top - transform.y) / transform.scale;
-    const node = simNodesRef.current.find((n) => n.id === nodeId);
-    if (node) { node.fx = svgX; node.fy = svgY; }
-    alphaRef.current = Math.max(alphaRef.current, 0.5);
-  }, [transform]);
+  const handleNodeMouseDown = useCallback(
+    (e: React.MouseEvent, nodeId: string) => {
+      e.stopPropagation();
+      dragNode.current = nodeId;
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const svgX = (e.clientX - rect.left - transform.x) / transform.scale;
+      const svgY = (e.clientY - rect.top - transform.y) / transform.scale;
+      const node = simNodesRef.current.find((n) => n.id === nodeId);
+      if (node) {
+        node.fx = svgX;
+        node.fy = svgY;
+      }
+      alphaRef.current = Math.max(alphaRef.current, 0.5);
+    },
+    [transform],
+  );
 
   // Simulation handler
   const runSimulation = useCallback(async () => {
@@ -542,7 +597,10 @@ export function NetworkPolicyView({ namespace, currentContext }: NetworkPolicyVi
     setSimLoading(true);
     try {
       const result = await simulate(
-        simSourceNs, simSourcePod, simDestNs, simDestPod,
+        simSourceNs,
+        simSourcePod,
+        simDestNs,
+        simDestPod,
         simPort ? parseInt(simPort) : undefined,
         simProtocol || undefined,
       );
@@ -586,7 +644,9 @@ export function NetworkPolicyView({ namespace, currentContext }: NetworkPolicyVi
         <Inbox className="w-12 h-12 text-slate-600" />
         <p className="text-sm font-medium">No network policies found</p>
         <p className="text-xs text-slate-500">
-          {namespace ? `No NetworkPolicies in "${namespace}"` : "Select a namespace to view network policies"}
+          {namespace
+            ? `No NetworkPolicies in "${namespace}"`
+            : "Select a namespace to view network policies"}
         </p>
       </div>
     );
@@ -630,11 +690,15 @@ export function NetworkPolicyView({ namespace, currentContext }: NetworkPolicyVi
         <div className="absolute top-3 left-3 z-20 flex items-center gap-2">
           <div className="text-[10px] text-slate-500 font-mono px-2 py-1 bg-surface/80 border border-slate-800 rounded-lg backdrop-blur-sm">
             <Shield className="w-3 h-3 inline mr-1" />
-            {graph.policies.length} policies &middot; {graph.groups.length} groups &middot; {graph.edges.length} edges
+            {graph.policies.length} policies &middot; {graph.groups.length} groups &middot;{" "}
+            {graph.edges.length} edges
           </div>
         </div>
 
-        <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5" style={{ right: policyPanelOpen ? "316px" : "12px" }}>
+        <div
+          className="absolute top-3 right-3 z-20 flex items-center gap-1.5"
+          style={{ right: policyPanelOpen ? "316px" : "12px" }}
+        >
           <button
             onClick={refresh}
             className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-slate-300 bg-surface/80 border border-slate-800 rounded-lg hover:border-accent/50 transition backdrop-blur-sm"
@@ -657,12 +721,17 @@ export function NetworkPolicyView({ namespace, currentContext }: NetworkPolicyVi
 
         {/* Legend */}
         <div className="absolute bottom-3 left-3 z-20 flex items-center gap-3 px-3 py-2 bg-surface/80 border border-slate-800 rounded-lg backdrop-blur-sm">
-          {[...Object.entries(GROUP_COLORS).slice(0, 4), ["CIDR", CIDR_COLOR] as const].map(([kind, color]) => (
-            <div key={kind} className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: (color as typeof DEFAULT_COLOR).stroke }} />
-              <span className="text-[10px] text-slate-400">{kind}</span>
-            </div>
-          ))}
+          {[...Object.entries(GROUP_COLORS).slice(0, 4), ["CIDR", CIDR_COLOR] as const].map(
+            ([kind, color]) => (
+              <div key={kind} className="flex items-center gap-1.5">
+                <div
+                  className="w-2.5 h-2.5 rounded-full"
+                  style={{ backgroundColor: (color as typeof DEFAULT_COLOR).stroke }}
+                />
+                <span className="text-[10px] text-slate-400">{kind}</span>
+              </div>
+            ),
+          )}
           <div className="flex items-center gap-1.5 ml-2 pl-2 border-l border-slate-700">
             <div className="w-3 h-0 border-t border-emerald-500 border-dashed" />
             <span className="text-[10px] text-slate-400">Ingress</span>
@@ -674,7 +743,10 @@ export function NetworkPolicyView({ namespace, currentContext }: NetworkPolicyVi
         </div>
 
         {/* Simulation toggle */}
-        <div className="absolute bottom-3 right-3 z-20" style={{ right: policyPanelOpen ? "316px" : "12px" }}>
+        <div
+          className="absolute bottom-3 right-3 z-20"
+          style={{ right: policyPanelOpen ? "316px" : "12px" }}
+        >
           <button
             onClick={() => setSimOpen(!simOpen)}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition backdrop-blur-sm ${
@@ -711,10 +783,24 @@ export function NetworkPolicyView({ namespace, currentContext }: NetworkPolicyVi
             >
               <circle cx={20} cy={20} r={0.5} fill="#1e293b" />
             </pattern>
-            <marker id="np-arrow-ingress" markerWidth={8} markerHeight={6} refX={7} refY={3} orient="auto">
+            <marker
+              id="np-arrow-ingress"
+              markerWidth={8}
+              markerHeight={6}
+              refX={7}
+              refY={3}
+              orient="auto"
+            >
               <path d="M 0 0 L 8 3 L 0 6 z" fill="#10b981" opacity={0.7} />
             </marker>
-            <marker id="np-arrow-egress" markerWidth={8} markerHeight={6} refX={7} refY={3} orient="auto">
+            <marker
+              id="np-arrow-egress"
+              markerWidth={8}
+              markerHeight={6}
+              refX={7}
+              refY={3}
+              orient="auto"
+            >
               <path d="M 0 0 L 8 3 L 0 6 z" fill="#3b82f6" opacity={0.7} />
             </marker>
           </defs>
@@ -757,15 +843,21 @@ export function NetworkPolicyView({ namespace, currentContext }: NetworkPolicyVi
               if (!s || !t) return null;
               const opacity = getEdgeOpacity(e);
               const color = e.direction === "ingress" ? "#10b981" : "#3b82f6";
-              const marker = e.direction === "ingress" ? "url(#np-arrow-ingress)" : "url(#np-arrow-egress)";
-              const portLabel = e.ports.length > 0
-                ? e.ports.map((p) => p.port ? `${p.port}/${p.protocol}` : p.protocol).join(", ")
-                : "";
+              const marker =
+                e.direction === "ingress" ? "url(#np-arrow-ingress)" : "url(#np-arrow-egress)";
+              const portLabel =
+                e.ports.length > 0
+                  ? e.ports.map((p) => (p.port ? `${p.port}/${p.protocol}` : p.protocol)).join(", ")
+                  : "";
               const mx = (s.x + t.x) / 2;
               const my = (s.y + t.y) / 2;
 
               return (
-                <g key={`${e.source}-${e.target}-${e.direction}-${i}`} style={{ transition: "opacity 0.2s" }} opacity={opacity}>
+                <g
+                  key={`${e.source}-${e.target}-${e.direction}-${i}`}
+                  style={{ transition: "opacity 0.2s" }}
+                  opacity={opacity}
+                >
                   <path
                     d={edgePath(s.x, s.y, t.x, t.y)}
                     fill="none"
@@ -896,12 +988,7 @@ export function NetworkPolicyView({ namespace, currentContext }: NetworkPolicyVi
                   )}
                   {/* Isolation shield icon */}
                   {isIsolated && (
-                    <foreignObject
-                      x={node.x - r + 1}
-                      y={node.y - r + 1}
-                      width={12}
-                      height={12}
-                    >
+                    <foreignObject x={node.x - r + 1} y={node.y - r + 1} width={12} height={12}>
                       <div
                         // @ts-expect-error xmlns is valid for foreignObject children
                         xmlns="http://www.w3.org/1999/xhtml"
@@ -934,58 +1021,91 @@ export function NetworkPolicyView({ namespace, currentContext }: NetworkPolicyVi
                     <ShieldCheck className="w-4 h-4 text-accent" />
                     Traffic Simulation
                   </h3>
-                  <button onClick={() => setSimOpen(false)} className="text-slate-500 hover:text-slate-300">
+                  <button
+                    onClick={() => setSimOpen(false)}
+                    className="text-slate-500 hover:text-slate-300"
+                  >
                     <X className="w-4 h-4" />
                   </button>
                 </div>
                 <div className="flex items-end gap-3 flex-wrap">
                   <div className="flex-1 min-w-[140px]">
-                    <label className="text-[10px] text-slate-500 uppercase mb-1 block">Source NS</label>
+                    <label className="text-[10px] text-slate-500 uppercase mb-1 block">
+                      Source NS
+                    </label>
                     <select
                       value={simSourceNs}
-                      onChange={(e) => { setSimSourceNs(e.target.value); setSimSourcePod(""); }}
+                      onChange={(e) => {
+                        setSimSourceNs(e.target.value);
+                        setSimSourcePod("");
+                      }}
                       className="w-full bg-background border border-slate-800 rounded px-2 py-1.5 text-xs text-slate-200 focus:border-accent/50 outline-none"
                     >
                       <option value="">Select...</option>
-                      {podNamespaces.map((ns) => <option key={ns} value={ns}>{ns}</option>)}
+                      {podNamespaces.map((ns) => (
+                        <option key={ns} value={ns}>
+                          {ns}
+                        </option>
+                      ))}
                     </select>
                   </div>
                   <div className="flex-1 min-w-[160px]">
-                    <label className="text-[10px] text-slate-500 uppercase mb-1 block">Source Pod</label>
+                    <label className="text-[10px] text-slate-500 uppercase mb-1 block">
+                      Source Pod
+                    </label>
                     <select
                       value={simSourcePod}
                       onChange={(e) => setSimSourcePod(e.target.value)}
                       className="w-full bg-background border border-slate-800 rounded px-2 py-1.5 text-xs text-slate-200 focus:border-accent/50 outline-none"
                     >
                       <option value="">Select...</option>
-                      {allPods.filter((p) => p.namespace === simSourceNs).map((p) => (
-                        <option key={p.name} value={p.name}>{p.name}</option>
-                      ))}
+                      {allPods
+                        .filter((p) => p.namespace === simSourceNs)
+                        .map((p) => (
+                          <option key={p.name} value={p.name}>
+                            {p.name}
+                          </option>
+                        ))}
                     </select>
                   </div>
                   <div className="text-slate-600 text-sm px-2 pb-1">&rarr;</div>
                   <div className="flex-1 min-w-[140px]">
-                    <label className="text-[10px] text-slate-500 uppercase mb-1 block">Dest NS</label>
+                    <label className="text-[10px] text-slate-500 uppercase mb-1 block">
+                      Dest NS
+                    </label>
                     <select
                       value={simDestNs}
-                      onChange={(e) => { setSimDestNs(e.target.value); setSimDestPod(""); }}
+                      onChange={(e) => {
+                        setSimDestNs(e.target.value);
+                        setSimDestPod("");
+                      }}
                       className="w-full bg-background border border-slate-800 rounded px-2 py-1.5 text-xs text-slate-200 focus:border-accent/50 outline-none"
                     >
                       <option value="">Select...</option>
-                      {podNamespaces.map((ns) => <option key={ns} value={ns}>{ns}</option>)}
+                      {podNamespaces.map((ns) => (
+                        <option key={ns} value={ns}>
+                          {ns}
+                        </option>
+                      ))}
                     </select>
                   </div>
                   <div className="flex-1 min-w-[160px]">
-                    <label className="text-[10px] text-slate-500 uppercase mb-1 block">Dest Pod</label>
+                    <label className="text-[10px] text-slate-500 uppercase mb-1 block">
+                      Dest Pod
+                    </label>
                     <select
                       value={simDestPod}
                       onChange={(e) => setSimDestPod(e.target.value)}
                       className="w-full bg-background border border-slate-800 rounded px-2 py-1.5 text-xs text-slate-200 focus:border-accent/50 outline-none"
                     >
                       <option value="">Select...</option>
-                      {allPods.filter((p) => p.namespace === simDestNs).map((p) => (
-                        <option key={p.name} value={p.name}>{p.name}</option>
-                      ))}
+                      {allPods
+                        .filter((p) => p.namespace === simDestNs)
+                        .map((p) => (
+                          <option key={p.name} value={p.name}>
+                            {p.name}
+                          </option>
+                        ))}
                     </select>
                   </div>
                   <div className="w-20">
@@ -1019,31 +1139,45 @@ export function NetworkPolicyView({ namespace, currentContext }: NetworkPolicyVi
                 </div>
 
                 {simResult && (
-                  <div className={`mt-3 px-3 py-2 rounded-lg border text-xs ${
-                    simResult.allowed
-                      ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
-                      : "bg-red-500/10 border-red-500/30 text-red-400"
-                  }`}>
-                    <div className="font-medium mb-1">{simResult.allowed ? "ALLOWED" : "DENIED"}</div>
+                  <div
+                    className={`mt-3 px-3 py-2 rounded-lg border text-xs ${
+                      simResult.allowed
+                        ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
+                        : "bg-red-500/10 border-red-500/30 text-red-400"
+                    }`}
+                  >
+                    <div className="font-medium mb-1">
+                      {simResult.allowed ? "ALLOWED" : "DENIED"}
+                    </div>
                     <div className="text-slate-400">{simResult.summary}</div>
                     {simResult.egress_evaluation.policy_results.length > 0 && (
                       <div className="mt-2">
                         <span className="text-slate-500">Egress:</span>
-                        {simResult.egress_evaluation.policy_results.filter((r) => r.selects_pod).map((r) => (
-                          <span key={r.policy_name} className={`ml-2 ${r.allows_traffic ? "text-emerald-400" : "text-red-400"}`}>
-                            {r.policy_name}: {r.reason}
-                          </span>
-                        ))}
+                        {simResult.egress_evaluation.policy_results
+                          .filter((r) => r.selects_pod)
+                          .map((r) => (
+                            <span
+                              key={r.policy_name}
+                              className={`ml-2 ${r.allows_traffic ? "text-emerald-400" : "text-red-400"}`}
+                            >
+                              {r.policy_name}: {r.reason}
+                            </span>
+                          ))}
                       </div>
                     )}
                     {simResult.ingress_evaluation.policy_results.length > 0 && (
                       <div className="mt-1">
                         <span className="text-slate-500">Ingress:</span>
-                        {simResult.ingress_evaluation.policy_results.filter((r) => r.selects_pod).map((r) => (
-                          <span key={r.policy_name} className={`ml-2 ${r.allows_traffic ? "text-emerald-400" : "text-red-400"}`}>
-                            {r.policy_name}: {r.reason}
-                          </span>
-                        ))}
+                        {simResult.ingress_evaluation.policy_results
+                          .filter((r) => r.selects_pod)
+                          .map((r) => (
+                            <span
+                              key={r.policy_name}
+                              className={`ml-2 ${r.allows_traffic ? "text-emerald-400" : "text-red-400"}`}
+                            >
+                              {r.policy_name}: {r.reason}
+                            </span>
+                          ))}
                       </div>
                     )}
                   </div>
@@ -1055,12 +1189,18 @@ export function NetworkPolicyView({ namespace, currentContext }: NetworkPolicyVi
       </div>
 
       {/* Policy List Panel */}
-      <div className={`relative transition-all duration-300 ${policyPanelOpen ? "w-[300px]" : "w-0"}`}>
+      <div
+        className={`relative transition-all duration-300 ${policyPanelOpen ? "w-[300px]" : "w-0"}`}
+      >
         <button
           onClick={() => setPolicyPanelOpen(!policyPanelOpen)}
           className="absolute -left-6 top-3 z-30 w-6 h-8 bg-surface/90 border border-slate-800 border-r-0 rounded-l-md flex items-center justify-center text-slate-500 hover:text-slate-300 transition"
         >
-          {policyPanelOpen ? <ChevronDown className="w-3 h-3 rotate-[-90deg]" /> : <ChevronUp className="w-3 h-3 rotate-[-90deg]" />}
+          {policyPanelOpen ? (
+            <ChevronDown className="w-3 h-3 rotate-[-90deg]" />
+          ) : (
+            <ChevronUp className="w-3 h-3 rotate-[-90deg]" />
+          )}
         </button>
 
         {policyPanelOpen && (
@@ -1079,7 +1219,10 @@ export function NetworkPolicyView({ namespace, currentContext }: NetworkPolicyVi
                   className="w-full pl-6 pr-6 py-1 text-[11px] font-mono bg-background border border-slate-800 rounded placeholder:text-slate-600 text-slate-300 focus:outline-none focus:border-accent/50 transition"
                 />
                 {policySearch && (
-                  <button onClick={() => setPolicySearch("")} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
+                  <button
+                    onClick={() => setPolicySearch("")}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                  >
                     <X className="w-3 h-3" />
                   </button>
                 )}
@@ -1091,7 +1234,9 @@ export function NetworkPolicyView({ namespace, currentContext }: NetworkPolicyVi
                   key={`${policy.namespace}/${policy.name}`}
                   policy={policy}
                   isSelected={selectedPolicy === policy.name}
-                  onClick={() => setSelectedPolicy(selectedPolicy === policy.name ? null : policy.name)}
+                  onClick={() =>
+                    setSelectedPolicy(selectedPolicy === policy.name ? null : policy.name)
+                  }
                 />
               ))}
               {filteredPolicies.length === 0 && (
@@ -1129,9 +1274,7 @@ function PolicyCard({
         <Shield className="w-3 h-3 text-accent flex-shrink-0" />
         <span className="text-[11px] font-medium text-slate-200 truncate">{policy.name}</span>
       </div>
-      <div className="text-[10px] text-slate-500 mb-1.5">
-        ns: {policy.namespace}
-      </div>
+      <div className="text-[10px] text-slate-500 mb-1.5">ns: {policy.namespace}</div>
       <div className="flex flex-wrap gap-1 mb-1.5">
         {policy.policy_types.map((t) => (
           <span
@@ -1152,7 +1295,10 @@ function PolicyCard({
       {Object.keys(policy.pod_selector).length > 0 && (
         <div className="flex flex-wrap gap-1">
           {Object.entries(policy.pod_selector).map(([k, v]) => (
-            <span key={k} className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800/80 text-slate-400 font-mono">
+            <span
+              key={k}
+              className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800/80 text-slate-400 font-mono"
+            >
               {k}={v}
             </span>
           ))}
@@ -1164,8 +1310,16 @@ function PolicyCard({
         </span>
       )}
       <div className="flex gap-2 mt-1.5 text-[9px] text-slate-500">
-        {policy.ingress_rule_count > 0 && <span>{policy.ingress_rule_count} ingress rule{policy.ingress_rule_count > 1 ? "s" : ""}</span>}
-        {policy.egress_rule_count > 0 && <span>{policy.egress_rule_count} egress rule{policy.egress_rule_count > 1 ? "s" : ""}</span>}
+        {policy.ingress_rule_count > 0 && (
+          <span>
+            {policy.ingress_rule_count} ingress rule{policy.ingress_rule_count > 1 ? "s" : ""}
+          </span>
+        )}
+        {policy.egress_rule_count > 0 && (
+          <span>
+            {policy.egress_rule_count} egress rule{policy.egress_rule_count > 1 ? "s" : ""}
+          </span>
+        )}
       </div>
     </button>
   );

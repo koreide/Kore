@@ -51,13 +51,9 @@ export function DebugContainerModal({
 
     try {
       const target = shareProcessNamespace && targetContainer ? targetContainer : undefined;
-      const containerName = await addDebugContainer(
-        namespace,
-        podName,
-        resolvedImage,
-        target,
-        ["/bin/sh"],
-      );
+      const containerName = await addDebugContainer(namespace, podName, resolvedImage, target, [
+        "/bin/sh",
+      ]);
       onDebugReady(containerName, resolvedImage);
     } catch (err) {
       setError(formatError(err));

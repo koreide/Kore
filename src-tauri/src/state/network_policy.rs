@@ -242,7 +242,11 @@ fn peer_matches_target(
     }
 }
 
-fn port_matches(target_port: Option<i32>, target_protocol: &str, policy_ports: &[PortInfo]) -> bool {
+fn port_matches(
+    target_port: Option<i32>,
+    target_protocol: &str,
+    policy_ports: &[PortInfo],
+) -> bool {
     if policy_ports.is_empty() {
         return true;
     }
@@ -321,7 +325,12 @@ impl K8sState {
             .iter()
             .filter_map(|ns| {
                 let name = ns.metadata.name.as_ref()?;
-                let labels = ns.metadata.labels.as_ref().map(btree_to_hash).unwrap_or_default();
+                let labels = ns
+                    .metadata
+                    .labels
+                    .as_ref()
+                    .map(btree_to_hash)
+                    .unwrap_or_default();
                 Some((name.clone(), labels))
             })
             .collect();
@@ -663,16 +672,24 @@ impl K8sState {
         let src_api: Api<Pod> = Api::namespaced(client.clone(), &source_namespace);
         let dst_api: Api<Pod> = Api::namespaced(client.clone(), &dest_namespace);
 
-        let (src_result, dst_result) = tokio::join!(
-            src_api.get(&source_pod),
-            dst_api.get(&dest_pod),
-        );
+        let (src_result, dst_result) =
+            tokio::join!(src_api.get(&source_pod), dst_api.get(&dest_pod),);
 
         let src = src_result.map_err(K8sError::Kube)?;
         let dst = dst_result.map_err(K8sError::Kube)?;
 
-        let src_labels = src.metadata.labels.as_ref().map(btree_to_hash).unwrap_or_default();
-        let dst_labels = dst.metadata.labels.as_ref().map(btree_to_hash).unwrap_or_default();
+        let src_labels = src
+            .metadata
+            .labels
+            .as_ref()
+            .map(btree_to_hash)
+            .unwrap_or_default();
+        let dst_labels = dst
+            .metadata
+            .labels
+            .as_ref()
+            .map(btree_to_hash)
+            .unwrap_or_default();
 
         // Fetch NPs and namespaces
         let src_np_api: Api<NetworkPolicy> = Api::namespaced(client.clone(), &source_namespace);
@@ -680,11 +697,8 @@ impl K8sState {
         let ns_api: Api<Namespace> = Api::all(client.clone());
 
         let lp = ListParams::default();
-        let (src_nps, dst_nps, all_ns) = tokio::join!(
-            src_np_api.list(&lp),
-            dst_np_api.list(&lp),
-            ns_api.list(&lp),
-        );
+        let (src_nps, dst_nps, all_ns) =
+            tokio::join!(src_np_api.list(&lp), dst_np_api.list(&lp), ns_api.list(&lp),);
 
         let src_nps = src_nps.map_err(K8sError::Kube)?.items;
         let dst_nps = dst_nps.map_err(K8sError::Kube)?.items;
@@ -694,7 +708,12 @@ impl K8sState {
             .iter()
             .filter_map(|ns| {
                 let name = ns.metadata.name.as_ref()?;
-                let labels = ns.metadata.labels.as_ref().map(btree_to_hash).unwrap_or_default();
+                let labels = ns
+                    .metadata
+                    .labels
+                    .as_ref()
+                    .map(btree_to_hash)
+                    .unwrap_or_default();
                 Some((name.clone(), labels))
             })
             .collect();
@@ -723,10 +742,16 @@ impl K8sState {
             "Ingress",
         );
 
-        let egress_allowed =
-            !egress_evaluation.isolated || egress_evaluation.policy_results.iter().any(|r| r.allows_traffic);
-        let ingress_allowed =
-            !ingress_evaluation.isolated || ingress_evaluation.policy_results.iter().any(|r| r.allows_traffic);
+        let egress_allowed = !egress_evaluation.isolated
+            || egress_evaluation
+                .policy_results
+                .iter()
+                .any(|r| r.allows_traffic);
+        let ingress_allowed = !ingress_evaluation.isolated
+            || ingress_evaluation
+                .policy_results
+                .iter()
+                .any(|r| r.allows_traffic);
 
         let allowed = egress_allowed && ingress_allowed;
 
@@ -816,7 +841,10 @@ fn evaluate_direction(
         let mut matching_idx = None;
         let mut reason = format!("No matching {} rule", direction.to_lowercase());
 
-        type RulePeersAndPorts<'a> = (Option<&'a Vec<NetworkPolicyPeer>>, Option<&'a Vec<NetworkPolicyPort>>);
+        type RulePeersAndPorts<'a> = (
+            Option<&'a Vec<NetworkPolicyPeer>>,
+            Option<&'a Vec<NetworkPolicyPort>>,
+        );
         let rules: Option<Vec<RulePeersAndPorts<'_>>> = if direction == "Ingress" {
             spec.ingress.as_ref().map(|rules| {
                 rules

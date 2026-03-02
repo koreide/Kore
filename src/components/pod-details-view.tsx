@@ -243,7 +243,9 @@ export function PodDetailsView({ pod, onBack }: PodDetailsViewProps) {
   const logSearchInputRef = useRef<HTMLInputElement>(null);
   // Debug container
   const [showDebugModal, setShowDebugModal] = useState(false);
-  const [debugContainer, setDebugContainer] = useState<{ name: string; image: string } | undefined>(undefined);
+  const [debugContainer, setDebugContainer] = useState<{ name: string; image: string } | undefined>(
+    undefined,
+  );
   const [stoppingDebug, setStoppingDebug] = useState(false);
   const [isStaticPod, setIsStaticPod] = useState(false);
   const [showPodInfo, setShowPodInfo] = useState(false);
@@ -502,7 +504,17 @@ export function PodDetailsView({ pod, onBack }: PodDetailsViewProps) {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onBack, isDeleted, isStaticPod, showDeleteConfirm, showDebugModal, logSearchVisible, activeTab, debugContainer, handleStopDebug]);
+  }, [
+    onBack,
+    isDeleted,
+    isStaticPod,
+    showDeleteConfirm,
+    showDebugModal,
+    logSearchVisible,
+    activeTab,
+    debugContainer,
+    handleStopDebug,
+  ]);
 
   // Clean up focus timeout on unmount
   useEffect(() => {
@@ -535,7 +547,6 @@ export function PodDetailsView({ pod, onBack }: PodDetailsViewProps) {
     URL.revokeObjectURL(url);
     toast("Logs downloaded", "success");
   };
-
 
   const handleDelete = async () => {
     if (!podName || !namespace || isDeleted) return;
@@ -666,7 +677,9 @@ export function PodDetailsView({ pod, onBack }: PodDetailsViewProps) {
                   )}
                 >
                   <Bug className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">{stoppingDebug ? "Stopping…" : debugContainer ? "Stop Debug" : "Debug"}</span>
+                  <span className="hidden sm:inline">
+                    {stoppingDebug ? "Stopping…" : debugContainer ? "Stop Debug" : "Debug"}
+                  </span>
                   {debugContainer ? (
                     <span className="relative flex h-2 w-2">
                       <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />

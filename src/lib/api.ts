@@ -628,9 +628,7 @@ export interface PolicyEvaluation {
   matching_rule_index: number | null;
 }
 
-export async function buildNetworkPolicyGraph(
-  namespace?: string,
-): Promise<NetworkPolicyGraph> {
+export async function buildNetworkPolicyGraph(namespace?: string): Promise<NetworkPolicyGraph> {
   return invoke("build_network_policy_graph", { namespace });
 }
 

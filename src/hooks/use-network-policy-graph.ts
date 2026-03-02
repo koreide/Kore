@@ -1,12 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  buildNetworkPolicyGraph,
-  simulateNetworkTraffic,
-} from "@/lib/api";
-import type {
-  NetworkPolicyGraph,
-  TrafficSimulationResult,
-} from "@/lib/api";
+import { buildNetworkPolicyGraph, simulateNetworkTraffic } from "@/lib/api";
+import type { NetworkPolicyGraph, TrafficSimulationResult } from "@/lib/api";
 import { listen } from "@tauri-apps/api/event";
 import type { WatchEventPayload } from "@/lib/types";
 

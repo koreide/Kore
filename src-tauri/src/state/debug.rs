@@ -197,9 +197,7 @@ impl K8sState {
                 .as_ref()
                 .and_then(|s| s.ephemeral_container_statuses.as_ref())
                 .and_then(|statuses| statuses.iter().find(|s| s.name == container_name))
-                .is_some_and(|cs| {
-                    cs.state.as_ref().is_some_and(|s| s.running.is_some())
-                });
+                .is_some_and(|cs| cs.state.as_ref().is_some_and(|s| s.running.is_some()));
             if !still_running {
                 return Ok(());
             }

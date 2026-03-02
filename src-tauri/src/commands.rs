@@ -809,7 +809,14 @@ pub async fn simulate_network_traffic(
     protocol: Option<String>,
 ) -> std::result::Result<crate::state::network_policy::TrafficSimulationResult, String> {
     state
-        .simulate_network_traffic(sourceNamespace, sourcePod, destNamespace, destPod, port, protocol)
+        .simulate_network_traffic(
+            sourceNamespace,
+            sourcePod,
+            destNamespace,
+            destPod,
+            port,
+            protocol,
+        )
         .await
         .map_err(|e| e.to_string())
 }
