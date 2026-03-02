@@ -743,6 +743,48 @@ pub fn delete_api_key(provider: String) -> std::result::Result<(), String> {
     }
 }
 
+// ── Debug Containers ─────────────────────────────────────────────────
+
+#[tauri::command]
+pub async fn add_debug_container(
+    state: State<'_, K8sState>,
+    namespace: String,
+    #[allow(non_snake_case)] podName: String,
+    image: String,
+    #[allow(non_snake_case)] targetContainer: Option<String>,
+    command: Option<Vec<String>>,
+) -> std::result::Result<String, String> {
+    state
+        .add_debug_container(namespace, podName, image, targetContainer, command)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn list_debug_containers(
+    state: State<'_, K8sState>,
+    namespace: String,
+    #[allow(non_snake_case)] podName: String,
+) -> std::result::Result<Vec<serde_json::Value>, String> {
+    state
+        .list_debug_containers(namespace, podName)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn stop_debug_container(
+    state: State<'_, K8sState>,
+    namespace: String,
+    #[allow(non_snake_case)] podName: String,
+    #[allow(non_snake_case)] containerName: String,
+) -> std::result::Result<(), String> {
+    state
+        .stop_debug_container(namespace, podName, containerName)
+        .await
+        .map_err(|e| e.to_string())
+}
+
 // ── Favorites Persistence ────────────────────────────────────────────
 
 fn favorites_path() -> std::result::Result<std::path::PathBuf, String> {

@@ -12,12 +12,15 @@ import {
   ChevronUp,
   ChevronDown,
   X,
+  Bug,
 } from "lucide-react";
 import {
   deleteResource,
   describePod,
   getResourceYaml,
+  listDebugContainers,
   startPodLogsStream,
+  stopDebugContainer,
   stopPodLogsStream,
 } from "@/lib/api";
 import { formatError } from "@/lib/errors";
@@ -30,6 +33,7 @@ import { EventsTimeline } from "./events-timeline";
 import { ExecTerminal } from "./exec-terminal";
 import { YamlEditor } from "./yaml-editor";
 import { DescribeContent } from "./describe-content";
+import { DebugContainerModal } from "./debug-container-modal";
 import { useToast } from "./toast";
 import { cn } from "@/lib/utils";
 
@@ -236,6 +240,11 @@ export function PodDetailsView({ pod, onBack }: PodDetailsViewProps) {
   const [logSearchVisible, setLogSearchVisible] = useState(false);
   const [logSearchIndex, setLogSearchIndex] = useState(0);
   const logSearchInputRef = useRef<HTMLInputElement>(null);
+  // Debug container
+  const [showDebugModal, setShowDebugModal] = useState(false);
+  const [debugContainer, setDebugContainer] = useState<{ name: string; image: string } | undefined>(undefined);
+  const [stoppingDebug, setStoppingDebug] = useState(false);
+  const [isStaticPod, setIsStaticPod] = useState(false);
 
   const logsContainerRef = useRef<HTMLDivElement>(null);
   const virtualListRef = useRef<ListImperativeAPI>(null);
@@ -269,6 +278,12 @@ export function PodDetailsView({ pod, onBack }: PodDetailsViewProps) {
       describePod(namespace, podName)
         .then((podData) => {
           setDescribe(JSON.stringify(podData, null, 2));
+          // Detect static pods (mirror pods created by kubelet)
+          const metadata = podData.metadata as Record<string, unknown> | undefined;
+          const annotations = metadata?.annotations as Record<string, string> | undefined;
+          if (annotations?.["kubernetes.io/config.mirror"]) {
+            setIsStaticPod(true);
+          }
           // Extract container names
           const spec = podData.spec as Record<string, unknown> | undefined;
           const containerList = spec?.containers as Array<Record<string, unknown>> | undefined;
@@ -285,6 +300,16 @@ export function PodDetailsView({ pod, onBack }: PodDetailsViewProps) {
             });
           }
           setContainers(names);
+          // Restore debug container state if one is running
+          listDebugContainers(namespace, podName)
+            .then((debugContainers) => {
+              const running = debugContainers.filter((dc) => dc.running);
+              if (running.length > 0) {
+                const last = running[running.length - 1];
+                setDebugContainer({ name: last.name, image: last.image });
+              }
+            })
+            .catch(() => {});
           if (activeTab === "describe") setLoading(false);
         })
         .catch((err) => {
@@ -426,11 +451,18 @@ export function PodDetailsView({ pod, onBack }: PodDetailsViewProps) {
         if (focusTimeoutRef.current) clearTimeout(focusTimeoutRef.current);
         focusTimeoutRef.current = setTimeout(() => logSearchInputRef.current?.focus(), 50);
       }
-      if (e.key.toLowerCase() === "d" && !isDeleted && !showDeleteConfirm) {
+      if (e.key.toLowerCase() === "d" && !isDeleted && !showDeleteConfirm && !showDebugModal) {
         const target = e.target as HTMLElement;
         if (target.tagName !== "INPUT" && target.tagName !== "TEXTAREA") {
           e.preventDefault();
           setShowDeleteConfirm(true);
+        }
+      }
+      if (e.key.toLowerCase() === "b" && !isDeleted && !isStaticPod && !showDeleteConfirm && !showDebugModal) {
+        const target = e.target as HTMLElement;
+        if (target.tagName !== "INPUT" && target.tagName !== "TEXTAREA") {
+          e.preventDefault();
+          setShowDebugModal(true);
         }
       }
       // Number key tab switching (1-6)
@@ -447,7 +479,7 @@ export function PodDetailsView({ pod, onBack }: PodDetailsViewProps) {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onBack, isDeleted, showDeleteConfirm, logSearchVisible, activeTab]);
+  }, [onBack, isDeleted, isStaticPod, showDeleteConfirm, showDebugModal, logSearchVisible, activeTab]);
 
   // Clean up focus timeout on unmount
   useEffect(() => {
@@ -508,6 +540,13 @@ export function PodDetailsView({ pod, onBack }: PodDetailsViewProps) {
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  const handleDebugReady = (containerName: string, image: string) => {
+    setDebugContainer({ name: containerName, image });
+    setShowDebugModal(false);
+    setActiveTab("shell");
+    toast(`Debug container "${containerName}" is ready`, "success");
   };
 
   const navigateLogSearch = useCallback(
@@ -573,6 +612,22 @@ export function PodDetailsView({ pod, onBack }: PodDetailsViewProps) {
                   >
                     <Copy className="w-4 h-4" />
                     Copy YAML
+                  </button>
+                  <button
+                    onClick={() => !isStaticPod && setShowDebugModal(true)}
+                    disabled={isStaticPod}
+                    title={isStaticPod ? "Static pods do not support ephemeral debug containers" : undefined}
+                    aria-label="Debug container"
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-1.5 rounded-md border transition text-sm",
+                      isStaticPod
+                        ? "border-slate-800 text-slate-600 cursor-not-allowed"
+                        : "border-accent/30 hover:border-accent/50 hover:bg-accent/15 text-accent",
+                    )}
+                  >
+                    <Bug className="w-4 h-4" />
+                    Debug
+                    <Kbd>B</Kbd>
                   </button>
                   <button
                     onClick={() => setShowDeleteConfirm(true)}
@@ -668,6 +723,38 @@ export function PodDetailsView({ pod, onBack }: PodDetailsViewProps) {
               <div className="text-slate-100 font-mono text-xs">{ip}</div>
             </div>
           </div>
+
+          {/* Debug container banner */}
+          {debugContainer && (
+            <div className="mt-3 flex items-center gap-2 px-3 py-2 rounded-md border border-accent/30 bg-accent/10">
+              <Bug className="w-4 h-4 text-accent shrink-0" />
+              <span className="text-xs text-accent font-medium">Debug:</span>
+              <span className="text-xs text-slate-200">{debugContainer.name}</span>
+              <span className="text-[10px] font-mono text-accent/70 bg-accent/10 px-1.5 py-0.5 rounded">
+                {debugContainer.image}
+              </span>
+              <button
+                disabled={stoppingDebug}
+                onClick={async () => {
+                  const dc = debugContainer;
+                  if (!dc) return;
+                  setStoppingDebug(true);
+                  try {
+                    await stopDebugContainer(namespace, podName, dc.name);
+                    setDebugContainer(undefined);
+                    toast("Debug container stopped", "success");
+                  } catch (err) {
+                    toast(`Failed to stop debug container: ${formatError(err)}`, "error");
+                  } finally {
+                    setStoppingDebug(false);
+                  }
+                }}
+                className="ml-auto text-xs text-slate-400 hover:text-slate-200 px-2 py-1 rounded border border-slate-700 hover:border-slate-600 transition disabled:opacity-50"
+              >
+                {stoppingDebug ? "Stopping..." : "Disconnect"}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Tabs */}
@@ -684,7 +771,15 @@ export function PodDetailsView({ pod, onBack }: PodDetailsViewProps) {
                   activeTab === tab.id ? "text-accent" : "text-slate-400 hover:text-slate-200",
                 )}
               >
-                {tab.label}
+                <span className="flex items-center gap-1.5">
+                  {tab.label}
+                  {tab.id === "shell" && debugContainer && (
+                    <span className="relative flex h-2 w-2">
+                      <span className="absolute inline-flex h-full w-full rounded-full bg-accent opacity-75 animate-ping" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-accent" />
+                    </span>
+                  )}
+                </span>
                 {activeTab === tab.id && (
                   <motion.div
                     layoutId="pod-detail-tab-indicator"
@@ -859,7 +954,8 @@ export function PodDetailsView({ pod, onBack }: PodDetailsViewProps) {
                     namespace={namespace}
                     podName={podName}
                     container={
-                      selectedContainer ? selectedContainer.replace(/^init:/, "") : undefined
+                      debugContainer?.name ||
+                      (selectedContainer ? selectedContainer.replace(/^init:/, "") : undefined)
                     }
                   />
                 </motion.div>
@@ -885,6 +981,16 @@ export function PodDetailsView({ pod, onBack }: PodDetailsViewProps) {
           onConfirm={handleDelete}
           onCancel={() => setShowDeleteConfirm(false)}
           variant="danger"
+        />
+
+        {/* Debug Container Modal */}
+        <DebugContainerModal
+          open={showDebugModal}
+          onClose={() => setShowDebugModal(false)}
+          onDebugReady={handleDebugReady}
+          namespace={namespace}
+          podName={podName}
+          containers={containers.filter((c) => !c.startsWith("init:"))}
         />
       </div>
 

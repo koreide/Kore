@@ -519,6 +519,33 @@ export async function aiChat(config: AIConfig, request: AIChatRequest): Promise<
   return invoke("ai_chat", { config, request });
 }
 
+// ── Debug Containers ─────────────────────────────────────────────────
+
+export async function addDebugContainer(
+  namespace: string,
+  podName: string,
+  image: string,
+  targetContainer?: string,
+  command?: string[],
+): Promise<string> {
+  return invoke("add_debug_container", { namespace, podName, image, targetContainer, command });
+}
+
+export async function listDebugContainers(
+  namespace: string,
+  podName: string,
+): Promise<Array<{ name: string; image: string; targetContainer?: string; running: boolean }>> {
+  return invoke("list_debug_containers", { namespace, podName });
+}
+
+export async function stopDebugContainer(
+  namespace: string,
+  podName: string,
+  containerName: string,
+): Promise<void> {
+  return invoke("stop_debug_container", { namespace, podName, containerName });
+}
+
 // ── Favorites Persistence ────────────────────────────────────────────
 
 export async function loadFavorites(key: string): Promise<string[]> {
