@@ -34,8 +34,18 @@ interface RbacViewProps {
 const TABS: { id: RbacTab; label: string; icon: React.ReactNode; key: string }[] = [
   { id: "matrix", label: "Permission Matrix", icon: <Grid3X3 className="w-3.5 h-3.5" />, key: "1" },
   { id: "roles", label: "Role Browser", icon: <BookOpen className="w-3.5 h-3.5" />, key: "2" },
-  { id: "query", label: "Query", icon: <MessageCircleQuestion className="w-3.5 h-3.5" />, key: "3" },
-  { id: "impersonation", label: "Impersonation", icon: <UserCog className="w-3.5 h-3.5" />, key: "4" },
+  {
+    id: "query",
+    label: "Query",
+    icon: <MessageCircleQuestion className="w-3.5 h-3.5" />,
+    key: "3",
+  },
+  {
+    id: "impersonation",
+    label: "Impersonation",
+    icon: <UserCog className="w-3.5 h-3.5" />,
+    key: "4",
+  },
 ];
 
 function Kbd({ children }: { children: React.ReactNode }) {
@@ -101,10 +111,7 @@ export function RbacView({
   // Keyboard shortcuts for tabs
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
-      if (
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement
-      ) {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         return;
       }
       const tabIndex = ["1", "2", "3", "4"].indexOf(e.key);
@@ -160,11 +167,7 @@ export function RbacView({
   }, [rbac.selectedIdentity, onSetImpersonation]);
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="flex flex-col h-full"
-    >
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-800">
         {onBack && (
@@ -213,7 +216,9 @@ export function RbacView({
           <div className="mb-4">
             <RbacForbiddenBanner
               analysis={initialAnalysis}
-              onClose={() => {/* handled by parent */}}
+              onClose={() => {
+                /* handled by parent */
+              }}
             />
           </div>
         )}
@@ -227,9 +232,7 @@ export function RbacView({
                 selected={rbac.selectedIdentity}
                 onSelect={handleIdentitySelect}
               />
-              {rbac.loading && (
-                <Loader2 className="w-4 h-4 text-slate-500 animate-spin" />
-              )}
+              {rbac.loading && <Loader2 className="w-4 h-4 text-slate-500 animate-spin" />}
             </div>
             {rbac.matrix ? (
               <div className="flex-1 min-h-0">
@@ -313,7 +316,9 @@ export function RbacView({
                 className="px-2 py-1.5 rounded-md bg-surface border border-slate-700/50 text-xs text-slate-200 outline-none focus:border-accent/50 transition-colors"
               >
                 {["get", "list", "watch", "create", "update", "patch", "delete"].map((v) => (
-                  <option key={v} value={v}>{v}</option>
+                  <option key={v} value={v}>
+                    {v}
+                  </option>
                 ))}
               </select>
 
@@ -324,13 +329,32 @@ export function RbacView({
                 className="px-2 py-1.5 rounded-md bg-surface border border-slate-700/50 text-xs text-slate-200 outline-none focus:border-accent/50 transition-colors"
               >
                 {[
-                  "pods", "deployments", "replicasets", "statefulsets", "daemonsets",
-                  "services", "ingresses", "configmaps", "secrets", "nodes",
-                  "namespaces", "persistentvolumeclaims", "persistentvolumes",
-                  "serviceaccounts", "jobs", "cronjobs", "roles", "rolebindings",
-                  "clusterroles", "clusterrolebindings", "events", "networkpolicies",
+                  "pods",
+                  "deployments",
+                  "replicasets",
+                  "statefulsets",
+                  "daemonsets",
+                  "services",
+                  "ingresses",
+                  "configmaps",
+                  "secrets",
+                  "nodes",
+                  "namespaces",
+                  "persistentvolumeclaims",
+                  "persistentvolumes",
+                  "serviceaccounts",
+                  "jobs",
+                  "cronjobs",
+                  "roles",
+                  "rolebindings",
+                  "clusterroles",
+                  "clusterrolebindings",
+                  "events",
+                  "networkpolicies",
                 ].map((r) => (
-                  <option key={r} value={r}>{r}</option>
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
                 ))}
               </select>
 
@@ -389,13 +413,8 @@ export function RbacView({
                 >
                   {queryResult.allowed ? "Allowed" : "Denied"}
                 </div>
-                <div className="text-xs text-slate-400 mb-3">
-                  {queryResult.summary}
-                </div>
-                <RbacRuleChain
-                  chain={queryResult.rule_chain}
-                  allowed={queryResult.allowed}
-                />
+                <div className="text-xs text-slate-400 mb-3">{queryResult.summary}</div>
+                <RbacRuleChain chain={queryResult.rule_chain} allowed={queryResult.allowed} />
               </motion.div>
             )}
 
@@ -446,14 +465,11 @@ export function RbacView({
         {activeTab === "impersonation" && (
           <div className="space-y-5 max-w-lg">
             <div className="space-y-3">
-              <div className="text-sm text-slate-300 font-medium">
-                What does impersonation do?
-              </div>
+              <div className="text-sm text-slate-300 font-medium">What does impersonation do?</div>
               <div className="text-xs text-slate-400 leading-relaxed">
-                Impersonation lets you pick a ServiceAccount, User, or Group and see what
-                they are allowed to do. When active, the Permission Matrix tab automatically
-                shows that identity&apos;s permissions instead of requiring you to re-select it
-                each time.
+                Impersonation lets you pick a ServiceAccount, User, or Group and see what they are
+                allowed to do. When active, the Permission Matrix tab automatically shows that
+                identity&apos;s permissions instead of requiring you to re-select it each time.
               </div>
               <div className="rounded-lg border border-slate-700/50 bg-slate-800/30 p-3 space-y-2">
                 <div className="text-[10px] uppercase tracking-wider text-slate-500 font-medium">
@@ -470,7 +486,8 @@ export function RbacView({
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-emerald-400 mt-0.5">&#x2022;</span>
-                    Quickly check &quot;would this identity be able to...?&quot; without leaving your current view
+                    Quickly check &quot;would this identity be able to...?&quot; without leaving
+                    your current view
                   </li>
                 </ul>
                 <div className="text-[10px] text-amber-500/70 pt-1 border-t border-slate-700/30">

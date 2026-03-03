@@ -17,10 +17,7 @@ function identityLabel(identity: RbacIdentity): string {
   }
 }
 
-export function RbacImpersonationBanner({
-  identity,
-  onExit,
-}: RbacImpersonationBannerProps) {
+export function RbacImpersonationBanner({ identity, onExit }: RbacImpersonationBannerProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: -8 }}
@@ -29,12 +26,8 @@ export function RbacImpersonationBanner({
       className="flex items-center gap-3 px-4 py-2 bg-amber-500/10 border-b border-amber-500/20"
     >
       <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0" />
-      <span className="text-xs text-amber-300">
-        Impersonation Mode:
-      </span>
-      <span className="text-xs font-mono text-amber-200">
-        viewing as {identityLabel(identity)}
-      </span>
+      <span className="text-xs text-amber-300">Impersonation Mode:</span>
+      <span className="text-xs font-mono text-amber-200">viewing as {identityLabel(identity)}</span>
       <span className="text-[10px] text-amber-500/70 ml-1">
         (simulated — actual API calls use your real credentials)
       </span>

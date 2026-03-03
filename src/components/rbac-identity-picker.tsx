@@ -45,9 +45,7 @@ export function RbacIdentityPicker({
     const q = search.toLowerCase();
     return {
       serviceAccounts: identities.service_accounts.filter(
-        (sa) =>
-          sa.name.toLowerCase().includes(q) ||
-          sa.namespace.toLowerCase().includes(q),
+        (sa) => sa.name.toLowerCase().includes(q) || sa.namespace.toLowerCase().includes(q),
       ),
       users: identities.users.filter((u) => u.toLowerCase().includes(q)),
       groups: identities.groups.filter((g) => g.toLowerCase().includes(q)),
@@ -67,7 +65,9 @@ export function RbacIdentityPicker({
           selected ? "text-slate-200" : "text-slate-500",
         )}
       >
-        {selected?.kind === "ServiceAccount" && <Box className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
+        {selected?.kind === "ServiceAccount" && (
+          <Box className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+        )}
         {selected?.kind === "User" && <User className="w-3.5 h-3.5 text-blue-400 shrink-0" />}
         {selected?.kind === "Group" && <Users className="w-3.5 h-3.5 text-purple-400 shrink-0" />}
         <span className="truncate">{loading ? "Loading..." : selectedLabel}</span>
@@ -190,9 +190,7 @@ export function RbacIdentityPicker({
               {!filtered.serviceAccounts.length &&
                 !filtered.users.length &&
                 !filtered.groups.length && (
-                  <div className="p-4 text-center text-sm text-slate-500">
-                    No identities found
-                  </div>
+                  <div className="p-4 text-center text-sm text-slate-500">No identities found</div>
                 )}
             </div>
           </div>

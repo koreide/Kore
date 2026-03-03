@@ -24,18 +24,13 @@ export function RbacForbiddenBanner({ analysis, onClose }: RbacForbiddenBannerPr
       <div className="flex items-start gap-3">
         <ShieldX className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium text-red-300">
-            Permission Denied
-          </div>
+          <div className="text-sm font-medium text-red-300">Permission Denied</div>
           <div className="text-xs text-slate-400 mt-1 font-mono">
             {identityLabel} cannot {analysis.verb} {analysis.resource}
             {analysis.namespace && ` in namespace "${analysis.namespace}"`}
           </div>
         </div>
-        <button
-          onClick={onClose}
-          className="text-slate-500 hover:text-slate-300 text-xs"
-        >
+        <button onClick={onClose} className="text-slate-500 hover:text-slate-300 text-xs">
           Dismiss
         </button>
       </div>

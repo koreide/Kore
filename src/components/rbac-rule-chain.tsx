@@ -9,11 +9,7 @@ interface RbacRuleChainProps {
 
 export function RbacRuleChain({ chain, allowed }: RbacRuleChainProps) {
   if (chain.length === 0) {
-    return (
-      <div className="text-sm text-slate-500 italic">
-        No matching rule found
-      </div>
-    );
+    return <div className="text-sm text-slate-500 italic">No matching rule found</div>;
   }
 
   return (
@@ -34,9 +30,7 @@ export function RbacRuleChain({ chain, allowed }: RbacRuleChainProps) {
               <span className="text-slate-500"> / </span>
               <span className="text-indigo-200">{entry.binding_name}</span>
               {entry.binding_namespace && (
-                <span className="text-slate-600 ml-1">
-                  (ns: {entry.binding_namespace})
-                </span>
+                <span className="text-slate-600 ml-1">(ns: {entry.binding_namespace})</span>
               )}
             </div>
           </div>
@@ -54,9 +48,7 @@ export function RbacRuleChain({ chain, allowed }: RbacRuleChainProps) {
               <span className="text-slate-500"> / </span>
               <span className="text-purple-200">{entry.role_name}</span>
               {entry.role_namespace && (
-                <span className="text-slate-600 ml-1">
-                  (ns: {entry.role_namespace})
-                </span>
+                <span className="text-slate-600 ml-1">(ns: {entry.role_namespace})</span>
               )}
             </div>
           </div>
@@ -84,9 +76,7 @@ export function RbacRuleChain({ chain, allowed }: RbacRuleChainProps) {
                 {entry.matching_rule.resources.join(", ")}
               </span>
               <span className="text-slate-500"> [</span>
-              <span className="text-slate-300">
-                {entry.matching_rule.verbs.join(", ")}
-              </span>
+              <span className="text-slate-300">{entry.matching_rule.verbs.join(", ")}</span>
               <span className="text-slate-500">]</span>
               {entry.matching_rule.api_groups.length > 0 &&
                 entry.matching_rule.api_groups[0] !== "" && (
@@ -103,9 +93,7 @@ export function RbacRuleChain({ chain, allowed }: RbacRuleChainProps) {
           </div>
 
           {/* Separator between entries */}
-          {i < chain.length - 1 && (
-            <div className="border-b border-slate-800 my-2" />
-          )}
+          {i < chain.length - 1 && <div className="border-b border-slate-800 my-2" />}
         </motion.div>
       ))}
     </div>

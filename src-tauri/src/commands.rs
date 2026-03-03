@@ -833,7 +833,13 @@ pub async fn rbac_check_permission(
 ) -> std::result::Result<crate::state::rbac::PermissionCheckResult, String> {
     let api_group = crate::state::rbac::api_group_for_resource_cmd(&resource);
     state
-        .rbac_check_permission(&identity, &verb, &resource, &api_group, namespace.as_deref())
+        .rbac_check_permission(
+            &identity,
+            &verb,
+            &resource,
+            &api_group,
+            namespace.as_deref(),
+        )
         .await
         .map_err(|e| e.to_string())
 }
@@ -878,7 +884,10 @@ pub async fn rbac_analyze_forbidden(
 pub async fn rbac_list_identities(
     state: State<'_, K8sState>,
 ) -> std::result::Result<crate::state::rbac::RbacIdentityList, String> {
-    state.rbac_list_identities().await.map_err(|e| e.to_string())
+    state
+        .rbac_list_identities()
+        .await
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]

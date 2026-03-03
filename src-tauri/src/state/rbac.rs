@@ -1,9 +1,7 @@
 use crate::error::{K8sError, Result};
 use crate::state::K8sState;
 use k8s_openapi::api::core::v1::ServiceAccount;
-use k8s_openapi::api::rbac::v1::{
-    ClusterRole, ClusterRoleBinding, Role, RoleBinding, Subject,
-};
+use k8s_openapi::api::rbac::v1::{ClusterRole, ClusterRoleBinding, Role, RoleBinding, Subject};
 use kube::api::{Api, ListParams};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -182,12 +180,8 @@ struct RbacSnapshot {
 
 fn subject_matches(subject: &Subject, identity: &RbacIdentity) -> bool {
     match identity {
-        RbacIdentity::User { name } => {
-            subject.kind == "User" && subject.name == *name
-        }
-        RbacIdentity::Group { name } => {
-            subject.kind == "Group" && subject.name == *name
-        }
+        RbacIdentity::User { name } => subject.kind == "User" && subject.name == *name,
+        RbacIdentity::Group { name } => subject.kind == "Group" && subject.name == *name,
         RbacIdentity::ServiceAccount { name, namespace } => {
             subject.kind == "ServiceAccount"
                 && subject.name == *name
@@ -209,9 +203,7 @@ fn rule_matches_api_group(rule_groups: &[String], api_group: &str) -> bool {
     rule_groups.iter().any(|g| g == "*" || g == api_group)
 }
 
-fn to_policy_rule_summary(
-    rule: &k8s_openapi::api::rbac::v1::PolicyRule,
-) -> PolicyRuleSummary {
+fn to_policy_rule_summary(rule: &k8s_openapi::api::rbac::v1::PolicyRule) -> PolicyRuleSummary {
     PolicyRuleSummary {
         verbs: rule.verbs.clone(),
         api_groups: rule.api_groups.clone().unwrap_or_default(),
@@ -549,9 +541,11 @@ impl K8sState {
                             &snapshot, identity, verb, resource, api_group, namespace,
                         );
                         let status = if result.allowed {
-                            if result.rule_chain.iter().any(|rc| {
-                                !rc.matching_rule.resource_names.is_empty()
-                            }) {
+                            if result
+                                .rule_chain
+                                .iter()
+                                .any(|rc| !rc.matching_rule.resource_names.is_empty())
+                            {
                                 PermissionStatus::Conditional
                             } else {
                                 PermissionStatus::Allowed
@@ -670,15 +664,10 @@ impl K8sState {
         })
     }
 
-    pub async fn rbac_analyze_forbidden(
-        &self,
-        error_message: &str,
-    ) -> Result<ForbiddenAnalysis> {
+    pub async fn rbac_analyze_forbidden(&self, error_message: &str) -> Result<ForbiddenAnalysis> {
         let (user, verb, resource, namespace) =
             parse_forbidden_message(error_message).ok_or_else(|| {
-                K8sError::Validation(
-                    "Could not parse forbidden error message".to_string(),
-                )
+                K8sError::Validation("Could not parse forbidden error message".to_string())
             })?;
 
         let identity = identity_from_user_string(&user);
@@ -707,7 +696,11 @@ impl K8sState {
 
         let suggestion = format!(
             "Create a {}Binding in {} that grants the '{}' verb on '{}' to {}",
-            if namespace.is_some() { "Role" } else { "ClusterRole" },
+            if namespace.is_some() {
+                "Role"
+            } else {
+                "ClusterRole"
+            },
             namespace.as_deref().unwrap_or("the cluster"),
             verb,
             resource,
@@ -779,10 +772,7 @@ impl K8sState {
         })
     }
 
-    pub async fn rbac_list_roles(
-        &self,
-        namespace: Option<&str>,
-    ) -> Result<Vec<RoleSummary>> {
+    pub async fn rbac_list_roles(&self, namespace: Option<&str>) -> Result<Vec<RoleSummary>> {
         let snapshot = self.load_rbac_snapshot().await?;
         let mut summaries = Vec::new();
 
@@ -831,9 +821,7 @@ impl K8sState {
             });
         }
 
-        summaries.sort_by(|a, b| {
-            a.kind.cmp(&b.kind).then_with(|| a.name.cmp(&b.name))
-        });
+        summaries.sort_by(|a, b| a.kind.cmp(&b.kind).then_with(|| a.name.cmp(&b.name)));
 
         Ok(summaries)
     }
@@ -882,14 +870,7 @@ impl K8sState {
         let results: Vec<PermissionCheckResult> = all_identities
             .iter()
             .map(|id| {
-                check_permission_from_snapshot(
-                    &snapshot,
-                    id,
-                    verb,
-                    resource,
-                    &api_group,
-                    namespace,
-                )
+                check_permission_from_snapshot(&snapshot, id, verb, resource, &api_group, namespace)
             })
             .filter(|r| r.allowed)
             .collect();
@@ -999,8 +980,10 @@ impl K8sState {
                 };
                 // Collect tokens that are neither the parsed verb nor the parsed resource
                 // nor filler words, up until we hit the verb
-                let filler: HashSet<&str> =
-                    ["the", "a", "an", "user", "sa", "group", "if", "does"].iter().copied().collect();
+                let filler: HashSet<&str> = ["the", "a", "an", "user", "sa", "group", "if", "does"]
+                    .iter()
+                    .copied()
+                    .collect();
                 let mut identity_tokens: Vec<&str> = Vec::new();
                 for w in &words[start..] {
                     let lw = w.to_lowercase();
@@ -1029,20 +1012,28 @@ impl K8sState {
                 let sa_ns = parsed_namespace.as_deref().unwrap_or("default");
                 let name_lower = name.to_lowercase();
                 // Check if any SA in the target namespace (or any namespace) matches this name
-                let matching_sa = snapshot.service_accounts.iter().find(|sa| {
-                    let sa_name = sa.metadata.name.as_deref().unwrap_or("");
-                    let sa_namespace = sa.metadata.namespace.as_deref().unwrap_or("default");
-                    sa_name.to_lowercase() == name_lower && sa_namespace == sa_ns
-                }).or_else(|| {
-                    // Broaden: match any SA with this name regardless of namespace
-                    snapshot.service_accounts.iter().find(|sa| {
-                        sa.metadata.name.as_deref().unwrap_or("").to_lowercase() == name_lower
+                let matching_sa = snapshot
+                    .service_accounts
+                    .iter()
+                    .find(|sa| {
+                        let sa_name = sa.metadata.name.as_deref().unwrap_or("");
+                        let sa_namespace = sa.metadata.namespace.as_deref().unwrap_or("default");
+                        sa_name.to_lowercase() == name_lower && sa_namespace == sa_ns
                     })
-                });
+                    .or_else(|| {
+                        // Broaden: match any SA with this name regardless of namespace
+                        snapshot.service_accounts.iter().find(|sa| {
+                            sa.metadata.name.as_deref().unwrap_or("").to_lowercase() == name_lower
+                        })
+                    });
                 if let Some(sa) = matching_sa {
                     parsed_identity = Some(RbacIdentity::ServiceAccount {
                         name: sa.metadata.name.clone().unwrap_or_default(),
-                        namespace: sa.metadata.namespace.clone().unwrap_or_else(|| "default".to_string()),
+                        namespace: sa
+                            .metadata
+                            .namespace
+                            .clone()
+                            .unwrap_or_else(|| "default".to_string()),
                     });
                 }
             }
@@ -1119,11 +1110,11 @@ impl K8sState {
             (parsed_verb.as_deref(), parsed_resource.as_deref())
         {
             let api_group = api_group_for_resource(resource);
-            let identity = parsed_identity.clone().unwrap_or_else(|| {
-                RbacIdentity::User {
+            let identity = parsed_identity
+                .clone()
+                .unwrap_or_else(|| RbacIdentity::User {
                     name: "unknown".to_string(),
-                }
-            });
+                });
             Some(check_permission_from_snapshot(
                 &snapshot,
                 &identity,
@@ -1173,12 +1164,7 @@ fn check_permission_from_snapshot(
         }
 
         let role_ref = &crb.role_ref;
-        let rules = resolve_role_rules(
-            &role_ref.kind,
-            &role_ref.name,
-            None,
-            snapshot,
-        );
+        let rules = resolve_role_rules(&role_ref.kind, &role_ref.name, None, snapshot);
 
         for rule in rules {
             let rule_resources = rule.resources.as_deref().unwrap_or(&[]);
@@ -1218,18 +1204,11 @@ fn check_permission_from_snapshot(
             }
 
             let role_ref = &rb.role_ref;
-            let rules = resolve_role_rules(
-                &role_ref.kind,
-                &role_ref.name,
-                Some(ns),
-                snapshot,
-            );
+            let rules = resolve_role_rules(&role_ref.kind, &role_ref.name, Some(ns), snapshot);
 
             for rule in rules {
-                let rule_resources =
-                    rule.resources.as_deref().unwrap_or(&[]);
-                let rule_api_groups =
-                    rule.api_groups.as_deref().unwrap_or(&[]);
+                let rule_resources = rule.resources.as_deref().unwrap_or(&[]);
+                let rule_api_groups = rule.api_groups.as_deref().unwrap_or(&[]);
 
                 if rule_matches_verb(&rule.verbs, verb)
                     && rule_matches_resource(rule_resources, res_base)
@@ -1307,49 +1286,45 @@ fn find_closest_rules(
     let res_base = base_resource(resource);
 
     // Find rules that match the resource but not the verb, or vice versa
-    let check_binding =
-        |subjects: Option<&Vec<Subject>>,
-         role_kind: &str,
-         role_name: &str,
-         role_ns: Option<&str>,
-         binding_kind: &str,
-         binding_name: &str,
-         binding_ns: Option<&str>,
-         closest: &mut Vec<RuleChainEntry>| {
-            let subjects = match subjects {
-                Some(s) => s,
-                None => return,
-            };
-            if !subjects.iter().any(|s| subject_matches(s, identity)) {
-                return;
-            }
-            let rules = resolve_role_rules(role_kind, role_name, role_ns, snapshot);
-            for rule in rules {
-                let rule_resources =
-                    rule.resources.as_deref().unwrap_or(&[]);
-                let rule_api_groups =
-                    rule.api_groups.as_deref().unwrap_or(&[]);
-
-                let resource_match = rule_matches_resource(rule_resources, res_base);
-                let verb_match = rule_matches_verb(&rule.verbs, verb);
-                let group_match = rule_matches_api_group(rule_api_groups, api_group);
-
-                // Partial match: exactly 2 of 3 (verb, resource, group) match
-                let matches = u8::from(verb_match) + u8::from(resource_match) + u8::from(group_match);
-                if matches == 2
-                {
-                    closest.push(RuleChainEntry {
-                        role_kind: role_kind.to_string(),
-                        role_name: role_name.to_string(),
-                        role_namespace: role_ns.map(|s| s.to_string()),
-                        binding_kind: binding_kind.to_string(),
-                        binding_name: binding_name.to_string(),
-                        binding_namespace: binding_ns.map(|s| s.to_string()),
-                        matching_rule: to_policy_rule_summary(rule),
-                    });
-                }
-            }
+    let check_binding = |subjects: Option<&Vec<Subject>>,
+                         role_kind: &str,
+                         role_name: &str,
+                         role_ns: Option<&str>,
+                         binding_kind: &str,
+                         binding_name: &str,
+                         binding_ns: Option<&str>,
+                         closest: &mut Vec<RuleChainEntry>| {
+        let subjects = match subjects {
+            Some(s) => s,
+            None => return,
         };
+        if !subjects.iter().any(|s| subject_matches(s, identity)) {
+            return;
+        }
+        let rules = resolve_role_rules(role_kind, role_name, role_ns, snapshot);
+        for rule in rules {
+            let rule_resources = rule.resources.as_deref().unwrap_or(&[]);
+            let rule_api_groups = rule.api_groups.as_deref().unwrap_or(&[]);
+
+            let resource_match = rule_matches_resource(rule_resources, res_base);
+            let verb_match = rule_matches_verb(&rule.verbs, verb);
+            let group_match = rule_matches_api_group(rule_api_groups, api_group);
+
+            // Partial match: exactly 2 of 3 (verb, resource, group) match
+            let matches = u8::from(verb_match) + u8::from(resource_match) + u8::from(group_match);
+            if matches == 2 {
+                closest.push(RuleChainEntry {
+                    role_kind: role_kind.to_string(),
+                    role_name: role_name.to_string(),
+                    role_namespace: role_ns.map(|s| s.to_string()),
+                    binding_kind: binding_kind.to_string(),
+                    binding_name: binding_name.to_string(),
+                    binding_namespace: binding_ns.map(|s| s.to_string()),
+                    matching_rule: to_policy_rule_summary(rule),
+                });
+            }
+        }
+    };
 
     for crb in &snapshot.cluster_role_bindings {
         let role_ref = &crb.role_ref;

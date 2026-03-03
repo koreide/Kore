@@ -390,163 +390,167 @@ export default function App() {
           )}
         </AnimatePresence>
         <div className="flex-1 p-4 grid grid-rows-[auto,1fr] gap-3">
-        {showHeader && (
-          <header className="flex flex-col gap-2">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 text-sm min-w-0 shrink-0">
-                <span className="text-slate-400 font-medium">{kindLabel}</span>
-                {isDetailView && selected ? (
-                  <>
-                    <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
-                    <span className="text-slate-100 font-medium truncate max-w-[200px]">
-                      {selected.name}
+          {showHeader && (
+            <header className="flex flex-col gap-2">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 text-sm min-w-0 shrink-0">
+                  <span className="text-slate-400 font-medium">{kindLabel}</span>
+                  {isDetailView && selected ? (
+                    <>
+                      <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
+                      <span className="text-slate-100 font-medium truncate max-w-[200px]">
+                        {selected.name}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-[10px] bg-slate-800/80 text-slate-400 px-1.5 py-0.5 rounded-full font-medium">
+                      {filteredResources.length}
                     </span>
-                  </>
-                ) : (
-                  <span className="text-[10px] bg-slate-800/80 text-slate-400 px-1.5 py-0.5 rounded-full font-medium">
-                    {filteredResources.length}
-                  </span>
-                )}
-              </div>
-
-              <div className="relative flex-1 max-w-md mx-auto">
-                <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  ref={searchRef}
-                  placeholder="Search..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full bg-surface/60 border border-slate-800 rounded-lg px-10 py-1.5 text-sm outline-none focus:border-accent/50 transition placeholder:text-slate-600"
-                />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <Kbd>/</Kbd>
+                  )}
                 </div>
-              </div>
 
-              <div className="flex items-center gap-2 shrink-0">
-                {isTableView && (
+                <div className="relative flex-1 max-w-md mx-auto">
+                  <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    ref={searchRef}
+                    placeholder="Search..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full bg-surface/60 border border-slate-800 rounded-lg px-10 py-1.5 text-sm outline-none focus:border-accent/50 transition placeholder:text-slate-600"
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <Kbd>/</Kbd>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {isTableView && (
+                    <button
+                      onClick={() => setShowLabelFilter(!showLabelFilter)}
+                      className={`px-2 py-1.5 rounded-lg border transition text-xs ${
+                        showLabelFilter || labelFilters.length > 0
+                          ? "border-accent/50 text-accent bg-accent/10"
+                          : "border-slate-800 text-slate-400 hover:text-slate-200"
+                      }`}
+                    >
+                      <Filter className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-800 bg-surface/60 text-xs text-slate-300">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    <span className="font-mono truncate max-w-[140px]">
+                      {currentContext ?? "No context"}
+                    </span>
+                  </div>
                   <button
-                    onClick={() => setShowLabelFilter(!showLabelFilter)}
-                    className={`px-2 py-1.5 rounded-lg border transition text-xs ${
-                      showLabelFilter || labelFilters.length > 0
-                        ? "border-accent/50 text-accent bg-accent/10"
-                        : "border-slate-800 text-slate-400 hover:text-slate-200"
-                    }`}
+                    onClick={() => setAiPanelOpen(true)}
+                    className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg border border-slate-800 text-slate-400 hover:text-accent hover:border-accent/50 hover:bg-accent/10 transition text-xs"
+                    title="Ask AI"
                   >
-                    <Filter className="w-3.5 h-3.5" />
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">AI</span>
                   </button>
-                )}
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-800 bg-surface/60 text-xs text-slate-300">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                  <span className="font-mono truncate max-w-[140px]">
-                    {currentContext ?? "No context"}
-                  </span>
+                  <Kbd>⌘K</Kbd>
                 </div>
-                <button
-                  onClick={() => setAiPanelOpen(true)}
-                  className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg border border-slate-800 text-slate-400 hover:text-accent hover:border-accent/50 hover:bg-accent/10 transition text-xs"
-                  title="Ask AI"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">AI</span>
-                </button>
-                <Kbd>⌘K</Kbd>
               </div>
-            </div>
 
-            {(showLabelFilter || labelFilters.length > 0) && isTableView && (
-              <LabelFilterBar labels={labelFilters} onLabelsChange={setLabelFilters} />
-            )}
-          </header>
-        )}
+              {(showLabelFilter || labelFilters.length > 0) && isTableView && (
+                <LabelFilterBar labels={labelFilters} onLabelsChange={setLabelFilters} />
+              )}
+            </header>
+          )}
 
-        {!showHeader && <div />}
+          {!showHeader && <div />}
 
-        <section className="overflow-hidden relative">
-          <AnimatePresence mode="wait">
-            {viewMode === "chat" ? (
-              <AIChatView key="chat" namespace={namespace === "*" ? undefined : namespace} />
-            ) : viewMode === "dashboard" ? (
-              <ClusterDashboard
-                key="dashboard"
-                onNavigateToResource={handleDashboardNavigate}
-                multiCluster={multiCluster}
-              />
-            ) : viewMode === "graph" ? (
-              <ResourceGraphView
-                key="graph"
-                namespace={namespace === "*" ? undefined : namespace}
-                onSelectResource={handleGraphSelect}
-              />
-            ) : viewMode === "network-policies" ? (
-              <NetworkPolicyView
-                key="network-policies"
-                namespace={namespace === "*" ? undefined : namespace}
-                currentContext={currentContext}
-              />
-            ) : viewMode === "rbac" ? (
-              <RbacView
-                key="rbac"
-                namespace={namespace === "*" ? undefined : namespace}
-                onBack={() => setViewMode("table")}
-                initialAnalysis={forbiddenAnalysis}
-                impersonatedIdentity={impersonatedIdentity}
-                onSetImpersonation={setImpersonatedIdentity}
-              />
-            ) : viewMode === "crds" ? (
-              <CrdBrowser
-                key="crds"
-                namespace={namespace === "*" ? undefined : namespace}
-                onBack={() => setViewMode("table")}
-              />
-            ) : viewMode === "helm" ? (
-              <HelmReleases
-                key="helm"
-                namespace={namespace === "*" ? undefined : namespace}
-                onSelectRelease={handleHelmSelect}
-              />
-            ) : viewMode === "helm-detail" && selectedHelmRelease ? (
-              <HelmDetailView key="helm-detail" release={selectedHelmRelease} onBack={handleBack} />
-            ) : viewMode === "settings" ? (
-              <SettingsPage key="settings" onBack={() => setViewMode("table")} />
-            ) : isTableView ? (
-              loading ? (
-                <SkeletonTable key="skeleton" />
-              ) : (
-                <ResourceTable
-                  key="table"
-                  data={filteredResources}
-                  sorting={sorting}
-                  onSortingChange={setSorting}
-                  onRowSelect={handleRowSelect}
-                  kind={kind}
-                  selectedRowIndex={selectedRowIndex}
-                  onSelectedRowIndexChange={setSelectedRowIndex}
-                  onRowAction={handleRowAction}
-                  onTogglePin={togglePin}
-                  isPinned={isPinned}
-                  getRestartHistory={kind === "pods" ? getRestartHistory : undefined}
+          <section className="overflow-hidden relative">
+            <AnimatePresence mode="wait">
+              {viewMode === "chat" ? (
+                <AIChatView key="chat" namespace={namespace === "*" ? undefined : namespace} />
+              ) : viewMode === "dashboard" ? (
+                <ClusterDashboard
+                  key="dashboard"
+                  onNavigateToResource={handleDashboardNavigate}
                   multiCluster={multiCluster}
                 />
-              )
-            ) : selected && kind === "pods" ? (
-              <PodDetailsView key="pod-details" pod={selected} onBack={handleBack} />
-            ) : selected && kind === "deployments" ? (
-              <DeploymentDetailsView
-                key="deploy-details"
-                deployment={selected}
-                onBack={handleBack}
-              />
-            ) : selected ? (
-              <ResourceDetailsView
-                key="resource-details"
-                resource={selected}
-                kind={kind}
-                onBack={handleBack}
-              />
-            ) : null}
-          </AnimatePresence>
-        </section>
+              ) : viewMode === "graph" ? (
+                <ResourceGraphView
+                  key="graph"
+                  namespace={namespace === "*" ? undefined : namespace}
+                  onSelectResource={handleGraphSelect}
+                />
+              ) : viewMode === "network-policies" ? (
+                <NetworkPolicyView
+                  key="network-policies"
+                  namespace={namespace === "*" ? undefined : namespace}
+                  currentContext={currentContext}
+                />
+              ) : viewMode === "rbac" ? (
+                <RbacView
+                  key="rbac"
+                  namespace={namespace === "*" ? undefined : namespace}
+                  onBack={() => setViewMode("table")}
+                  initialAnalysis={forbiddenAnalysis}
+                  impersonatedIdentity={impersonatedIdentity}
+                  onSetImpersonation={setImpersonatedIdentity}
+                />
+              ) : viewMode === "crds" ? (
+                <CrdBrowser
+                  key="crds"
+                  namespace={namespace === "*" ? undefined : namespace}
+                  onBack={() => setViewMode("table")}
+                />
+              ) : viewMode === "helm" ? (
+                <HelmReleases
+                  key="helm"
+                  namespace={namespace === "*" ? undefined : namespace}
+                  onSelectRelease={handleHelmSelect}
+                />
+              ) : viewMode === "helm-detail" && selectedHelmRelease ? (
+                <HelmDetailView
+                  key="helm-detail"
+                  release={selectedHelmRelease}
+                  onBack={handleBack}
+                />
+              ) : viewMode === "settings" ? (
+                <SettingsPage key="settings" onBack={() => setViewMode("table")} />
+              ) : isTableView ? (
+                loading ? (
+                  <SkeletonTable key="skeleton" />
+                ) : (
+                  <ResourceTable
+                    key="table"
+                    data={filteredResources}
+                    sorting={sorting}
+                    onSortingChange={setSorting}
+                    onRowSelect={handleRowSelect}
+                    kind={kind}
+                    selectedRowIndex={selectedRowIndex}
+                    onSelectedRowIndexChange={setSelectedRowIndex}
+                    onRowAction={handleRowAction}
+                    onTogglePin={togglePin}
+                    isPinned={isPinned}
+                    getRestartHistory={kind === "pods" ? getRestartHistory : undefined}
+                    multiCluster={multiCluster}
+                  />
+                )
+              ) : selected && kind === "pods" ? (
+                <PodDetailsView key="pod-details" pod={selected} onBack={handleBack} />
+              ) : selected && kind === "deployments" ? (
+                <DeploymentDetailsView
+                  key="deploy-details"
+                  deployment={selected}
+                  onBack={handleBack}
+                />
+              ) : selected ? (
+                <ResourceDetailsView
+                  key="resource-details"
+                  resource={selected}
+                  kind={kind}
+                  onBack={handleBack}
+                />
+              ) : null}
+            </AnimatePresence>
+          </section>
         </div>
       </main>
 

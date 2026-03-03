@@ -777,9 +777,7 @@ export async function rbacReverseLookup(
   return invoke("rbac_reverse_lookup", { roleKind, roleName, roleNamespace });
 }
 
-export async function rbacAnalyzeForbidden(
-  errorMessage: string,
-): Promise<ForbiddenAnalysis> {
+export async function rbacAnalyzeForbidden(errorMessage: string): Promise<ForbiddenAnalysis> {
   return invoke("rbac_analyze_forbidden", { errorMessage });
 }
 

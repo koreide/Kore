@@ -27,14 +27,8 @@ export function RbacReverseLookup({
     return roles.filter((r) => r.name.toLowerCase().includes(q));
   }, [roles, search]);
 
-  const clusterRoles = useMemo(
-    () => filtered.filter((r) => r.kind === "ClusterRole"),
-    [filtered],
-  );
-  const namespacedRoles = useMemo(
-    () => filtered.filter((r) => r.kind === "Role"),
-    [filtered],
-  );
+  const clusterRoles = useMemo(() => filtered.filter((r) => r.kind === "ClusterRole"), [filtered]);
+  const namespacedRoles = useMemo(() => filtered.filter((r) => r.kind === "Role"), [filtered]);
 
   function handleSelectRole(role: RoleSummary) {
     const key = `${role.kind}/${role.namespace || ""}/${role.name}`;
@@ -76,9 +70,7 @@ export function RbacReverseLookup({
                       selectedKey === key && "bg-slate-700/60",
                     )}
                   >
-                    <span className="font-mono text-slate-300 truncate text-xs">
-                      {role.name}
-                    </span>
+                    <span className="font-mono text-slate-300 truncate text-xs">{role.name}</span>
                     <span className="text-[10px] text-slate-600 shrink-0 ml-2">
                       {role.rule_count}
                     </span>
@@ -141,11 +133,7 @@ export function RbacReverseLookup({
           </div>
         )}
         {!loading && reverseLookup && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="space-y-4"
-          >
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
             {/* Role info */}
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-purple-400" />
@@ -153,9 +141,7 @@ export function RbacReverseLookup({
                 {reverseLookup.role_kind}/{reverseLookup.role_name}
               </span>
               {reverseLookup.role_namespace && (
-                <span className="text-xs text-slate-500">
-                  (ns: {reverseLookup.role_namespace})
-                </span>
+                <span className="text-xs text-slate-500">(ns: {reverseLookup.role_namespace})</span>
               )}
             </div>
 
@@ -171,20 +157,15 @@ export function RbacReverseLookup({
                       key={i}
                       className="px-2.5 py-1.5 rounded bg-purple-500/5 border border-purple-500/10 text-xs font-mono"
                     >
-                      <span className="text-purple-300">
-                        {rule.resources.join(", ")}
-                      </span>
+                      <span className="text-purple-300">{rule.resources.join(", ")}</span>
                       <span className="text-slate-500"> [</span>
-                      <span className="text-slate-300">
-                        {rule.verbs.join(", ")}
-                      </span>
+                      <span className="text-slate-300">{rule.verbs.join(", ")}</span>
                       <span className="text-slate-500">]</span>
-                      {rule.api_groups.length > 0 &&
-                        rule.api_groups[0] !== "" && (
-                          <span className="text-slate-600 ml-1">
-                            in &quot;{rule.api_groups.join(", ")}&quot;
-                          </span>
-                        )}
+                      {rule.api_groups.length > 0 && rule.api_groups[0] !== "" && (
+                        <span className="text-slate-600 ml-1">
+                          in &quot;{rule.api_groups.join(", ")}&quot;
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -197,9 +178,7 @@ export function RbacReverseLookup({
                 Subjects ({reverseLookup.subjects.length})
               </div>
               {reverseLookup.subjects.length === 0 ? (
-                <div className="text-sm text-slate-500 italic">
-                  No subjects bound to this role
-                </div>
+                <div className="text-sm text-slate-500 italic">No subjects bound to this role</div>
               ) : (
                 <div className="space-y-1">
                   {reverseLookup.subjects.map((sub, i) => (

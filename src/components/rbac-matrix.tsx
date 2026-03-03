@@ -102,10 +102,7 @@ function CellPopover({
           {statusLabel(cell.status)}
         </span>
       </div>
-      <RbacRuleChain
-        chain={cell.rule_chain}
-        allowed={cell.status !== "denied"}
-      />
+      <RbacRuleChain chain={cell.rule_chain} allowed={cell.status !== "denied"} />
     </motion.div>
   );
 }
@@ -200,9 +197,7 @@ export function RbacMatrix({ matrix }: RbacMatrixProps) {
                 <td className="px-3 py-1.5 text-xs font-mono text-slate-300 sticky left-0 bg-surface z-10">
                   {row.resource}
                   {row.api_group && (
-                    <span className="text-slate-600 ml-1 text-[10px]">
-                      {row.api_group}
-                    </span>
+                    <span className="text-slate-600 ml-1 text-[10px]">{row.api_group}</span>
                   )}
                 </td>
                 {VERBS.map((verb) => {
