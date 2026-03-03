@@ -128,6 +128,15 @@ fn main() {
             add_debug_container,
             list_debug_containers,
             stop_debug_container,
+            // RBAC Simulator
+            rbac_check_permission,
+            rbac_build_matrix,
+            rbac_reverse_lookup,
+            rbac_analyze_forbidden,
+            rbac_list_identities,
+            rbac_list_roles,
+            rbac_natural_language_query,
+            rbac_who_can,
             // Secure key storage
             store_api_key,
             get_api_key,

@@ -650,6 +650,160 @@ export async function simulateNetworkTraffic(
   });
 }
 
+// ── RBAC Simulator ──────────────────────────────────────────────────
+
+export type RbacIdentity =
+  | { kind: "User"; name: string }
+  | { kind: "Group"; name: string }
+  | { kind: "ServiceAccount"; name: string; namespace: string };
+
+export interface PolicyRuleSummary {
+  verbs: string[];
+  api_groups: string[];
+  resources: string[];
+  resource_names: string[];
+}
+
+export interface RuleChainEntry {
+  role_kind: string;
+  role_name: string;
+  role_namespace: string | null;
+  binding_kind: string;
+  binding_name: string;
+  binding_namespace: string | null;
+  matching_rule: PolicyRuleSummary;
+}
+
+export interface PermissionCheckResult {
+  allowed: boolean;
+  identity: RbacIdentity;
+  verb: string;
+  resource: string;
+  namespace: string | null;
+  rule_chain: RuleChainEntry[];
+  summary: string;
+}
+
+export type PermissionStatus = "allowed" | "denied" | "conditional";
+
+export interface PermissionCell {
+  status: PermissionStatus;
+  rule_chain: RuleChainEntry[];
+}
+
+export interface PermissionMatrixRow {
+  resource: string;
+  api_group: string;
+  verbs: Record<string, PermissionCell>;
+}
+
+export interface PermissionMatrix {
+  identity: RbacIdentity;
+  namespace: string | null;
+  rows: PermissionMatrixRow[];
+}
+
+export interface ReverseLookupSubject {
+  identity: RbacIdentity;
+  binding_kind: string;
+  binding_name: string;
+  binding_namespace: string | null;
+  scope: string;
+}
+
+export interface ReverseLookupResult {
+  role_kind: string;
+  role_name: string;
+  role_namespace: string | null;
+  rules: PolicyRuleSummary[];
+  subjects: ReverseLookupSubject[];
+}
+
+export interface RoleSummary {
+  kind: string;
+  name: string;
+  namespace: string | null;
+  rule_count: number;
+  rules: PolicyRuleSummary[];
+}
+
+export interface ForbiddenAnalysis {
+  verb: string;
+  resource: string;
+  namespace: string | null;
+  identity: RbacIdentity;
+  missing_permission: string;
+  closest_rules: RuleChainEntry[];
+  suggestion: string;
+}
+
+export interface RbacIdentityList {
+  service_accounts: Array<{ name: string; namespace: string }>;
+  users: string[];
+  groups: string[];
+}
+
+export interface NaturalLanguageRbacResult {
+  query: string;
+  parsed_verb: string | null;
+  parsed_resource: string | null;
+  parsed_identity: RbacIdentity | null;
+  parsed_namespace: string | null;
+  result: PermissionCheckResult | null;
+  who_can_results: PermissionCheckResult[];
+}
+
+export async function rbacCheckPermission(
+  identity: RbacIdentity,
+  verb: string,
+  resource: string,
+  namespace?: string,
+): Promise<PermissionCheckResult> {
+  return invoke("rbac_check_permission", { identity, verb, resource, namespace });
+}
+
+export async function rbacBuildMatrix(
+  identity: RbacIdentity,
+  namespace?: string,
+): Promise<PermissionMatrix> {
+  return invoke("rbac_build_matrix", { identity, namespace });
+}
+
+export async function rbacReverseLookup(
+  roleKind: string,
+  roleName: string,
+  roleNamespace?: string,
+): Promise<ReverseLookupResult> {
+  return invoke("rbac_reverse_lookup", { roleKind, roleName, roleNamespace });
+}
+
+export async function rbacAnalyzeForbidden(errorMessage: string): Promise<ForbiddenAnalysis> {
+  return invoke("rbac_analyze_forbidden", { errorMessage });
+}
+
+export async function rbacListIdentities(): Promise<RbacIdentityList> {
+  return invoke("rbac_list_identities");
+}
+
+export async function rbacListRoles(namespace?: string): Promise<RoleSummary[]> {
+  return invoke("rbac_list_roles", { namespace });
+}
+
+export async function rbacWhoCan(
+  verb: string,
+  resource: string,
+  namespace?: string,
+): Promise<PermissionCheckResult[]> {
+  return invoke("rbac_who_can", { verb, resource, namespace });
+}
+
+export async function rbacNaturalLanguageQuery(
+  query: string,
+  namespace?: string,
+): Promise<NaturalLanguageRbacResult> {
+  return invoke("rbac_natural_language_query", { query, namespace });
+}
+
 // ── Favorites Persistence ────────────────────────────────────────────
 
 export async function loadFavorites(key: string): Promise<string[]> {

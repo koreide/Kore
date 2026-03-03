@@ -40,6 +40,14 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
     ],
   },
   {
+    category: "RBAC",
+    items: [
+      { keys: ["\u2318", "\u21E7", "R"], description: "Open RBAC view" },
+      { keys: ["i"], description: "Toggle impersonation" },
+      { keys: ["1", "2", "3", "4"], description: "Switch RBAC tabs" },
+    ],
+  },
+  {
     category: "General",
     items: [
       { keys: ["Esc"], description: "Close / go back" },

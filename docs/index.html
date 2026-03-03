@@ -114,11 +114,18 @@
       border-radius: var(--radius);
     }
 
+    @keyframes gradient-shift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
     .gradient-text {
-      background: linear-gradient(135deg, #58d0ff 0%, #3b82f6 50%, #a78bfa 100%);
+      background: linear-gradient(135deg, #58d0ff 0%, #3b82f6 25%, #a78bfa 50%, #f59e0b 75%, #58d0ff 100%);
+      background-size: 300% 300%;
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
+      animation: gradient-shift 6s ease infinite;
     }
 
     a { color: var(--accent); text-decoration: none; }
@@ -245,7 +252,7 @@
       background: var(--muted); border: 1px solid var(--border-strong);
       font-size: 13px; color: var(--text-secondary);
       font-family: var(--font-mono);
-      margin-bottom: 36px;
+      margin-top: 20px; margin-bottom: 24px;
     }
     .hero-badge-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--status-ok); }
     .hero h1 {
@@ -284,19 +291,6 @@
         0 24px 80px rgba(0,0,0,0.5),
         0 0 0 1px rgba(255,255,255,0.03),
         0 0 60px rgba(88,208,255,0.04);
-    }
-    .frame-titlebar {
-      background: #1a1f2e; padding: 12px 16px;
-      display: flex; align-items: center; gap: 8px;
-    }
-    .frame-dot { width: 12px; height: 12px; border-radius: 50%; }
-    .frame-dot.r { background: #ff5f57; }
-    .frame-dot.y { background: #febc2e; }
-    .frame-dot.g { background: #28c840; }
-    .frame-title {
-      flex: 1; text-align: center;
-      font-size: 13px; color: var(--text-muted);
-      font-family: var(--font-mono);
     }
     .screenshot-frame img {
       display: block; width: 100%; height: auto;
@@ -612,11 +606,11 @@
   <div class="hero-glow"></div>
   <div class="container" style="position:relative;z-index:1;">
     <img src="icon.png" alt="Kore" class="hero-icon">
+    <h1>The AI-Powered<br><span class="gradient-text">Kubernetes IDE</span></h1>
     <div class="hero-badge">
       <img src="icon.png" alt="Kore" class="hero-badge-icon">
       Open Source &middot; MIT License &middot; macOS &amp; Windows
     </div>
-    <h1>The AI-Powered<br><span class="gradient-text">Kubernetes IDE</span></h1>
     <p class="tagline">Native desktop app that combines real-time cluster monitoring, AI troubleshooting, and keyboard-driven workflows. Stop switching between kubectl, k9s, and your browser.</p>
     <div class="hero-buttons">
       <a href="https://github.com/eladbash/kore/releases/latest" target="_blank" rel="noopener" class="btn btn-primary">
@@ -634,12 +628,6 @@
     <div class="hero-screenshot reveal">
       <div class="hero-screenshot-glow"></div>
       <div class="screenshot-frame">
-        <div class="frame-titlebar">
-          <span class="frame-dot r"></span>
-          <span class="frame-dot y"></span>
-          <span class="frame-dot g"></span>
-          <span class="frame-title">Kore &mdash; Pods</span>
-        </div>
         <img src="screenshots/pods-view.png" alt="Kore resource table showing pods with real-time status, sidebar navigation, and search" width="1060" height="auto" loading="eager">
       </div>
     </div>
@@ -768,6 +756,13 @@
         <h3>Network Policy Visualizer</h3>
         <p>Interactive force-directed graph of network policies. See ingress/egress rules, pod isolation, CIDR blocks, and simulate traffic between pods.</p>
       </div>
+      <div class="feature-card glass">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+        </div>
+        <h3>RBAC Simulator</h3>
+        <p>Visual permission matrix, role browser, reverse lookup, forbidden error analysis, and natural language queries. Impersonate any identity to test access.</p>
+      </div>
     </div>
     <div class="also-strip reveal">
       <div class="also-chip">Vim navigation</div>
@@ -779,6 +774,7 @@
       <div class="also-chip">Restart sparklines</div>
       <div class="also-chip">Debug containers</div>
       <div class="also-chip">Traffic simulation</div>
+      <div class="also-chip">RBAC simulator</div>
     </div>
   </div>
 </section>
@@ -808,12 +804,6 @@
       </div>
       <div class="showcase-frame-wrap">
         <div class="screenshot-frame">
-          <div class="frame-titlebar">
-            <span class="frame-dot r"></span>
-            <span class="frame-dot y"></span>
-            <span class="frame-dot g"></span>
-            <span class="frame-title">AI Assistant</span>
-          </div>
           <img src="screenshots/ai-chat.png" alt="AI troubleshooting panel with cluster-aware suggestions" width="600" height="auto" loading="lazy">
         </div>
       </div>
@@ -833,12 +823,6 @@
       </div>
       <div class="showcase-frame-wrap">
         <div class="screenshot-frame">
-          <div class="frame-titlebar">
-            <span class="frame-dot r"></span>
-            <span class="frame-dot y"></span>
-            <span class="frame-dot g"></span>
-            <span class="frame-title">Dashboard</span>
-          </div>
           <img src="screenshots/dashboard.png" alt="Cluster dashboard with health score, pod ring chart, and node status" width="600" height="auto" loading="lazy">
         </div>
       </div>
@@ -858,12 +842,6 @@
       </div>
       <div class="showcase-frame-wrap">
         <div class="screenshot-frame">
-          <div class="frame-titlebar">
-            <span class="frame-dot r"></span>
-            <span class="frame-dot y"></span>
-            <span class="frame-dot g"></span>
-            <span class="frame-title">Command Palette</span>
-          </div>
           <img src="screenshots/command-palette.png" alt="Command palette for instant access to resources, views, and actions" width="600" height="auto" loading="lazy">
         </div>
       </div>
@@ -909,6 +887,7 @@
           <tr><td>Port forwarding UI</td><td class="kore-col"><span class="check">&#10003;</span></td><td><span class="check">&#10003;</span></td><td><span class="check">&#10003;</span></td><td><span class="cross">&#10005;</span></td><td><span class="cross">&#10005;</span></td></tr>
           <tr><td>Ephemeral debug containers</td><td class="kore-col"><span class="check">&#10003;</span></td><td><span class="cross">&#10005;</span></td><td><span class="cross">&#10005;</span></td><td><span class="cross">&#10005;</span></td><td><span class="cross">&#10005;</span></td></tr>
           <tr><td>Network policy visualizer</td><td class="kore-col"><span class="check">&#10003;</span></td><td><span class="cross">&#10005;</span></td><td><span class="partial">Extension</span></td><td><span class="cross">&#10005;</span></td><td><span class="cross">&#10005;</span></td></tr>
+          <tr><td>RBAC simulator</td><td class="kore-col"><span class="check">&#10003;</span></td><td><span class="cross">&#10005;</span></td><td><span class="cross">&#10005;</span></td><td><span class="cross">&#10005;</span></td><td><span class="cross">&#10005;</span></td></tr>
           <tr><td>Memory usage</td><td class="kore-col" style="color:var(--accent);font-family:var(--font-mono);font-size:13px">~80 MB</td><td style="font-family:var(--font-mono);font-size:13px;color:var(--text-secondary)">~30 MB</td><td style="font-family:var(--font-mono);font-size:13px;color:var(--text-secondary)">~400 MB</td><td style="font-family:var(--font-mono);font-size:13px;color:var(--text-secondary)">~50 MB</td><td style="font-family:var(--font-mono);font-size:13px;color:var(--text-secondary)">~300 MB</td></tr>
         </tbody>
       </table>
@@ -971,6 +950,7 @@
       <div class="shortcut-item"><kbd>?</kbd><span class="shortcut-desc">Shortcut overlay</span></div>
       <div class="shortcut-item"><kbd>&#8984; P</kbd><span class="shortcut-desc">Pin resource</span></div>
       <div class="shortcut-item"><kbd>B</kbd><span class="shortcut-desc">Debug container</span></div>
+      <div class="shortcut-item"><kbd>&#8984; &#8679; R</kbd><span class="shortcut-desc">RBAC simulator</span></div>
     </div>
   </div>
 </section>

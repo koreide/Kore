@@ -12,6 +12,7 @@ pub mod multi_cluster;
 pub mod multi_logs;
 pub mod network_policy;
 pub mod port_forward;
+pub mod rbac;
 pub mod resources;
 pub mod rollback;
 pub mod watcher;

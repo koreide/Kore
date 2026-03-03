@@ -821,6 +821,111 @@ pub async fn simulate_network_traffic(
         .map_err(|e| e.to_string())
 }
 
+// ── RBAC Simulator ──────────────────────────────────────────────────
+
+#[tauri::command]
+pub async fn rbac_check_permission(
+    state: State<'_, K8sState>,
+    identity: crate::state::rbac::RbacIdentity,
+    verb: String,
+    resource: String,
+    namespace: Option<String>,
+) -> std::result::Result<crate::state::rbac::PermissionCheckResult, String> {
+    let api_group = crate::state::rbac::api_group_for_resource_cmd(&resource);
+    state
+        .rbac_check_permission(
+            &identity,
+            &verb,
+            &resource,
+            &api_group,
+            namespace.as_deref(),
+        )
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn rbac_build_matrix(
+    state: State<'_, K8sState>,
+    identity: crate::state::rbac::RbacIdentity,
+    namespace: Option<String>,
+) -> std::result::Result<crate::state::rbac::PermissionMatrix, String> {
+    state
+        .rbac_build_matrix(&identity, namespace.as_deref())
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn rbac_reverse_lookup(
+    state: State<'_, K8sState>,
+    #[allow(non_snake_case)] roleKind: String,
+    #[allow(non_snake_case)] roleName: String,
+    #[allow(non_snake_case)] roleNamespace: Option<String>,
+) -> std::result::Result<crate::state::rbac::ReverseLookupResult, String> {
+    state
+        .rbac_reverse_lookup(&roleKind, &roleName, roleNamespace.as_deref())
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn rbac_analyze_forbidden(
+    state: State<'_, K8sState>,
+    #[allow(non_snake_case)] errorMessage: String,
+) -> std::result::Result<crate::state::rbac::ForbiddenAnalysis, String> {
+    state
+        .rbac_analyze_forbidden(&errorMessage)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn rbac_list_identities(
+    state: State<'_, K8sState>,
+) -> std::result::Result<crate::state::rbac::RbacIdentityList, String> {
+    state
+        .rbac_list_identities()
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn rbac_list_roles(
+    state: State<'_, K8sState>,
+    namespace: Option<String>,
+) -> std::result::Result<Vec<crate::state::rbac::RoleSummary>, String> {
+    state
+        .rbac_list_roles(namespace.as_deref())
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn rbac_natural_language_query(
+    state: State<'_, K8sState>,
+    query: String,
+    namespace: Option<String>,
+) -> std::result::Result<crate::state::rbac::NaturalLanguageRbacResult, String> {
+    state
+        .rbac_natural_language_query(&query, namespace.as_deref())
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn rbac_who_can(
+    state: State<'_, K8sState>,
+    verb: String,
+    resource: String,
+    namespace: Option<String>,
+) -> std::result::Result<Vec<crate::state::rbac::PermissionCheckResult>, String> {
+    state
+        .rbac_who_can(&verb, &resource, namespace.as_deref())
+        .await
+        .map_err(|e| e.to_string())
+}
+
 // ── Favorites Persistence ────────────────────────────────────────────
 
 fn favorites_path() -> std::result::Result<std::path::PathBuf, String> {

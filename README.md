@@ -62,6 +62,7 @@ If you spend your day switching between `kubectl`, `k9s`, Lens, and your browser
 | **Event History** | Live events with persistent SQLite history and time-range filtering |
 | **Multi-Cluster** | Compare resources across contexts in a unified view |
 | **AI Troubleshooting** | Streaming AI chat panel — supports OpenAI, Anthropic, and Ollama |
+| **RBAC Simulator** | Permission matrix, role browser, reverse lookup, forbidden error analysis, natural language queries, and identity impersonation |
 | **Command Palette** | `Cmd+K` for resource search, view switching, quick filters, and actions |
 | **Label Filtering** | Filter resources by label selectors |
 | **Pinned Resources** | Bookmark frequently accessed resources in the sidebar |
@@ -78,6 +79,7 @@ If you spend your day switching between `kubectl`, `k9s`, Lens, and your browser
 | `h` | Go back |
 | `1`–`6` | Switch tabs in detail views |
 | `?` | Show shortcut overlay |
+| `Cmd+Shift+R` | Open RBAC Simulator |
 
 ## Prerequisites
 

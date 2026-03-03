@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kore Website Editor Playground</title>
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --pg-bg: #0a0e1a;
+  --pg-surface: #111827;
+  --pg-border: rgba(255,255,255,0.08);
+  --pg-text: #e2e8f0;
+  --pg-muted: #64748b;
+  --pg-accent: #58d0ff;
+}
+
+body {
+  background: var(--pg-bg);
+  color: var(--pg-text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  height: 100vh;
+}
+
+/* Controls panel */
+.controls {
+  background: var(--pg-surface);
+  border-right: 1px solid var(--pg-border);
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.controls::-webkit-scrollbar { width: 5px; }
+.controls::-webkit-scrollbar-track { background: transparent; }
+.controls::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+
+.pg-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: var(--pg-accent);
+}
+.pg-subtitle {
+  font-size: 11px;
+  color: var(--pg-muted);
+  margin-bottom: 20px;
+}
+
+/* Groups */
+.group {
+  margin-bottom: 20px;
+  border: 1px solid var(--pg-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.02);
+  cursor: pointer;
+  user-select: none;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--pg-muted);
+}
+.group-header:hover { color: var(--pg-text); }
+.group-header .arrow { transition: transform 0.2s; font-size: 10px; }
+.group-header.collapsed .arrow { transform: rotate(-90deg); }
+.group-body { padding: 14px; }
+.group-body.hidden { display: none; }
+
+/* Controls */
+.field { margin-bottom: 14px; }
+.field:last-child { margin-bottom: 0; }
+.field-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--pg-muted);
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+.field-value {
+  font-family: 'SFMono-Regular', Menlo, monospace;
+  font-size: 10px;
+  color: var(--pg-accent);
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.1);
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--pg-accent);
+  cursor: pointer;
+  box-shadow: 0 0 6px rgba(88,208,255,0.4);
+}
+
+input[type="color"] {
+  -webkit-appearance: none;
+  border: 1px solid var(--pg-border);
+  border-radius: 6px;
+  width: 32px;
+  height: 24px;
+  cursor: pointer;
+  background: transparent;
+  padding: 2px;
+}
+input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+input[type="color"]::-webkit-color-swatch { border: none; border-radius: 4px; }
+
+input[type="text"], textarea {
+  width: 100%;
+  padding: 7px 10px;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--pg-border);
+  border-radius: 6px;
+  color: var(--pg-text);
+  font-family: inherit;
+  font-size: 12px;
+  outline: none;
+}
+input[type="text"]:focus, textarea:focus {
+  border-color: var(--pg-accent);
+}
+textarea { resize: vertical; min-height: 44px; }
+
+select {
+  width: 100%;
+  padding: 7px 10px;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--pg-border);
+  border-radius: 6px;
+  color: var(--pg-text);
+  font-size: 12px;
+  outline: none;
+  cursor: pointer;
+}
+select option { background: #1a1f2e; }
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+}
+.toggle-row label {
+  font-size: 12px;
+  color: var(--pg-text);
+  cursor: pointer;
+}
+.toggle {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: rgba(255,255,255,0.1);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+.toggle:checked { background: var(--pg-accent); }
+.toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: white;
+  transition: transform 0.2s;
+}
+.toggle:checked::after { transform: translateX(16px); }
+
+.color-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.color-row input[type="text"] {
+  flex: 1;
+  font-family: 'SFMono-Regular', Menlo, monospace;
+  font-size: 11px;
+}
+
+/* Presets */
+.presets {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.preset-btn {
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--pg-border);
+  background: rgba(255,255,255,0.03);
+  color: var(--pg-muted);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.preset-btn:hover {
+  border-color: var(--pg-accent);
+  color: var(--pg-accent);
+  background: rgba(88,208,255,0.05);
+}
+.preset-btn.active {
+  border-color: var(--pg-accent);
+  color: var(--pg-accent);
+  background: rgba(88,208,255,0.1);
+}
+
+/* Right panel */
+.right-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Preview */
+.preview-wrap {
+  flex: 1;
+  overflow: auto;
+  background: #080d19;
+}
+.preview-wrap::-webkit-scrollbar { width: 8px; }
+.preview-wrap::-webkit-scrollbar-track { background: transparent; }
+.preview-wrap::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
+
+.preview-frame {
+  transform-origin: top left;
+  min-height: 100%;
+}
+
+/* Prompt panel */
+.prompt-panel {
+  border-top: 1px solid var(--pg-border);
+  background: var(--pg-surface);
+  padding: 14px 20px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.prompt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.prompt-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--pg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.copy-btn {
+  padding: 4px 12px;
+  border-radius: 5px;
+  border: 1px solid var(--pg-border);
+  background: rgba(88,208,255,0.08);
+  color: var(--pg-accent);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.copy-btn:hover { background: rgba(88,208,255,0.15); }
+.copy-btn.copied { background: rgba(16,185,129,0.2); color: #10b981; border-color: rgba(16,185,129,0.3); }
+
+.prompt-text {
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--pg-text);
+  white-space: pre-wrap;
+  font-family: 'SFMono-Regular', Menlo, monospace;
+}
+
+/* Zoom control */
+.zoom-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--pg-surface);
+  border-bottom: 1px solid var(--pg-border);
+  font-size: 11px;
+  color: var(--pg-muted);
+}
+.zoom-bar select {
+  width: auto;
+  padding: 3px 8px;
+  font-size: 11px;
+}
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <!-- Controls -->
+  <div class="controls">
+    <div class="pg-title">Kore Website Editor</div>
+    <div class="pg-subtitle">Adjust the website design, then copy the prompt to apply changes</div>
+
+    <!-- Presets -->
+    <div class="presets">
+      <button class="preset-btn active" onclick="applyPreset('default')">Current</button>
+      <button class="preset-btn" onclick="applyPreset('warm')">Warm</button>
+      <button class="preset-btn" onclick="applyPreset('violet')">Violet</button>
+      <button class="preset-btn" onclick="applyPreset('minimal')">Minimal</button>
+      <button class="preset-btn" onclick="applyPreset('bold')">Bold</button>
+    </div>
+
+    <!-- Colors -->
+    <div class="group">
+      <div class="group-header" onclick="toggleGroup(this)">
+        Colors <span class="arrow">&#9660;</span>
+      </div>
+      <div class="group-body">
+        <div class="field">
+          <div class="field-label">Background</div>
+          <div class="color-row">
+            <input type="color" id="c-bg" value="#080d19" oninput="state.bgColor=this.value;document.getElementById('c-bg-hex').value=this.value;updateAll()">
+            <input type="text" id="c-bg-hex" value="#080d19" oninput="state.bgColor=this.value;document.getElementById('c-bg').value=this.value;updateAll()">
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-label">Surface / Cards</div>
+          <div class="color-row">
+            <input type="color" id="c-surface" value="#0f1629" oninput="state.surfaceColor=this.value;document.getElementById('c-surface-hex').value=this.value;updateAll()">
+            <input type="text" id="c-surface-hex" value="#0f1629" oninput="state.surfaceColor=this.value;document.getElementById('c-surface').value=this.value;updateAll()">
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-label">Accent</div>
+          <div class="color-row">
+            <input type="color" id="c-accent" value="#58d0ff" oninput="state.accentColor=this.value;document.getElementById('c-accent-hex').value=this.value;updateAll()">
+            <input type="text" id="c-accent-hex" value="#58d0ff" oninput="state.accentColor=this.value;document.getElementById('c-accent').value=this.value;updateAll()">
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-label">Accent Secondary</div>
+          <div class="color-row">
+            <input type="color" id="c-accent2" value="#3b82f6" oninput="state.accent2Color=this.value;document.getElementById('c-accent2-hex').value=this.value;updateAll()">
+            <input type="text" id="c-accent2-hex" value="#3b82f6" oninput="state.accent2Color=this.value;document.getElementById('c-accent2').value=this.value;updateAll()">
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-label">Gradient Text End</div>
+          <div class="color-row">
+            <input type="color" id="c-gradient" value="#a78bfa" oninput="state.gradientEnd=this.value;document.getElementById('c-gradient-hex').value=this.value;updateAll()">
+            <input type="text" id="c-gradient-hex" value="#a78bfa" oninput="state.gradientEnd=this.value;document.getElementById('c-gradient').value=this.value;updateAll()">
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-label">Primary Button</div>
+          <div class="color-row">
+            <input type="color" id="c-btn" value="#2563eb" oninput="state.btnColor=this.value;document.getElementById('c-btn-hex').value=this.value;updateAll()">
+            <input type="text" id="c-btn-hex" value="#2563eb" oninput="state.btnColor=this.value;document.getElementById('c-btn').value=this.value;updateAll()">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hero -->
+    <div class="group">
+      <div class="group-header" onclick="toggleGroup(this)">
+        Hero Content <span class="arrow">&#9660;</span>
+      </div>
+      <div class="group-body">
+        <div class="field">
+          <div class="field-label">Badge Text</div>
+          <input type="text" id="hero-badge" value="Open Source &middot; MIT License &middot; macOS &amp; Windows" oninput="state.heroBadge=this.value;updateAll()">
+        </div>
+        <div class="field">
+          <div class="field-label">Title Line 1</div>
+          <input type="text" id="hero-title1" value="The AI-Powered" oninput="state.heroTitle1=this.value;updateAll()">
+        </div>
+        <div class="field">
+          <div class="field-label">Title Line 2 (gradient)</div>
+          <input type="text" id="hero-title2" value="Kubernetes IDE" oninput="state.heroTitle2=this.value;updateAll()">
+        </div>
+        <div class="field">
+          <div class="field-label">Tagline</div>
+          <textarea id="hero-tagline" oninput="state.heroTagline=this.value;updateAll()">Native desktop app that combines real-time cluster monitoring, AI troubleshooting, and keyboard-driven workflows. Stop switching between kubectl, k9s, and your browser.</textarea>
+        </div>
+        <div class="field">
+          <div class="field-label">Primary CTA</div>
+          <input type="text" id="hero-cta" value="Download for Free" oninput="state.heroCTA=this.value;updateAll()">
+        </div>
+        <div class="field">
+          <div class="field-label">Secondary CTA</div>
+          <input type="text" id="hero-cta2" value="View on GitHub" oninput="state.heroCTA2=this.value;updateAll()">
+        </div>
+      </div>
+    </div>
+
+    <!-- Typography -->
+    <div class="group">
+      <div class="group-header" onclick="toggleGroup(this)">
+        Typography <span class="arrow">&#9660;</span>
+      </div>
+      <div class="group-body">
+        <div class="field">
+          <div class="field-label">Hero Title Size <span class="field-value" id="v-hero-size">80px</span></div>
+          <input type="range" min="48" max="100" value="80" oninput="state.heroFontSize=+this.value;document.getElementById('v-hero-size').textContent=this.value+'px';updateAll()">
+        </div>
+        <div class="field">
+          <div class="field-label">Section Title Size <span class="field-value" id="v-section-size">48px</span></div>
+          <input type="range" min="28" max="64" value="48" oninput="state.sectionFontSize=+this.value;document.getElementById('v-section-size').textContent=this.value+'px';updateAll()">
+        </div>
+        <div class="field">
+          <div class="field-label">Body Size <span class="field-value" id="v-body-size">16px</span></div>
+          <input type="range" min="14" max="20" value="16" oninput="state.bodyFontSize=+this.value;document.getElementById('v-body-size').textContent=this.value+'px';updateAll()">
+        </div>
+        <div class="field">
+          <div class="field-label">Hero Weight</div>
+          <select onchange="state.heroWeight=this.value;updateAll()">
+            <option value="700">Bold (700)</option>
+            <option value="800" selected>Extra Bold (800)</option>
+            <option value="900">Black (900)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Layout -->
+    <div class="group">
+      <div class="group-header" onclick="toggleGroup(this)">
+        Layout & Spacing <span class="arrow">&#9660;</span>
+      </div>
+      <div class="group-body">
+        <div class="field">
+          <div class="field-label">Section Padding <span class="field-value" id="v-section-pad">120px</span></div>
+          <input type="range" min="60" max="180" value="120" step="10" oninput="state.sectionPadding=+this.value;document.getElementById('v-section-pad').textContent=this.value+'px';updateAll()">
+        </div>
+        <div class="field">
+          <div class="field-label">Container Width <span class="field-value" id="v-container">1200px</span></div>
+          <input type="range" min="960" max="1400" value="1200" step="20" oninput="state.containerWidth=+this.value;document.getElementById('v-container').textContent=this.value+'px';updateAll()">
+        </div>
+        <div class="field">
+          <div class="field-label">Card Border Radius <span class="field-value" id="v-radius">16px</span></div>
+          <input type="range" min="4" max="28" value="16" oninput="state.cardRadius=+this.value;document.getElementById('v-radius').textContent=this.value+'px';updateAll()">
+        </div>
+        <div class="field">
+          <div class="field-label">Feature Grid Columns</div>
+          <select onchange="state.gridCols=+this.value;updateAll()">
+            <option value="3">3 Columns</option>
+            <option value="4" selected>4 Columns</option>
+            <option value="5">5 Columns</option>
+          </select>
+        </div>
+        <div class="field">
+          <div class="field-label">Card Gap <span class="field-value" id="v-gap">16px</span></div>
+          <input type="range" min="8" max="28" value="16" oninput="state.cardGap=+this.value;document.getElementById('v-gap').textContent=this.value+'px';updateAll()">
+        </div>
+      </div>
+    </div>
+
+    <!-- Glass Effect -->
+    <div class="group">
+      <div class="group-header" onclick="toggleGroup(this)">
+        Glass & Effects <span class="arrow">&#9660;</span>
+      </div>
+      <div class="group-body">
+        <div class="field">
+          <div class="field-label">Glass Blur <span class="field-value" id="v-blur">16px</span></div>
+          <input type="range" min="0" max="32" value="16" oninput="state.glassBlur=+this.value;document.getElementById('v-blur').textContent=this.value+'px';updateAll()">
+        </div>
+        <div class="field">
+          <div class="field-label">Glass Opacity <span class="field-value" id="v-opacity">0.65</span></div>
+          <input type="range" min="0" max="100" value="65" oninput="state.glassOpacity=this.value/100;document.getElementById('v-opacity').textContent=(this.value/100).toFixed(2);updateAll()">
+        </div>
+        <div class="field">
+          <div class="field-label">Glow Intensity <span class="field-value" id="v-glow">0.06</span></div>
+          <input type="range" min="0" max="20" value="6" oninput="state.glowIntensity=this.value/100;document.getElementById('v-glow').textContent=(this.value/100).toFixed(2);updateAll()">
+        </div>
+        <div class="field toggle-row">
+          <label>Mouse-follow glow</label>
+          <input type="checkbox" class="toggle" checked onchange="state.mouseGlow=this.checked;updateAll()">
+        </div>
+        <div class="field toggle-row">
+          <label>Noise texture overlay</label>
+          <input type="checkbox" class="toggle" checked onchange="state.noiseOverlay=this.checked;updateAll()">
+        </div>
+      </div>
+    </div>
+
+    <!-- Sections -->
+    <div class="group">
+      <div class="group-header" onclick="toggleGroup(this)">
+        Section Visibility <span class="arrow">&#9660;</span>
+      </div>
+      <div class="group-body">
+        <div class="field toggle-row">
+          <label>Tech strip (Powered by)</label>
+          <input type="checkbox" class="toggle" checked onchange="state.showTechStrip=this.checked;updateAll()">
+        </div>
+        <div class="field toggle-row">
+          <label>Features grid</label>
+          <input type="checkbox" class="toggle" checked onchange="state.showFeatures=this.checked;updateAll()">
+        </div>
+        <div class="field toggle-row">
+          <label>Also-strip chips</label>
+          <input type="checkbox" class="toggle" checked onchange="state.showAlsoStrip=this.checked;updateAll()">
+        </div>
+        <div class="field toggle-row">
+          <label>Showcase screenshots</label>
+          <input type="checkbox" class="toggle" checked onchange="state.showShowcase=this.checked;updateAll()">
+        </div>
+        <div class="field toggle-row">
+          <label>Comparison table</label>
+          <input type="checkbox" class="toggle" checked onchange="state.showCompare=this.checked;updateAll()">
+        </div>
+        <div class="field toggle-row">
+          <label>Performance stats</label>
+          <input type="checkbox" class="toggle" checked onchange="state.showStats=this.checked;updateAll()">
+        </div>
+        <div class="field toggle-row">
+          <label>Keyboard shortcuts</label>
+          <input type="checkbox" class="toggle" checked onchange="state.showShortcuts=this.checked;updateAll()">
+        </div>
+        <div class="field toggle-row">
+          <label>Sponsor section</label>
+          <input type="checkbox" class="toggle" checked onchange="state.showSponsor=this.checked;updateAll()">
+        </div>
+        <div class="field toggle-row">
+          <label>Install section</label>
+          <input type="checkbox" class="toggle" checked onchange="state.showInstall=this.checked;updateAll()">
+        </div>
+      </div>
+    </div>
+
+    <!-- Nav -->
+    <div class="group">
+      <div class="group-header" onclick="toggleGroup(this)">
+        Navigation <span class="arrow">&#9660;</span>
+      </div>
+      <div class="group-body">
+        <div class="field">
+          <div class="field-label">Nav Background Opacity <span class="field-value" id="v-nav-opacity">0.80</span></div>
+          <input type="range" min="0" max="100" value="80" oninput="state.navOpacity=this.value/100;document.getElementById('v-nav-opacity').textContent=(this.value/100).toFixed(2);updateAll()">
+        </div>
+        <div class="field">
+          <div class="field-label">Nav Blur <span class="field-value" id="v-nav-blur">20px</span></div>
+          <input type="range" min="0" max="40" value="20" oninput="state.navBlur=+this.value;document.getElementById('v-nav-blur').textContent=this.value+'px';updateAll()">
+        </div>
+        <div class="field toggle-row">
+          <label>Show sponsor link in nav</label>
+          <input type="checkbox" class="toggle" checked onchange="state.navSponsor=this.checked;updateAll()">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right panel -->
+  <div class="right-panel">
+    <div class="zoom-bar">
+      Preview Zoom:
+      <select id="zoom-select" onchange="setZoom(this.value)">
+        <option value="0.4">40%</option>
+        <option value="0.5" selected>50%</option>
+        <option value="0.6">60%</option>
+        <option value="0.75">75%</option>
+        <option value="1">100%</option>
+      </select>
+    </div>
+
+    <div class="preview-wrap" id="preview-wrap">
+      <div class="preview-frame" id="preview-frame">
+        <!-- Preview rendered here -->
+      </div>
+    </div>
+
+    <div class="prompt-panel">
+      <div class="prompt-header">
+        <span class="prompt-label">Generated Prompt</span>
+        <button class="copy-btn" onclick="copyPrompt(this)">Copy Prompt</button>
+      </div>
+      <div class="prompt-text" id="prompt-output">Adjust controls to generate a prompt...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Defaults
+const DEFAULTS = {
+  bgColor: '#080d19',
+  surfaceColor: '#0f1629',
+  accentColor: '#58d0ff',
+  accent2Color: '#3b82f6',
+  gradientEnd: '#a78bfa',
+  btnColor: '#2563eb',
+  heroBadge: 'Open Source &middot; MIT License &middot; macOS &amp; Windows',
+  heroTitle1: 'The AI-Powered',
+  heroTitle2: 'Kubernetes IDE',
+  heroTagline: 'Native desktop app that combines real-time cluster monitoring, AI troubleshooting, and keyboard-driven workflows. Stop switching between kubectl, k9s, and your browser.',
+  heroCTA: 'Download for Free',
+  heroCTA2: 'View on GitHub',
+  heroFontSize: 80,
+  sectionFontSize: 48,
+  bodyFontSize: 16,
+  heroWeight: '800',
+  sectionPadding: 120,
+  containerWidth: 1200,
+  cardRadius: 16,
+  gridCols: 4,
+  cardGap: 16,
+  glassBlur: 16,
+  glassOpacity: 0.65,
+  glowIntensity: 0.06,
+  mouseGlow: true,
+  noiseOverlay: true,
+  showTechStrip: true,
+  showFeatures: true,
+  showAlsoStrip: true,
+  showShowcase: true,
+  showCompare: true,
+  showStats: true,
+  showShortcuts: true,
+  showSponsor: true,
+  showInstall: true,
+  navOpacity: 0.80,
+  navBlur: 20,
+  navSponsor: true,
+};
+
+const state = { ...DEFAULTS };
+
+const PRESETS = {
+  default: { ...DEFAULTS },
+  warm: {
+    ...DEFAULTS,
+    accentColor: '#f59e0b',
+    accent2Color: '#ef4444',
+    gradientEnd: '#f59e0b',
+    btnColor: '#d97706',
+    bgColor: '#0f0a05',
+    surfaceColor: '#1a1008',
+  },
+  violet: {
+    ...DEFAULTS,
+    accentColor: '#a78bfa',
+    accent2Color: '#818cf8',
+    gradientEnd: '#f472b6',
+    btnColor: '#7c3aed',
+    bgColor: '#0c0815',
+    surfaceColor: '#140e24',
+  },
+  minimal: {
+    ...DEFAULTS,
+    glassBlur: 0,
+    glassOpacity: 0,
+    glowIntensity: 0,
+    mouseGlow: false,
+    noiseOverlay: false,
+    cardRadius: 8,
+    sectionPadding: 80,
+    heroFontSize: 64,
+    showAlsoStrip: false,
+    showStats: false,
+  },
+  bold: {
+    ...DEFAULTS,
+    heroFontSize: 96,
+    heroWeight: '900',
+    sectionFontSize: 56,
+    accentColor: '#00ff88',
+    accent2Color: '#00ccff',
+    gradientEnd: '#00ff88',
+    btnColor: '#059669',
+    glowIntensity: 0.12,
+    cardRadius: 20,
+    sectionPadding: 140,
+  },
+};
+
+function applyPreset(name) {
+  const preset = PRESETS[name];
+  Object.assign(state, preset);
+  syncControls();
+  updateAll();
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+function syncControls() {
+  document.getElementById('c-bg').value = state.bgColor;
+  document.getElementById('c-bg-hex').value = state.bgColor;
+  document.getElementById('c-surface').value = state.surfaceColor;
+  document.getElementById('c-surface-hex').value = state.surfaceColor;
+  document.getElementById('c-accent').value = state.accentColor;
+  document.getElementById('c-accent-hex').value = state.accentColor;
+  document.getElementById('c-accent2').value = state.accent2Color;
+  document.getElementById('c-accent2-hex').value = state.accent2Color;
+  document.getElementById('c-gradient').value = state.gradientEnd;
+  document.getElementById('c-gradient-hex').value = state.gradientEnd;
+  document.getElementById('c-btn').value = state.btnColor;
+  document.getElementById('c-btn-hex').value = state.btnColor;
+  document.getElementById('hero-badge').value = state.heroBadge;
+  document.getElementById('hero-title1').value = state.heroTitle1;
+  document.getElementById('hero-title2').value = state.heroTitle2;
+  document.getElementById('hero-tagline').value = state.heroTagline;
+  document.getElementById('hero-cta').value = state.heroCTA;
+  document.getElementById('hero-cta2').value = state.heroCTA2;
+
+  // Sync range inputs via querying
+  const ranges = document.querySelectorAll('input[type="range"]');
+  // We'll just re-set values manually
+  const setRange = (idx, val) => { if (ranges[idx]) ranges[idx].value = val; };
+  setRange(0, state.heroFontSize);
+  setRange(1, state.sectionFontSize);
+  setRange(2, state.bodyFontSize);
+  setRange(3, state.sectionPadding);
+  setRange(4, state.containerWidth);
+  setRange(5, state.cardRadius);
+  setRange(6, state.cardGap);
+  setRange(7, state.glassBlur);
+  setRange(8, Math.round(state.glassOpacity * 100));
+  setRange(9, Math.round(state.glowIntensity * 100));
+  setRange(10, Math.round(state.navOpacity * 100));
+  setRange(11, state.navBlur);
+
+  // Value displays
+  document.getElementById('v-hero-size').textContent = state.heroFontSize + 'px';
+  document.getElementById('v-section-size').textContent = state.sectionFontSize + 'px';
+  document.getElementById('v-body-size').textContent = state.bodyFontSize + 'px';
+  document.getElementById('v-section-pad').textContent = state.sectionPadding + 'px';
+  document.getElementById('v-container').textContent = state.containerWidth + 'px';
+  document.getElementById('v-radius').textContent = state.cardRadius + 'px';
+  document.getElementById('v-gap').textContent = state.cardGap + 'px';
+  document.getElementById('v-blur').textContent = state.glassBlur + 'px';
+  document.getElementById('v-opacity').textContent = state.glassOpacity.toFixed(2);
+  document.getElementById('v-glow').textContent = state.glowIntensity.toFixed(2);
+  document.getElementById('v-nav-opacity').textContent = state.navOpacity.toFixed(2);
+  document.getElementById('v-nav-blur').textContent = state.navBlur + 'px';
+
+  // Toggles
+  const toggles = document.querySelectorAll('.toggle');
+  const toggleValues = [state.mouseGlow, state.noiseOverlay, state.showTechStrip, state.showFeatures, state.showAlsoStrip, state.showShowcase, state.showCompare, state.showStats, state.showShortcuts, state.showSponsor, state.showInstall, state.navSponsor];
+  toggleValues.forEach((val, i) => { if (toggles[i]) toggles[i].checked = val; });
+
+  // Selects
+  const selects = document.querySelectorAll('select');
+  // heroWeight select
+  selects[0].value = state.heroWeight;
+  // gridCols select
+  selects[1].value = state.gridCols;
+}
+
+function toggleGroup(header) {
+  header.classList.toggle('collapsed');
+  const body = header.nextElementSibling;
+  body.classList.toggle('hidden');
+}
+
+function setZoom(val) {
+  const frame = document.getElementById('preview-frame');
+  const scale = parseFloat(val);
+  frame.style.transform = 'scale(' + scale + ')';
+  frame.style.width = (100 / scale) + '%';
+}
+
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1,3), 16);
+  const g = parseInt(hex.slice(3,5), 16);
+  const b = parseInt(hex.slice(5,7), 16);
+  return { r, g, b };
+}
+
+function darken(hex, amount) {
+  const {r, g, b} = hexToRgb(hex);
+  const f = 1 - amount;
+  const nr = Math.round(r * f);
+  const ng = Math.round(g * f);
+  const nb = Math.round(b * f);
+  return '#' + [nr,ng,nb].map(c => c.toString(16).padStart(2,'0')).join('');
+}
+
+function renderPreview() {
+  const s = state;
+  const {r: ar, g: ag, b: ab} = hexToRgb(s.accentColor);
+  const {r: sr, g: sg, b: sb} = hexToRgb(s.surfaceColor);
+  const muted = darken(s.surfaceColor, -0.3);
+
+  const sectionStyle = 'padding:' + s.sectionPadding + 'px 0;position:relative;';
+  const containerStyle = 'max-width:' + s.containerWidth + 'px;margin:0 auto;padding:0 24px;';
+  const glassStyle = 'background:rgba(' + sr + ',' + sg + ',' + sb + ',' + s.glassOpacity + ');backdrop-filter:blur(' + s.glassBlur + 'px);-webkit-backdrop-filter:blur(' + s.glassBlur + 'px);border:1px solid rgba(255,255,255,0.06);box-shadow:0 4px 24px rgba(0,0,0,0.25);border-radius:' + s.cardRadius + 'px;';
+  const gradientTextStyle = 'background:linear-gradient(135deg,' + s.accentColor + ' 0%,' + s.accent2Color + ' 50%,' + s.gradientEnd + ' 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;';
+
+  let html = '';
+
+  // Body style
+  html += '<div style="background:' + s.bgColor + ';color:#e8edf5;font-family:\'Figtree\',\'Segoe UI\',system-ui,sans-serif;font-size:' + s.bodyFontSize + 'px;line-height:1.6;overflow-x:hidden;-webkit-font-smoothing:antialiased;position:relative;">';
+
+  // Noise overlay
+  if (s.noiseOverlay) {
+    html += '<div style="position:fixed;inset:0;z-index:9999;pointer-events:none;opacity:0.012;background-image:url(\'data:image/svg+xml,%3Csvg viewBox=%270 0 256 256%27 xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cfilter id=%27n%27%3E%3CfeTurbulence type=%27fractalNoise%27 baseFrequency=%270.9%27 numOctaves=%274%27 stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect width=%27100%25%27 height=%27100%25%27 filter=%27url(%23n)%27/%3E%3C/svg%3E\');background-repeat:repeat;background-size:256px 256px;"></div>';
+  }
+
+  // Nav
+  html += '<div style="position:sticky;top:0;left:0;right:0;z-index:1000;padding:0 24px;height:64px;display:flex;align-items:center;background:rgba(' + hexToRgb(s.bgColor).r + ',' + hexToRgb(s.bgColor).g + ',' + hexToRgb(s.bgColor).b + ',' + s.navOpacity + ');backdrop-filter:blur(' + s.navBlur + 'px);-webkit-backdrop-filter:blur(' + s.navBlur + 'px);border-bottom:1px solid rgba(255,255,255,0.06);">';
+  html += '<div style="' + containerStyle + 'display:flex;align-items:center;justify-content:space-between;padding:0 24px;">';
+  html += '<div style="display:flex;align-items:center;gap:10px;font-family:\'Outfit\',sans-serif;font-weight:700;font-size:18px;">&#9670; Kore</div>';
+  html += '<div style="display:flex;align-items:center;gap:28px;font-size:14px;color:#7a8ba8;">';
+  html += '<span>Features</span><span>Screenshots</span><span>Compare</span><span>Install</span>';
+  if (s.navSponsor) html += '<span style="color:#f59e0b;">&#9829; Sponsor</span>';
+  html += '<span style="padding:8px 20px;background:#fff;color:#080d19;border-radius:8px;font-weight:600;font-size:13px;">Download</span>';
+  html += '</div></div></div>';
+
+  // Hero
+  html += '<div style="padding-top:160px;padding-bottom:40px;text-align:center;position:relative;overflow:hidden;">';
+  html += '<div style="position:absolute;top:-300px;left:50%;transform:translateX(-50%);width:1000px;height:700px;background:radial-gradient(ellipse,rgba(' + ar + ',' + ag + ',' + ab + ',' + s.glowIntensity + ') 0%,rgba(' + ar + ',' + ag + ',' + ab + ',' + (s.glowIntensity * 0.5) + ') 40%,transparent 70%);pointer-events:none;"></div>';
+  html += '<div style="' + containerStyle + 'position:relative;z-index:1;">';
+  html += '<div style="display:inline-flex;align-items:center;gap:8px;padding:6px 16px;border-radius:20px;background:' + muted + ';border:1px solid rgba(255,255,255,0.1);font-size:13px;color:#7a8ba8;font-family:monospace;margin-bottom:36px;">';
+  html += '<span style="width:6px;height:6px;border-radius:50%;background:#10b981;display:inline-block;"></span>';
+  html += s.heroBadge;
+  html += '</div>';
+  html += '<h1 style="font-family:\'Outfit\',sans-serif;font-size:' + s.heroFontSize + 'px;font-weight:' + s.heroWeight + ';letter-spacing:-0.03em;line-height:1.05;margin-bottom:24px;">' + s.heroTitle1 + '<br><span style="' + gradientTextStyle + '">' + s.heroTitle2 + '</span></h1>';
+  html += '<p style="font-size:20px;color:#7a8ba8;max-width:600px;margin:0 auto 40px;line-height:1.7;">' + s.heroTagline + '</p>';
+  html += '<div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;">';
+  html += '<span style="display:inline-flex;align-items:center;gap:8px;padding:13px 28px;border-radius:10px;background:linear-gradient(135deg,' + darken(s.btnColor, 0.2) + ',' + s.btnColor + ');color:#fff;font-family:\'Outfit\',sans-serif;font-weight:600;font-size:15px;">&#8595; ' + s.heroCTA + '</span>';
+  html += '<span style="display:inline-flex;align-items:center;gap:8px;padding:13px 28px;border-radius:10px;background:' + muted + ';color:#e8edf5;font-family:\'Outfit\',sans-serif;font-weight:600;font-size:15px;border:1px solid rgba(255,255,255,0.1);">' + s.heroCTA2 + '</span>';
+  html += '</div></div>';
+
+  // Screenshot placeholder
+  html += '<div style="' + containerStyle + '"><div style="max-width:1060px;margin:64px auto 0;"><div style="border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);box-shadow:0 24px 80px rgba(0,0,0,0.5);">';
+  html += '<div style="background:#1a1f2e;padding:12px 16px;display:flex;align-items:center;gap:8px;">';
+  html += '<span style="width:12px;height:12px;border-radius:50%;background:#ff5f57;display:inline-block;"></span>';
+  html += '<span style="width:12px;height:12px;border-radius:50%;background:#febc2e;display:inline-block;"></span>';
+  html += '<span style="width:12px;height:12px;border-radius:50%;background:#28c840;display:inline-block;"></span>';
+  html += '<span style="flex:1;text-align:center;font-size:13px;color:#4a5568;font-family:monospace;">Kore &mdash; Pods</span>';
+  html += '</div>';
+  html += '<div style="background:' + s.bgColor + ';height:300px;display:flex;align-items:center;justify-content:center;color:#4a5568;font-family:monospace;font-size:14px;">[Screenshot: pods-view.png]</div>';
+  html += '</div></div></div>';
+
+  // Tech strip
+  if (s.showTechStrip) {
+    html += '<div style="text-align:center;padding:48px 0 0;">';
+    html += '<div style="font-size:12px;color:#4a5568;text-transform:uppercase;letter-spacing:2px;font-family:monospace;margin-bottom:14px;">Powered by</div>';
+    html += '<div style="display:flex;align-items:center;justify-content:center;gap:32px;font-size:14px;font-family:monospace;color:#7a8ba8;">';
+    html += '<span>Rust</span><span style="color:#4a5568;">&middot;</span><span>React</span><span style="color:#4a5568;">&middot;</span><span>Tauri v2</span><span style="color:#4a5568;">&middot;</span><span>kube-rs</span>';
+    html += '</div></div>';
+  }
+
+  html += '</div>'; // end hero
+
+  // Divider
+  html += '<div style="height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.1),transparent);max-width:600px;margin:0 auto;"></div>';
+
+  // Features
+  if (s.showFeatures) {
+    html += '<div style="' + sectionStyle + '">';
+    html += '<div style="' + containerStyle + '">';
+    html += '<div style="font-family:monospace;font-size:13px;color:' + s.accentColor + ';text-transform:uppercase;letter-spacing:2.5px;margin-bottom:16px;">Features</div>';
+    html += '<div style="font-family:\'Outfit\',sans-serif;font-size:clamp(32px,4.5vw,' + s.sectionFontSize + 'px);font-weight:700;margin-bottom:16px;line-height:1.15;">Everything you need, nothing you don\'t</div>';
+    html += '<div style="color:#7a8ba8;font-size:18px;margin-bottom:56px;line-height:1.7;">Built for engineers who live in the terminal but want something better.</div>';
+
+    // Grid
+    html += '<div style="display:grid;grid-template-columns:repeat(' + s.gridCols + ',1fr);gap:' + s.cardGap + 'px;margin-bottom:36px;">';
+    const features = [
+      { name: 'AI Troubleshooting', desc: 'Built-in AI with cluster context. OpenAI, Anthropic, Ollama.', hl: true },
+      { name: 'Native Performance', desc: 'Rust backend, ~80MB. Starts under 1 second.' },
+      { name: 'Real-Time Streaming', desc: 'Live watches, logs, events via K8s watch API.' },
+      { name: 'Command Palette', desc: 'Cmd+K for resources, views, filters.' },
+      { name: 'Cluster Dashboard', desc: 'Health score, pod chart, node bars.' },
+      { name: 'Resource Graph', desc: 'Interactive dependency graph.' },
+      { name: 'YAML Editor + Diff', desc: 'Edit with diff preview before apply.' },
+      { name: 'Deployment Rollback', desc: 'Visual revision timeline, one-click rollback.' },
+    ];
+    features.forEach(f => {
+      const hl = f.hl ? 'border-color:rgba(' + ar + ',' + ag + ',' + ab + ',0.2);box-shadow:0 0 32px rgba(' + ar + ',' + ag + ',' + ab + ',0.05);' : '';
+      html += '<div style="' + glassStyle + hl + 'padding:28px;">';
+      html += '<div style="width:42px;height:42px;border-radius:10px;background:rgba(' + ar + ',' + ag + ',' + ab + ',' + (f.hl ? 0.15 : 0.08) + ');margin-bottom:16px;display:flex;align-items:center;justify-content:center;color:' + s.accentColor + ';font-size:18px;">&#9679;</div>';
+      html += '<div style="font-family:\'Outfit\',sans-serif;font-size:15px;font-weight:600;margin-bottom:8px;' + (f.hl ? 'color:' + s.accentColor + ';' : '') + '">' + f.name + '</div>';
+      html += '<div style="font-size:13px;color:#7a8ba8;line-height:1.6;">' + f.desc + '</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+
+    // Also strip
+    if (s.showAlsoStrip) {
+      html += '<div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;">';
+      ['Vim navigation', 'Persistent events', 'Pod exec shell', 'Multi-pod logs', 'Label filtering', 'Pinned resources'].forEach(chip => {
+        html += '<div style="padding:7px 16px;border-radius:20px;font-size:13px;color:#7a8ba8;background:' + muted + ';border:1px solid rgba(255,255,255,0.06);">' + chip + '</div>';
+      });
+      html += '</div>';
+    }
+
+    html += '</div></div>';
+    html += '<div style="height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.1),transparent);max-width:600px;margin:0 auto;"></div>';
+  }
+
+  // Stats
+  if (s.showStats) {
+    html += '<div style="' + sectionStyle + '">';
+    html += '<div style="' + containerStyle + 'text-align:center;">';
+    html += '<div style="font-family:monospace;font-size:13px;color:' + s.accentColor + ';text-transform:uppercase;letter-spacing:2.5px;margin-bottom:16px;">Performance</div>';
+    html += '<div style="font-family:\'Outfit\',sans-serif;font-size:clamp(32px,4.5vw,' + s.sectionFontSize + 'px);font-weight:700;margin-bottom:16px;">Built different</div>';
+    html += '<div style="color:#7a8ba8;font-size:18px;margin-bottom:56px;line-height:1.7;max-width:560px;margin-left:auto;margin-right:auto;">Native Rust backend means no Node.js runtime, no Chromium fork.</div>';
+    html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px;">';
+    const stats = [
+      { val: '~80', unit: 'MB', label: 'Memory', compare: 'vs ~400 MB (Lens)' },
+      { val: '~15', unit: 'MB', label: 'Binary Size', compare: 'vs ~200 MB (Electron)' },
+      { val: '<1', unit: 's', label: 'Startup Time', compare: 'vs 3-5s (Lens)' },
+      { val: 'Rust', unit: '', label: 'Backend', compare: 'vs Node.js / Go' },
+    ];
+    stats.forEach(st => {
+      html += '<div style="' + glassStyle + 'padding:36px 28px;text-align:center;">';
+      html += '<div style="font-family:\'Outfit\',sans-serif;font-size:48px;font-weight:800;margin-bottom:8px;"><span style="color:' + s.accentColor + ';">' + st.val + '</span><span style="font-size:24px;color:#4a5568;">' + st.unit + '</span></div>';
+      html += '<div style="font-size:15px;color:#7a8ba8;">' + st.label + '</div>';
+      html += '<div style="font-size:12px;color:#4a5568;font-family:monospace;">' + st.compare + '</div>';
+      html += '</div>';
+    });
+    html += '</div></div></div>';
+    html += '<div style="height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.1),transparent);max-width:600px;margin:0 auto;"></div>';
+  }
+
+  // Sponsor
+  if (s.showSponsor) {
+    html += '<div style="' + sectionStyle + 'overflow:hidden;">';
+    html += '<div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 50%,rgba(245,158,11,0.04) 0%,transparent 65%);pointer-events:none;"></div>';
+    html += '<div style="' + containerStyle + 'text-align:center;max-width:640px;position:relative;z-index:1;">';
+    html += '<div style="width:56px;height:56px;border-radius:14px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);display:inline-flex;align-items:center;justify-content:center;margin-bottom:24px;font-size:24px;color:#f59e0b;">&#9829;</div>';
+    html += '<div style="font-family:monospace;font-size:13px;color:#f59e0b;text-transform:uppercase;letter-spacing:2.5px;margin-bottom:16px;">Support</div>';
+    html += '<div style="font-family:\'Outfit\',sans-serif;font-size:clamp(32px,4.5vw,' + s.sectionFontSize + 'px);font-weight:700;margin-bottom:16px;">Support Kore\'s development</div>';
+    html += '<div style="font-size:17px;color:#7a8ba8;line-height:1.7;margin-bottom:32px;">Kore is free, open-source, and MIT licensed. Your sponsorship helps sustain active development.</div>';
+    html += '<span style="display:inline-flex;align-items:center;gap:8px;padding:13px 28px;border-radius:10px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#0a0f1a;font-family:\'Outfit\',sans-serif;font-weight:700;font-size:15px;">&#9829; Become a Sponsor on GitHub</span>';
+    html += '</div></div>';
+    html += '<div style="height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.1),transparent);max-width:600px;margin:0 auto;"></div>';
+  }
+
+  // Install
+  if (s.showInstall) {
+    html += '<div style="' + sectionStyle + '">';
+    html += '<div style="' + containerStyle + 'text-align:center;max-width:680px;">';
+    html += '<div style="font-family:monospace;font-size:13px;color:' + s.accentColor + ';text-transform:uppercase;letter-spacing:2.5px;margin-bottom:16px;">Get Started</div>';
+    html += '<div style="font-family:\'Outfit\',sans-serif;font-size:clamp(32px,4.5vw,' + s.sectionFontSize + 'px);font-weight:700;margin-bottom:16px;">Install Kore</div>';
+    html += '<div style="color:#7a8ba8;font-size:18px;margin-bottom:56px;">Download a prebuilt binary or build from source.</div>';
+    html += '<div style="background:' + darken(s.surfaceColor, -0.15) + ';border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:28px;font-family:monospace;font-size:14px;text-align:left;color:#7a8ba8;line-height:1.8;margin-bottom:28px;">';
+    html += '<span style="color:#4a5568;"># Clone and build</span><br>';
+    html += '<span style="color:#e8edf5;">git clone https://github.com/eladbash/kore && cd kore</span><br>';
+    html += '<span style="color:#e8edf5;">npm install && npm run tauri:build</span>';
+    html += '</div>';
+    html += '<span style="display:inline-flex;align-items:center;gap:8px;padding:13px 28px;border-radius:10px;background:linear-gradient(135deg,' + darken(s.btnColor, 0.2) + ',' + s.btnColor + ');color:#fff;font-family:\'Outfit\',sans-serif;font-weight:600;font-size:15px;">&#8595; Download Latest Release</span>';
+    html += '</div></div>';
+  }
+
+  // Footer
+  html += '<div style="border-top:1px solid rgba(255,255,255,0.06);padding:48px 0;">';
+  html += '<div style="' + containerStyle + 'display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">';
+  html += '<div style="font-family:\'Outfit\',sans-serif;font-weight:600;font-size:15px;color:#7a8ba8;">&#9670; Kore</div>';
+  html += '<div style="display:flex;gap:24px;font-size:13px;color:#4a5568;">GitHub &middot; Releases &middot; Sponsor &middot; Issues</div>';
+  html += '<div style="font-size:13px;color:#4a5568;">Built with <span style="color:' + s.accentColor + ';">Rust</span> &amp; <span style="color:' + s.accent2Color + ';">React</span> &middot; MIT License</div>';
+  html += '</div></div>';
+
+  html += '</div>'; // end body wrapper
+
+  document.getElementById('preview-frame').innerHTML = html;
+}
+
+function updatePrompt() {
+  const parts = [];
+  const d = DEFAULTS;
+  const s = state;
+
+  // Colors
+  const colorChanges = [];
+  if (s.bgColor !== d.bgColor) colorChanges.push('background to ' + s.bgColor);
+  if (s.surfaceColor !== d.surfaceColor) colorChanges.push('surface/card background to ' + s.surfaceColor);
+  if (s.accentColor !== d.accentColor) colorChanges.push('--accent to ' + s.accentColor);
+  if (s.accent2Color !== d.accent2Color) colorChanges.push('--accent-blue to ' + s.accent2Color);
+  if (s.gradientEnd !== d.gradientEnd) colorChanges.push('--accent-violet (gradient end) to ' + s.gradientEnd);
+  if (s.btnColor !== d.btnColor) colorChanges.push('primary button gradient end to ' + s.btnColor);
+  if (colorChanges.length) parts.push('Update the color scheme: change ' + colorChanges.join(', ') + '.');
+
+  // Hero text
+  const heroChanges = [];
+  if (s.heroTitle1 !== d.heroTitle1) heroChanges.push('title line 1 to "' + s.heroTitle1 + '"');
+  if (s.heroTitle2 !== d.heroTitle2) heroChanges.push('the gradient title text to "' + s.heroTitle2 + '"');
+  if (s.heroTagline !== d.heroTagline) heroChanges.push('the tagline to "' + s.heroTagline + '"');
+  if (s.heroCTA !== d.heroCTA) heroChanges.push('primary CTA button text to "' + s.heroCTA + '"');
+  if (s.heroCTA2 !== d.heroCTA2) heroChanges.push('secondary CTA button text to "' + s.heroCTA2 + '"');
+  if (s.heroBadge !== d.heroBadge) heroChanges.push('the hero badge to "' + s.heroBadge + '"');
+  if (heroChanges.length) parts.push('Update the hero section: change ' + heroChanges.join(', ') + '.');
+
+  // Typography
+  const typoChanges = [];
+  if (s.heroFontSize !== d.heroFontSize) typoChanges.push('hero title max font-size to ' + s.heroFontSize + 'px');
+  if (s.sectionFontSize !== d.sectionFontSize) typoChanges.push('section title max font-size to ' + s.sectionFontSize + 'px');
+  if (s.bodyFontSize !== d.bodyFontSize) typoChanges.push('body font-size to ' + s.bodyFontSize + 'px');
+  if (s.heroWeight !== d.heroWeight) typoChanges.push('hero title font-weight to ' + s.heroWeight);
+  if (typoChanges.length) parts.push('Adjust typography: ' + typoChanges.join(', ') + '.');
+
+  // Layout
+  const layoutChanges = [];
+  if (s.sectionPadding !== d.sectionPadding) layoutChanges.push('section vertical padding to ' + s.sectionPadding + 'px');
+  if (s.containerWidth !== d.containerWidth) layoutChanges.push('container max-width to ' + s.containerWidth + 'px');
+  if (s.cardRadius !== d.cardRadius) layoutChanges.push('card border-radius (--radius) to ' + s.cardRadius + 'px');
+  if (s.gridCols !== d.gridCols) layoutChanges.push('feature grid to ' + s.gridCols + ' columns');
+  if (s.cardGap !== d.cardGap) layoutChanges.push('feature grid gap to ' + s.cardGap + 'px');
+  if (layoutChanges.length) parts.push('Update layout: ' + layoutChanges.join(', ') + '.');
+
+  // Glass
+  const glassChanges = [];
+  if (s.glassBlur !== d.glassBlur) glassChanges.push('blur to ' + s.glassBlur + 'px');
+  if (s.glassOpacity !== d.glassOpacity) glassChanges.push('background opacity to ' + s.glassOpacity.toFixed(2));
+  if (s.glowIntensity !== d.glowIntensity) glassChanges.push('hero glow intensity to ' + s.glowIntensity.toFixed(2));
+  if (!s.mouseGlow && d.mouseGlow) glassChanges.push('remove the mouse-follow glow effect');
+  if (!s.noiseOverlay && d.noiseOverlay) glassChanges.push('remove the noise texture overlay');
+  if (s.mouseGlow && !d.mouseGlow) glassChanges.push('add a mouse-follow glow effect');
+  if (s.noiseOverlay && !d.noiseOverlay) glassChanges.push('add a noise texture overlay');
+  if (glassChanges.length) parts.push('Glass effects: ' + glassChanges.join(', ') + '.');
+
+  // Nav
+  const navChanges = [];
+  if (s.navOpacity !== d.navOpacity) navChanges.push('nav background opacity to ' + s.navOpacity.toFixed(2));
+  if (s.navBlur !== d.navBlur) navChanges.push('nav backdrop blur to ' + s.navBlur + 'px');
+  if (!s.navSponsor && d.navSponsor) navChanges.push('hide the sponsor link from the nav');
+  if (navChanges.length) parts.push('Navigation: ' + navChanges.join(', ') + '.');
+
+  // Sections
+  const hiddenSections = [];
+  const sectionMap = {
+    showTechStrip: 'tech strip (Powered by)',
+    showFeatures: 'features grid',
+    showAlsoStrip: 'also-strip chips',
+    showShowcase: 'showcase screenshots',
+    showCompare: 'comparison table',
+    showStats: 'performance stats',
+    showShortcuts: 'keyboard shortcuts',
+    showSponsor: 'sponsor section',
+    showInstall: 'install section',
+  };
+  for (const [key, label] of Object.entries(sectionMap)) {
+    if (!s[key] && d[key]) hiddenSections.push(label);
+  }
+  if (hiddenSections.length) parts.push('Remove or hide these sections from the website: ' + hiddenSections.join(', ') + '.');
+
+  const output = document.getElementById('prompt-output');
+  if (parts.length === 0) {
+    output.textContent = 'No changes from the current design. Adjust controls above to generate a prompt.';
+  } else {
+    output.textContent = 'In the Kore website (docs/index.html), make the following changes:\n\n' + parts.join('\n\n');
+  }
+}
+
+function updateAll() {
+  renderPreview();
+  updatePrompt();
+}
+
+function copyPrompt(btn) {
+  const text = document.getElementById('prompt-output').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = 'Copy Prompt';
+      btn.classList.remove('copied');
+    }, 1500);
+  });
+}
+
+// Init
+setZoom('0.5');
+updateAll();
+</script>
+</body>
+</html>

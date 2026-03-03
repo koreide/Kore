@@ -25,6 +25,7 @@ import {
   Filter,
   MessageCircle,
   Heart,
+  ShieldCheck,
 } from "lucide-react";
 import { searchResources } from "@/lib/api";
 import { toResourceItem } from "@/lib/transforms";
@@ -86,6 +87,7 @@ const VIEW_COMMANDS: { id: AppView; label: string; icon: typeof LayoutDashboard 
   { id: "graph", label: "Resource Graph", icon: GitBranch },
   { id: "crds", label: "Custom Resources", icon: Puzzle },
   { id: "helm", label: "Helm Releases", icon: Package },
+  { id: "rbac", label: "RBAC Simulator", icon: ShieldCheck },
   { id: "settings", label: "Settings", icon: Settings },
 ];
 
