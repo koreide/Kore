@@ -4,313 +4,193 @@ import {
   Loader2,
   Inbox,
   Shield,
-  ShieldAlert,
-  ShieldCheck,
   ShieldX,
-  Maximize2,
   RefreshCw,
   Search,
   X,
   ChevronDown,
+  ChevronRight,
+  Send,
+  Bot,
+  Copy,
+  Settings2,
+  Trash2,
+  ArrowRight,
+  CheckCircle2,
+  XCircle,
   ChevronUp,
-  Globe,
-  Box,
-  Container,
-  Server,
-  Layers,
 } from "lucide-react";
+import { listen } from "@tauri-apps/api/event";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { cn } from "@/lib/utils";
 import { useNetworkPolicyGraph } from "@/hooks/use-network-policy-graph";
+import { useToast } from "./toast";
+import { AISettings, type AIConfig } from "./ai-settings";
 import type {
-  NetworkPolicyPodGroup,
-  NetworkPolicyCidrNode,
-  NetworkPolicyTrafficEdge,
   NetworkPolicySummary,
   TrafficSimulationResult,
+  NetworkPolicyGraph,
+  NetworkPolicyPodGroup,
+  AIChatRequest,
+  ChatMessage,
 } from "@/lib/api";
+import { aiChat } from "@/lib/api";
 
-// ── Constants ────────────────────────────────────────────────────────
+// ── Types ────────────────────────────────────────────────────────────
 
-const NODE_RADIUS = 28;
-const CIDR_RADIUS = 22;
-const REPULSION = 5000;
-const ATTRACTION = 0.005;
-const REST_LENGTH = 200;
-const NS_GRAVITY = 0.1;
-const CENTER_GRAVITY = 0.01;
-const DAMPING = 0.85;
-const ALPHA_DECAY = 0.99;
-const NS_PADDING = 50;
-
-// ── Kind colors ──────────────────────────────────────────────────────
-
-const GROUP_COLORS: Record<string, { fill: string; stroke: string; text: string }> = {
-  Deployment: { fill: "#1e3a5f", stroke: "#3b82f6", text: "#93c5fd" },
-  ReplicaSet: { fill: "#1e293b", stroke: "#64748b", text: "#94a3b8" },
-  DaemonSet: { fill: "#2d1b4e", stroke: "#a855f7", text: "#d8b4fe" },
-  StatefulSet: { fill: "#1a3a2a", stroke: "#10b981", text: "#6ee7b7" },
-  Job: { fill: "#3b2a0a", stroke: "#f97316", text: "#fdba74" },
-  Pod: { fill: "#1a3a2a", stroke: "#10b981", text: "#6ee7b7" },
-};
-const DEFAULT_COLOR = { fill: "#1e293b", stroke: "#64748b", text: "#94a3b8" };
-const CIDR_COLOR = { fill: "#2a1a1a", stroke: "#ef4444", text: "#fca5a5" };
-
-function getGroupColor(kind: string) {
-  return GROUP_COLORS[kind] ?? DEFAULT_COLOR;
-}
-
-// ── Simulation node type ─────────────────────────────────────────────
-
-interface SimNode {
+interface NPMessage {
   id: string;
-  type: "group" | "cidr";
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  fx: number | null;
-  fy: number | null;
-  namespace: string;
-  label: string;
-  kind: string;
-  podCount: number;
-  isIsolatedIngress: boolean;
-  isIsolatedEgress: boolean;
-  matchingPolicies: string[];
+  role: "user" | "assistant";
+  content: string;
+  simulationResult?: TrafficSimulationResult;
+  sourceLabel?: string;
+  destLabel?: string;
+  relatedPolicies?: NetworkPolicySummary[];
 }
 
-// ── Force simulation ─────────────────────────────────────────────────
+interface AIResponsePayload {
+  type: "chunk" | "done" | "error" | "status";
+  content?: string;
+  message?: string;
+}
 
-function initNodes(
+// ── Helpers ──────────────────────────────────────────────────────────
+
+function loadAIConfig(): AIConfig {
+  try {
+    const stored = localStorage.getItem("kore-ai-config");
+    if (stored) {
+      const { api_key: _, ...config } = JSON.parse(stored);
+      return config as AIConfig;
+    }
+  } catch {
+    // ignore parse errors
+  }
+  return { provider: "openai", model: "gpt-4o" };
+}
+
+let sessionCounter = 0;
+function nextSessionId(): string {
+  sessionCounter += 1;
+  return `np-ai-${Date.now()}-${sessionCounter}`;
+}
+
+function msgId(): string {
+  return `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+// ── Build graph context for AI system prompt ─────────────────────────
+
+function buildGraphContext(graph: NetworkPolicyGraph): string {
+  const lines: string[] = [];
+
+  lines.push("# Network Policy Graph Context\n");
+
+  // Policies
+  if (graph.policies.length > 0) {
+    lines.push(`## Policies (${graph.policies.length})`);
+    for (const p of graph.policies) {
+      const types = p.policy_types.join(", ");
+      const selector =
+        Object.keys(p.pod_selector).length > 0
+          ? Object.entries(p.pod_selector)
+              .map(([k, v]) => `${k}=${v}`)
+              .join(", ")
+          : "all pods";
+      lines.push(
+        `- **${p.name}** (ns: ${p.namespace}) — types: [${types}], selector: {${selector}}, affects ${p.affected_pod_count} pods, ${p.ingress_rule_count} ingress rules, ${p.egress_rule_count} egress rules`,
+      );
+    }
+    lines.push("");
+  }
+
+  // Workload groups
+  if (graph.groups.length > 0) {
+    lines.push(`## Workload Groups (${graph.groups.length})`);
+    for (const g of graph.groups) {
+      const isolation: string[] = [];
+      if (g.is_isolated_ingress) isolation.push("ingress-isolated");
+      if (g.is_isolated_egress) isolation.push("egress-isolated");
+      const isoStr = isolation.length > 0 ? ` [${isolation.join(", ")}]` : "";
+      const policies =
+        g.matching_policies.length > 0 ? ` policies: [${g.matching_policies.join(", ")}]` : "";
+      lines.push(
+        `- **${g.name}** (ns: ${g.namespace}, kind: ${g.kind}, ${g.pod_count} pods)${isoStr}${policies}`,
+      );
+    }
+    lines.push("");
+  }
+
+  // CIDR nodes
+  if (graph.external_cidrs.length > 0) {
+    lines.push(`## External CIDRs (${graph.external_cidrs.length})`);
+    for (const c of graph.external_cidrs) {
+      const except = c.except.length > 0 ? ` except [${c.except.join(", ")}]` : "";
+      lines.push(`- ${c.cidr}${except} (from policy: ${c.from_policy})`);
+    }
+    lines.push("");
+  }
+
+  // Traffic edges
+  if (graph.edges.length > 0) {
+    lines.push(`## Traffic Edges (${graph.edges.length})`);
+    for (const e of graph.edges) {
+      const ports =
+        e.ports.length > 0
+          ? e.ports.map((p) => (p.port ? `${p.port}/${p.protocol}` : p.protocol)).join(", ")
+          : "all ports";
+      lines.push(
+        `- ${e.source} → ${e.target} [${e.direction}] via ${e.policy_name} (${ports})`,
+      );
+    }
+    lines.push("");
+  }
+
+  return lines.join("\n");
+}
+
+// ── Detect simulation from user question ─────────────────────────────
+
+interface SimulationMatch {
+  sourceGroup: NetworkPolicyPodGroup;
+  destGroup: NetworkPolicyPodGroup;
+}
+
+function detectSimulation(
+  text: string,
   groups: NetworkPolicyPodGroup[],
-  cidrs: NetworkPolicyCidrNode[],
-  width: number,
-  height: number,
-): SimNode[] {
-  // Spread groups by namespace in circles
-  const nsByIdx = new Map<string, number>();
-  let nsCounter = 0;
-  for (const g of groups) {
-    if (!nsByIdx.has(g.namespace)) {
-      nsByIdx.set(g.namespace, nsCounter++);
-    }
+): SimulationMatch | null {
+  // Pattern: "can X talk/reach/connect/access Y"
+  const pattern =
+    /can\s+(.+?)\s+(?:talk|reach|connect|access|communicate|send)\s+(?:to|with)\s+(.+?)[\s?]*$/i;
+  const match = text.match(pattern);
+  if (!match) return null;
+
+  const sourceQuery = match[1].trim().toLowerCase();
+  const destQuery = match[2].trim().toLowerCase();
+
+  const findGroup = (query: string): NetworkPolicyPodGroup | undefined => {
+    // Exact name match
+    let found = groups.find((g) => g.name.toLowerCase() === query);
+    if (found) return found;
+    // Partial match
+    found = groups.find((g) => g.name.toLowerCase().includes(query));
+    if (found) return found;
+    // Match by pod name
+    found = groups.find((g) =>
+      g.pods.some((p) => p.name.toLowerCase().includes(query)),
+    );
+    return found;
+  };
+
+  const sourceGroup = findGroup(sourceQuery);
+  const destGroup = findGroup(destQuery);
+
+  if (sourceGroup && destGroup && sourceGroup.id !== destGroup.id) {
+    return { sourceGroup, destGroup };
   }
-  const nsCount = nsByIdx.size || 1;
-
-  const nodes: SimNode[] = groups.map((g, i) => {
-    const nsIdx = nsByIdx.get(g.namespace) ?? 0;
-    const angle = (nsIdx / nsCount) * 2 * Math.PI + i * 0.3;
-    const r = 150 + Math.random() * 100;
-    return {
-      id: g.id,
-      type: "group",
-      x: width / 2 + Math.cos(angle) * r,
-      y: height / 2 + Math.sin(angle) * r,
-      vx: 0,
-      vy: 0,
-      fx: null,
-      fy: null,
-      namespace: g.namespace,
-      label: g.name,
-      kind: g.kind,
-      podCount: g.pod_count,
-      isIsolatedIngress: g.is_isolated_ingress,
-      isIsolatedEgress: g.is_isolated_egress,
-      matchingPolicies: g.matching_policies,
-    };
-  });
-
-  // Add CIDR nodes at edges
-  for (const c of cidrs) {
-    nodes.push({
-      id: c.id,
-      type: "cidr",
-      x: width / 2 + (Math.random() - 0.5) * 400,
-      y: height / 2 + (Math.random() - 0.5) * 400,
-      vx: 0,
-      vy: 0,
-      fx: null,
-      fy: null,
-      namespace: "__external__",
-      label: c.cidr,
-      kind: "CIDR",
-      podCount: 0,
-      isIsolatedIngress: false,
-      isIsolatedEgress: false,
-      matchingPolicies: [c.from_policy],
-    });
-  }
-
-  return nodes;
-}
-
-function tickSimulation(
-  nodes: SimNode[],
-  edges: NetworkPolicyTrafficEdge[],
-  width: number,
-  height: number,
-  alpha: number,
-): number {
-  const nodeMap = new Map<string, number>();
-  for (let i = 0; i < nodes.length; i++) nodeMap.set(nodes[i].id, i);
-
-  // Namespace centroids
-  const nsCentroids = new Map<string, { x: number; y: number; count: number }>();
-  for (const n of nodes) {
-    if (n.namespace === "__external__") continue;
-    const c = nsCentroids.get(n.namespace) ?? { x: 0, y: 0, count: 0 };
-    c.x += n.x;
-    c.y += n.y;
-    c.count++;
-    nsCentroids.set(n.namespace, c);
-  }
-
-  // Repulsion
-  for (let i = 0; i < nodes.length; i++) {
-    for (let j = i + 1; j < nodes.length; j++) {
-      const a = nodes[i];
-      const b = nodes[j];
-      let dx = b.x - a.x;
-      let dy = b.y - a.y;
-      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-      const force = (REPULSION * alpha) / (dist * dist);
-      dx = (dx / dist) * force;
-      dy = (dy / dist) * force;
-      if (a.fx === null) {
-        a.vx -= dx;
-        a.vy -= dy;
-      }
-      if (b.fx === null) {
-        b.vx += dx;
-        b.vy += dy;
-      }
-    }
-  }
-
-  // Attraction along edges
-  for (const e of edges) {
-    const si = nodeMap.get(e.source);
-    const ti = nodeMap.get(e.target);
-    if (si === undefined || ti === undefined) continue;
-    const a = nodes[si];
-    const b = nodes[ti];
-    let dx = b.x - a.x;
-    let dy = b.y - a.y;
-    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-    const force = (dist - REST_LENGTH) * ATTRACTION * alpha;
-    dx = (dx / dist) * force;
-    dy = (dy / dist) * force;
-    if (a.fx === null) {
-      a.vx += dx;
-      a.vy += dy;
-    }
-    if (b.fx === null) {
-      b.vx -= dx;
-      b.vy -= dy;
-    }
-  }
-
-  // Namespace gravity
-  for (const n of nodes) {
-    if (n.fx !== null) continue;
-    const c = nsCentroids.get(n.namespace);
-    if (c && c.count > 1) {
-      const cx = c.x / c.count;
-      const cy = c.y / c.count;
-      n.vx += (cx - n.x) * NS_GRAVITY * alpha;
-      n.vy += (cy - n.y) * NS_GRAVITY * alpha;
-    }
-    // Center gravity
-    n.vx += (width / 2 - n.x) * CENTER_GRAVITY * alpha;
-    n.vy += (height / 2 - n.y) * CENTER_GRAVITY * alpha;
-  }
-
-  // Apply velocities
-  for (const n of nodes) {
-    if (n.fx !== null) {
-      n.x = n.fx;
-      n.y = n.fy!;
-      n.vx = 0;
-      n.vy = 0;
-      continue;
-    }
-    n.vx *= DAMPING;
-    n.vy *= DAMPING;
-    n.x += n.vx;
-    n.y += n.vy;
-  }
-
-  return alpha * ALPHA_DECAY;
-}
-
-// ── Namespace bounding boxes ─────────────────────────────────────────
-
-interface NsBounds {
-  ns: string;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
-
-function computeNsBounds(nodes: SimNode[]): NsBounds[] {
-  const nsNodes = new Map<string, SimNode[]>();
-  for (const n of nodes) {
-    if (n.namespace === "__external__") continue;
-    const arr = nsNodes.get(n.namespace) ?? [];
-    arr.push(n);
-    nsNodes.set(n.namespace, arr);
-  }
-  const bounds: NsBounds[] = [];
-  for (const [ns, arr] of nsNodes) {
-    let minX = Infinity,
-      minY = Infinity,
-      maxX = -Infinity,
-      maxY = -Infinity;
-    for (const n of arr) {
-      minX = Math.min(minX, n.x - NODE_RADIUS);
-      minY = Math.min(minY, n.y - NODE_RADIUS);
-      maxX = Math.max(maxX, n.x + NODE_RADIUS);
-      maxY = Math.max(maxY, n.y + NODE_RADIUS);
-    }
-    bounds.push({
-      ns,
-      x: minX - NS_PADDING,
-      y: minY - NS_PADDING,
-      w: maxX - minX + NS_PADDING * 2,
-      h: maxY - minY + NS_PADDING * 2,
-    });
-  }
-  return bounds;
-}
-
-// ── Edge path ────────────────────────────────────────────────────────
-
-function edgePath(sx: number, sy: number, tx: number, ty: number): string {
-  const mx = (sx + tx) / 2;
-  const my = (sy + ty) / 2;
-  const dx = tx - sx;
-  const dy = ty - sy;
-  const perpX = -dy * 0.15;
-  const perpY = dx * 0.15;
-  return `M ${sx} ${sy} Q ${mx + perpX} ${my + perpY}, ${tx} ${ty}`;
-}
-
-// ── Kind icon ────────────────────────────────────────────────────────
-
-function KindIcon({ kind, color }: { kind: string; color: string }) {
-  const props = { width: 14, height: 14, color, strokeWidth: 1.5 };
-  switch (kind) {
-    case "Deployment":
-      return <Container {...props} />;
-    case "Pod":
-      return <Box {...props} />;
-    case "CIDR":
-      return <Globe {...props} />;
-    case "ReplicaSet":
-      return <Layers {...props} />;
-    default:
-      return <Server {...props} />;
-  }
+  return null;
 }
 
 // ── Main Component ───────────────────────────────────────────────────
@@ -326,132 +206,55 @@ export function NetworkPolicyView({ namespace, currentContext }: NetworkPolicyVi
     currentContext,
   );
 
-  // Simulation nodes
-  const [simNodes, setSimNodes] = useState<SimNode[]>([]);
-  const simNodesRef = useRef<SimNode[]>([]);
-  const alphaRef = useRef(1);
-  const animRef = useRef<number>(0);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [containerSize, setContainerSize] = useState({ width: 1200, height: 800 });
+  // Chat state
+  const [messages, setMessages] = useState<NPMessage[]>([]);
+  const [input, setInput] = useState("");
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [aiConfig, setAiConfig] = useState<AIConfig>(() => loadAIConfig());
+  const [showSettings, setShowSettings] = useState(false);
 
-  // Pan/zoom
-  const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
-  const [isPanning, setIsPanning] = useState(false);
-  const panStart = useRef({ x: 0, y: 0, tx: 0, ty: 0 });
-  const dragNode = useRef<string | null>(null);
-
-  // Selection/filter
-  const [hoveredNode, setHoveredNode] = useState<string | null>(null);
+  // Policy sidebar
   const [selectedPolicy, setSelectedPolicy] = useState<string | null>(null);
   const [policySearch, setPolicySearch] = useState("");
-
-  // Simulation panel
-  const [simOpen, setSimOpen] = useState(false);
-  const [simSourceNs, setSimSourceNs] = useState("");
-  const [simSourcePod, setSimSourcePod] = useState("");
-  const [simDestNs, setSimDestNs] = useState("");
-  const [simDestPod, setSimDestPod] = useState("");
-  const [simPort, setSimPort] = useState("");
-  const [simProtocol, setSimProtocol] = useState("TCP");
-  const [simResult, setSimResult] = useState<TrafficSimulationResult | null>(null);
-  const [simLoading, setSimLoading] = useState(false);
-
-  // Policy panel
   const [policyPanelOpen, setPolicyPanelOpen] = useState(true);
 
-  // Measure container
+  // Refs
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const unlistenRef = useRef<(() => void) | null>(null);
+  const toast = useToast();
+
+  // Auto-scroll only when user is already near the bottom
   useEffect(() => {
-    const update = () => {
-      if (containerRef.current) {
-        const r = containerRef.current.getBoundingClientRect();
-        setContainerSize({ width: r.width, height: r.height });
-      }
-    };
-    update();
-    const obs = new ResizeObserver(update);
-    if (containerRef.current) obs.observe(containerRef.current);
-    return () => obs.disconnect();
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+    // Only auto-scroll if within 150px of bottom
+    if (distanceFromBottom < 150) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
+
+  // Focus input on mount
+  useEffect(() => {
+    const timer = setTimeout(() => inputRef.current?.focus(), 300);
+    return () => clearTimeout(timer);
   }, []);
 
-  // Initialize simulation when graph changes
+  // Cleanup listener on unmount
   useEffect(() => {
-    if (!graph) return;
-    const nodes = initNodes(
-      graph.groups,
-      graph.external_cidrs,
-      containerSize.width,
-      containerSize.height,
-    );
-    simNodesRef.current = nodes;
-    setSimNodes([...nodes]);
-    alphaRef.current = 1;
-  }, [graph, containerSize.width, containerSize.height]);
-
-  // Run simulation loop
-  useEffect(() => {
-    if (!graph || simNodesRef.current.length === 0) return;
-
-    const tick = () => {
-      if (alphaRef.current < 0.001) {
-        animRef.current = requestAnimationFrame(tick); // Keep checking for reheat
-        return;
+    return () => {
+      if (unlistenRef.current) {
+        unlistenRef.current();
+        unlistenRef.current = null;
       }
-      alphaRef.current = tickSimulation(
-        simNodesRef.current,
-        graph.edges,
-        containerSize.width,
-        containerSize.height,
-        alphaRef.current,
-      );
-      setSimNodes([...simNodesRef.current]);
-      animRef.current = requestAnimationFrame(tick);
     };
+  }, []);
 
-    animRef.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(animRef.current);
-  }, [graph, containerSize.width, containerSize.height]);
+  // ── Data memos ────────────────────────────────────────────────────
 
-  // Namespace bounds
-  const nsBounds = useMemo(() => computeNsBounds(simNodes), [simNodes]);
-
-  // Node map for edges
-  const nodeMap = useMemo(() => {
-    const m = new Map<string, SimNode>();
-    for (const n of simNodes) m.set(n.id, n);
-    return m;
-  }, [simNodes]);
-
-  // Connected nodes for hover
-  const connectedToHovered = useMemo(() => {
-    if (!hoveredNode || !graph) return new Set<string>();
-    const connected = new Set<string>();
-    connected.add(hoveredNode);
-    for (const e of graph.edges) {
-      if (e.source === hoveredNode) connected.add(e.target);
-      if (e.target === hoveredNode) connected.add(e.source);
-    }
-    return connected;
-  }, [hoveredNode, graph]);
-
-  // Affected groups for selected policy
-  const policyAffectedGroups = useMemo(() => {
-    if (!selectedPolicy || !graph) return new Set<string>();
-    const affected = new Set<string>();
-    for (const g of graph.groups) {
-      if (g.matching_policies.includes(selectedPolicy)) {
-        affected.add(g.id);
-      }
-    }
-    for (const e of graph.edges) {
-      if (e.policy_name === selectedPolicy) {
-        affected.add(e.source);
-        affected.add(e.target);
-      }
-    }
-    return affected;
-  }, [selectedPolicy, graph]);
-
-  // Filtered policies
   const filteredPolicies = useMemo(() => {
     if (!graph) return [];
     if (!policySearch) return graph.policies;
@@ -461,7 +264,6 @@ export function NetworkPolicyView({ namespace, currentContext }: NetworkPolicyVi
     );
   }, [graph, policySearch]);
 
-  // Pod list for simulation dropdowns
   const allPods = useMemo(() => {
     if (!graph) return [];
     const pods: { name: string; namespace: string }[] = [];
@@ -473,151 +275,205 @@ export function NetworkPolicyView({ namespace, currentContext }: NetworkPolicyVi
     return pods;
   }, [graph]);
 
-  const podNamespaces = useMemo(() => {
-    const ns = new Set<string>();
-    for (const p of allPods) ns.add(p.namespace);
-    return Array.from(ns).sort();
-  }, [allPods]);
+  // ── Suggested questions ───────────────────────────────────────────
 
-  // Fit to view
-  const fitToView = useCallback(() => {
-    if (simNodes.length === 0 || !containerRef.current) return;
-    let minX = Infinity,
-      minY = Infinity,
-      maxX = -Infinity,
-      maxY = -Infinity;
-    for (const n of simNodes) {
-      minX = Math.min(minX, n.x - 50);
-      minY = Math.min(minY, n.y - 50);
-      maxX = Math.max(maxX, n.x + 50);
-      maxY = Math.max(maxY, n.y + 50);
+  const suggestedQuestions = useMemo(() => {
+    if (!graph) return [];
+    const questions: string[] = [];
+
+    // If 2+ groups: connectivity question
+    if (graph.groups.length >= 2) {
+      const g1 = graph.groups[0];
+      const g2 = graph.groups[1];
+      questions.push(`Can ${g1.name} talk to ${g2.name}?`);
     }
-    const gw = maxX - minX || 1;
-    const gh = maxY - minY || 1;
-    const rect = containerRef.current.getBoundingClientRect();
-    const scaleX = (rect.width - 80) / gw;
-    const scaleY = (rect.height - 80) / gh;
-    const scale = Math.min(scaleX, scaleY, 1.5);
-    const x = (rect.width - gw * scale) / 2 - minX * scale;
-    const y = (rect.height - gh * scale) / 2 - minY * scale;
-    setTransform({ x, y, scale });
-  }, [simNodes]);
 
-  // Fit on initial load
-  const hasSimNodes = simNodes.length > 0;
-  useEffect(() => {
-    if (hasSimNodes && alphaRef.current < 0.5) {
-      const t = setTimeout(fitToView, 100);
-      return () => clearTimeout(t);
+    // Isolated pods
+    const isolated = graph.groups.filter(
+      (g) => g.is_isolated_ingress || g.is_isolated_egress,
+    );
+    if (isolated.length > 0) {
+      questions.push("Which pods are isolated and why?");
     }
-  }, [hasSimNodes, fitToView]);
 
-  // Mouse handlers
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
-    const factor = e.deltaY > 0 ? 0.92 : 1.08;
-    setTransform((t) => {
-      const newScale = Math.min(Math.max(t.scale * factor, 0.1), 5);
-      const sc = newScale / t.scale;
-      return { x: mx - (mx - t.x) * sc, y: my - (my - t.y) * sc, scale: newScale };
-    });
-  }, []);
+    // CIDR edges
+    if (graph.external_cidrs.length > 0) {
+      questions.push("What external traffic is allowed?");
+    }
 
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      if (e.button !== 0 || dragNode.current) return;
-      setIsPanning(true);
-      panStart.current = { x: e.clientX, y: e.clientY, tx: transform.x, ty: transform.y };
-    },
-    [transform],
-  );
+    // Policy explanation
+    if (graph.policies.length > 0) {
+      questions.push(`What does ${graph.policies[0].name} do?`);
+    }
 
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent) => {
-      if (dragNode.current) {
-        const rect = containerRef.current?.getBoundingClientRect();
-        if (!rect) return;
-        const svgX = (e.clientX - rect.left - transform.x) / transform.scale;
-        const svgY = (e.clientY - rect.top - transform.y) / transform.scale;
-        const node = simNodesRef.current.find((n) => n.id === dragNode.current);
-        if (node) {
-          node.fx = svgX;
-          node.fy = svgY;
-          node.x = svgX;
-          node.y = svgY;
+    // Always
+    questions.push("Summarize the network security posture");
+
+    return questions.slice(0, 4);
+  }, [graph]);
+
+  // ── Send message ──────────────────────────────────────────────────
+
+  const sendMessage = useCallback(
+    async (text: string) => {
+      if (!text.trim() || isStreaming || !graph) return;
+
+      const trimmed = text.trim();
+      const userMsg: NPMessage = { id: msgId(), role: "user", content: trimmed };
+
+      // Detect simulation
+      const simMatch = detectSimulation(trimmed, graph.groups);
+      if (simMatch) {
+        const sourcePod = simMatch.sourceGroup.pods[0];
+        const destPod = simMatch.destGroup.pods[0];
+
+        if (sourcePod && destPod) {
+          try {
+            const result = await simulate(
+              sourcePod.namespace,
+              sourcePod.name,
+              destPod.namespace,
+              destPod.name,
+            );
+            userMsg.simulationResult = result;
+            userMsg.sourceLabel = simMatch.sourceGroup.name;
+            userMsg.destLabel = simMatch.destGroup.name;
+          } catch {
+            // Simulation failed, continue without it
+          }
         }
-        alphaRef.current = Math.max(alphaRef.current, 0.3);
+      }
+
+      setMessages((prev) => [...prev, userMsg]);
+      setInput("");
+      setIsStreaming(true);
+
+      // Build messages for AI
+      const systemContext = buildGraphContext(graph);
+      const systemPrompt = `You are a Kubernetes network policy expert assistant. You analyze NetworkPolicies and help users understand traffic flow between workloads.
+
+Answer questions clearly and concisely. Reference specific policy names when relevant. Use the graph context below to answer accurately.
+
+${systemContext}
+
+When a simulation result is provided with the user's question, explain WHY the traffic is allowed or denied based on the policies. Reference the specific policies and rules.
+
+Available workloads: ${graph.groups.map((g) => g.name).join(", ")}
+Total pods: ${allPods.length}`;
+
+      const chatMessages: ChatMessage[] = [
+        { role: "system", content: systemPrompt },
+      ];
+
+      // Add conversation history (last 10 messages)
+      const recentMsgs = [...messages, userMsg].slice(-10);
+      for (const m of recentMsgs) {
+        let content = m.content;
+        if (m.simulationResult) {
+          content += `\n\n[Simulation Result: ${m.sourceLabel} → ${m.destLabel}: ${m.simulationResult.allowed ? "ALLOWED" : "DENIED"}. ${m.simulationResult.summary}]`;
+        }
+        chatMessages.push({ role: m.role, content });
+      }
+
+      const newSessionId = nextSessionId();
+
+      // Clean up previous listener
+      if (unlistenRef.current) {
+        unlistenRef.current();
+        unlistenRef.current = null;
+      }
+
+      // Set up listener BEFORE calling backend
+      try {
+        const eventName = `ai-chat://${newSessionId}`;
+        const unlisten = await listen<AIResponsePayload>(eventName, (event) => {
+          const payload = event.payload;
+
+          if (payload.type === "chunk" && payload.content) {
+            setMessages((prev) => {
+              const last = prev[prev.length - 1];
+              if (last && last.role === "assistant") {
+                const updated = [...prev];
+                updated[updated.length - 1] = {
+                  ...last,
+                  content: last.content + payload.content,
+                };
+                return updated;
+              }
+              return [
+                ...prev,
+                { id: msgId(), role: "assistant", content: payload.content! },
+              ];
+            });
+          } else if (payload.type === "done") {
+            setIsStreaming(false);
+          } else if (payload.type === "error") {
+            setIsStreaming(false);
+            const errorMsg = payload.message || "An unknown error occurred.";
+            setMessages((prev) => {
+              const last = prev[prev.length - 1];
+              if (last && last.role === "assistant") {
+                const updated = [...prev];
+                updated[updated.length - 1] = {
+                  ...last,
+                  content: last.content + `\n\n[Error: ${errorMsg}]`,
+                };
+                return updated;
+              }
+              return [
+                ...prev,
+                { id: msgId(), role: "assistant", content: `[Error: ${errorMsg}]` },
+              ];
+            });
+          }
+          // status events are ignored (could show "Thinking..." but keeping it simple)
+        });
+        unlistenRef.current = unlisten;
+      } catch (err) {
+        console.error("Failed to set up AI response listener", err);
+        setIsStreaming(false);
         return;
       }
-      if (!isPanning) return;
-      const dx = e.clientX - panStart.current.x;
-      const dy = e.clientY - panStart.current.y;
-      setTransform((t) => ({ ...t, x: panStart.current.tx + dx, y: panStart.current.ty + dy }));
+
+      // Call backend
+      try {
+        const request: AIChatRequest = {
+          messages: chatMessages,
+          session_id: newSessionId,
+          namespace: namespace,
+        };
+        await aiChat(aiConfig, request);
+      } catch (err) {
+        setIsStreaming(false);
+        const errMsg = err instanceof Error ? err.message : String(err);
+        setMessages((prev) => [
+          ...prev,
+          { id: msgId(), role: "assistant", content: `[Error: ${errMsg}]` },
+        ]);
+      }
     },
-    [isPanning, transform],
+    [isStreaming, graph, messages, allPods, namespace, aiConfig, simulate],
   );
 
-  const handleMouseUp = useCallback(() => {
-    if (dragNode.current) {
-      const node = simNodesRef.current.find((n) => n.id === dragNode.current);
-      if (node) {
-        node.fx = null;
-        node.fy = null;
-      }
-      dragNode.current = null;
-    }
-    setIsPanning(false);
-  }, []);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    sendMessage(input);
+  };
 
-  const handleNodeMouseDown = useCallback(
-    (e: React.MouseEvent, nodeId: string) => {
-      e.stopPropagation();
-      dragNode.current = nodeId;
-      const rect = containerRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      const svgX = (e.clientX - rect.left - transform.x) / transform.scale;
-      const svgY = (e.clientY - rect.top - transform.y) / transform.scale;
-      const node = simNodesRef.current.find((n) => n.id === nodeId);
-      if (node) {
-        node.fx = svgX;
-        node.fy = svgY;
-      }
-      alphaRef.current = Math.max(alphaRef.current, 0.5);
-    },
-    [transform],
-  );
-
-  // Simulation handler
-  const runSimulation = useCallback(async () => {
-    if (!simSourceNs || !simSourcePod || !simDestNs || !simDestPod) return;
-    setSimLoading(true);
+  const handleCopyMessage = async (content: string) => {
     try {
-      const result = await simulate(
-        simSourceNs,
-        simSourcePod,
-        simDestNs,
-        simDestPod,
-        simPort ? parseInt(simPort) : undefined,
-        simProtocol || undefined,
-      );
-      setSimResult(result);
-    } catch (err) {
-      setSimResult({
-        allowed: false,
-        summary: `Error: ${err}`,
-        ingress_evaluation: { isolated: false, policy_results: [] },
-        egress_evaluation: { isolated: false, policy_results: [] },
-      });
-    } finally {
-      setSimLoading(false);
+      await navigator.clipboard.writeText(content);
+      toast("Copied to clipboard", "success");
+    } catch {
+      toast("Failed to copy", "error");
     }
-  }, [simulate, simSourceNs, simSourcePod, simDestNs, simDestPod, simPort, simProtocol]);
+  };
 
-  // ── Render states ──────────────────────────────────────────────────
+  const handleClearChat = () => {
+    setMessages([]);
+  };
+
+  // ── Render states ─────────────────────────────────────────────────
 
   if (loading && !graph) {
     return (
@@ -652,601 +508,476 @@ export function NetworkPolicyView({ namespace, currentContext }: NetworkPolicyVi
     );
   }
 
-  const isHighlighting = hoveredNode !== null || selectedPolicy !== null;
-
-  function getNodeOpacity(nodeId: string): number {
-    if (!isHighlighting) return 1;
-    if (selectedPolicy) {
-      return policyAffectedGroups.has(nodeId) ? 1 : 0.12;
-    }
-    if (hoveredNode) {
-      return connectedToHovered.has(nodeId) ? 1 : 0.2;
-    }
-    return 1;
-  }
-
-  function getEdgeOpacity(edge: NetworkPolicyTrafficEdge): number {
-    if (!isHighlighting) return 0.6;
-    if (selectedPolicy) {
-      return edge.policy_name === selectedPolicy ? 0.9 : 0.05;
-    }
-    if (hoveredNode) {
-      const connected = connectedToHovered.has(edge.source) && connectedToHovered.has(edge.target);
-      return connected ? 0.9 : 0.08;
-    }
-    return 0.6;
-  }
+  // Check if AI is configured
+  const hasAIConfig =
+    aiConfig.provider === "ollama" ||
+    aiConfig.provider === "claude_cli" ||
+    aiConfig.provider === "cursor_agent" ||
+    !!aiConfig.api_key;
 
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="h-full w-full relative overflow-hidden flex"
-      ref={containerRef}
+      className="h-full w-full relative overflow-hidden flex flex-col"
     >
-      {/* SVG Canvas */}
-      <div className="flex-1 relative overflow-hidden">
-        {/* Toolbar */}
-        <div className="absolute top-3 left-3 z-20 flex items-center gap-2">
-          <div className="text-[10px] text-slate-500 font-mono px-2 py-1 bg-surface/80 border border-slate-800 rounded-lg backdrop-blur-sm">
-            <Shield className="w-3 h-3 inline mr-1" />
-            {graph.policies.length} policies &middot; {graph.groups.length} groups &middot;{" "}
-            {graph.edges.length} edges
+      {/* Stats Bar */}
+      <div className="flex items-center justify-between px-4 py-2 border-b border-slate-800/50 shrink-0">
+        <div className="flex items-center gap-4">
+          <div className="text-[10px] text-slate-500 font-mono flex items-center gap-1.5">
+            <Shield className="w-3 h-3" />
+            {graph.policies.length} policies
           </div>
+          <div className="text-[10px] text-slate-500 font-mono">
+            {graph.groups.length} workloads
+          </div>
+          <div className="text-[10px] text-slate-500 font-mono">{graph.edges.length} edges</div>
         </div>
-
-        <div
-          className="absolute top-3 right-3 z-20 flex items-center gap-1.5"
-          style={{ right: policyPanelOpen ? "316px" : "12px" }}
-        >
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowSettings((v) => !v)}
+            className={cn(
+              "flex items-center gap-1.5 px-2 py-1 text-[11px] rounded-md border transition",
+              showSettings
+                ? "bg-accent/10 border-accent/50 text-accent"
+                : "bg-surface/80 border-slate-800 text-slate-400 hover:border-accent/50 hover:text-slate-300",
+            )}
+          >
+            <Settings2 className="w-3 h-3" />
+            AI Settings
+          </button>
           <button
             onClick={refresh}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-slate-300 bg-surface/80 border border-slate-800 rounded-lg hover:border-accent/50 transition backdrop-blur-sm"
+            className="flex items-center gap-1.5 px-2 py-1 text-[11px] text-slate-400 bg-surface/80 border border-slate-800 rounded-md hover:border-accent/50 hover:text-slate-300 transition"
             title="Refresh"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
+            <RefreshCw className="w-3 h-3" />
           </button>
-          <button
-            onClick={fitToView}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-slate-300 bg-surface/80 border border-slate-800 rounded-lg hover:border-accent/50 transition backdrop-blur-sm"
-            title="Fit to view"
-          >
-            <Maximize2 className="w-3.5 h-3.5" />
-            Fit
-          </button>
-          <span className="text-[10px] text-slate-600 font-mono px-1.5">
-            {Math.round(transform.scale * 100)}%
-          </span>
         </div>
+      </div>
 
-        {/* Legend */}
-        <div className="absolute bottom-3 left-3 z-20 flex items-center gap-3 px-3 py-2 bg-surface/80 border border-slate-800 rounded-lg backdrop-blur-sm">
-          {[...Object.entries(GROUP_COLORS).slice(0, 4), ["CIDR", CIDR_COLOR] as const].map(
-            ([kind, color]) => (
-              <div key={kind} className="flex items-center gap-1.5">
-                <div
-                  className="w-2.5 h-2.5 rounded-full"
-                  style={{ backgroundColor: (color as typeof DEFAULT_COLOR).stroke }}
-                />
-                <span className="text-[10px] text-slate-400">{kind}</span>
+      {/* AI Settings (collapsible) */}
+      <AnimatePresence>
+        {showSettings && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 400, damping: 35 }}
+            className="border-b border-slate-800/50 overflow-hidden shrink-0"
+          >
+            <div className="px-4 py-4 bg-background/50">
+              <AISettings config={aiConfig} onConfigChange={setAiConfig} />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Main content */}
+      <div className="flex-1 flex min-h-0 overflow-hidden">
+        {/* Chat area */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          {/* Messages */}
+          <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
+            {messages.length === 0 && (
+              <div className="flex flex-col items-center justify-center h-full text-center px-6">
+                <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center mb-4">
+                  <Bot className="w-7 h-7 text-accent/60" />
+                </div>
+                <p className="text-sm text-slate-400 mb-1">
+                  Ask about your network policies
+                </p>
+                <p className="text-xs text-slate-600 mb-6">
+                  "Can X talk to Y?", "Which pods are isolated?", "What does this policy do?"
+                </p>
+
+                {!hasAIConfig && !showSettings && (
+                  <div className="mb-6 px-4 py-3 rounded-lg border border-amber-500/30 bg-amber-500/5 max-w-sm">
+                    <p className="text-xs text-amber-400 mb-2">
+                      No AI provider configured
+                    </p>
+                    <button
+                      onClick={() => setShowSettings(true)}
+                      className="text-xs text-accent hover:text-accent/80 underline underline-offset-2"
+                    >
+                      Open AI Settings
+                    </button>
+                  </div>
+                )}
+
+                {/* Suggested questions */}
+                {suggestedQuestions.length > 0 && (
+                  <div className="flex flex-wrap gap-2 justify-center max-w-lg">
+                    {suggestedQuestions.map((q) => (
+                      <button
+                        key={q}
+                        onClick={() => sendMessage(q)}
+                        disabled={isStreaming || !hasAIConfig}
+                        className={cn(
+                          "px-3 py-1.5 rounded-lg border text-xs transition text-left",
+                          "border-slate-700 text-slate-300 hover:border-accent/50 hover:text-accent hover:bg-accent/5",
+                          "disabled:opacity-40 disabled:cursor-not-allowed",
+                        )}
+                      >
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-            ),
-          )}
-          <div className="flex items-center gap-1.5 ml-2 pl-2 border-l border-slate-700">
-            <div className="w-3 h-0 border-t border-emerald-500 border-dashed" />
-            <span className="text-[10px] text-slate-400">Ingress</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-0 border-t border-blue-500 border-dashed" />
-            <span className="text-[10px] text-slate-400">Egress</span>
-          </div>
-        </div>
+            )}
 
-        {/* Simulation toggle */}
-        <div
-          className="absolute bottom-3 right-3 z-20"
-          style={{ right: policyPanelOpen ? "316px" : "12px" }}
-        >
-          <button
-            onClick={() => setSimOpen(!simOpen)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition backdrop-blur-sm ${
-              simOpen
-                ? "bg-accent/10 border-accent/50 text-accent"
-                : "bg-surface/80 border-slate-800 text-slate-300 hover:border-accent/50"
-            }`}
-          >
-            <ShieldCheck className="w-3.5 h-3.5" />
-            Can they talk?
-          </button>
-        </div>
+            {messages.map((msg) => (
+              <div key={msg.id}>
+                {/* User message */}
+                {msg.role === "user" && (
+                  <div className="flex gap-2.5 justify-end">
+                    <div className="max-w-[85%] rounded-lg rounded-br-sm px-3 py-2 bg-accent/15 text-slate-100 text-sm leading-relaxed">
+                      <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                    </div>
+                  </div>
+                )}
 
-        {/* SVG */}
-        <svg
-          className="w-full h-full"
-          style={{
-            cursor: isPanning ? "grabbing" : dragNode.current ? "grabbing" : "grab",
-            background: "radial-gradient(circle at 50% 50%, #0f1a2e 0%, #0b1221 100%)",
-          }}
-          onWheel={handleWheel}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-        >
-          <defs>
-            <pattern
-              id="np-grid"
-              width={40}
-              height={40}
-              patternUnits="userSpaceOnUse"
-              patternTransform={`translate(${transform.x} ${transform.y}) scale(${transform.scale})`}
-            >
-              <circle cx={20} cy={20} r={0.5} fill="#1e293b" />
-            </pattern>
-            <marker
-              id="np-arrow-ingress"
-              markerWidth={8}
-              markerHeight={6}
-              refX={7}
-              refY={3}
-              orient="auto"
-            >
-              <path d="M 0 0 L 8 3 L 0 6 z" fill="#10b981" opacity={0.7} />
-            </marker>
-            <marker
-              id="np-arrow-egress"
-              markerWidth={8}
-              markerHeight={6}
-              refX={7}
-              refY={3}
-              orient="auto"
-            >
-              <path d="M 0 0 L 8 3 L 0 6 z" fill="#3b82f6" opacity={0.7} />
-            </marker>
-          </defs>
+                {/* Simulation result card (attached to user message) */}
+                {msg.role === "user" && msg.simulationResult && (
+                  <div className="mt-2 flex justify-end">
+                    <SimulationResultCard
+                      result={msg.simulationResult}
+                      sourceLabel={msg.sourceLabel || "Source"}
+                      destLabel={msg.destLabel || "Destination"}
+                    />
+                  </div>
+                )}
 
-          <rect width="100%" height="100%" fill="url(#np-grid)" />
-
-          <g transform={`translate(${transform.x}, ${transform.y}) scale(${transform.scale})`}>
-            {/* Namespace boundaries */}
-            {nsBounds.map((b) => (
-              <g key={b.ns}>
-                <rect
-                  x={b.x}
-                  y={b.y}
-                  width={b.w}
-                  height={b.h}
-                  rx={16}
-                  ry={16}
-                  fill="#1a2235"
-                  fillOpacity={0.3}
-                  stroke="#334155"
-                  strokeWidth={1}
-                  strokeDasharray="6 3"
-                />
-                <text
-                  x={b.x + 12}
-                  y={b.y + 18}
-                  fill="#475569"
-                  fontSize={10}
-                  fontFamily="SFMono-Regular, Menlo, Monaco, Consolas, monospace"
-                >
-                  ns: {b.ns}
-                </text>
-              </g>
+                {/* Assistant message */}
+                {msg.role === "assistant" && (
+                  <div className="flex gap-2.5 justify-start">
+                    <div className="w-6 h-6 rounded-md bg-accent/15 flex items-center justify-center shrink-0 mt-0.5">
+                      <Bot className="w-3.5 h-3.5 text-accent" />
+                    </div>
+                    <div className="relative group max-w-[85%] rounded-lg rounded-bl-sm px-3 py-2 bg-muted/60 text-slate-200 border border-slate-800/50 text-sm leading-relaxed overflow-hidden">
+                      <div className="ai-markdown">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {msg.content}
+                        </ReactMarkdown>
+                      </div>
+                      <button
+                        onClick={() => handleCopyMessage(msg.content)}
+                        className="absolute -top-2 -right-2 p-1 rounded bg-surface border border-slate-700 opacity-0 group-hover:opacity-100 transition-opacity hover:border-accent/50"
+                        aria-label="Copy message"
+                      >
+                        <Copy className="w-3 h-3 text-slate-400" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             ))}
 
-            {/* Edges */}
-            {graph.edges.map((e, i) => {
-              const s = nodeMap.get(e.source);
-              const t = nodeMap.get(e.target);
-              if (!s || !t) return null;
-              const opacity = getEdgeOpacity(e);
-              const color = e.direction === "ingress" ? "#10b981" : "#3b82f6";
-              const marker =
-                e.direction === "ingress" ? "url(#np-arrow-ingress)" : "url(#np-arrow-egress)";
-              const portLabel =
-                e.ports.length > 0
-                  ? e.ports.map((p) => (p.port ? `${p.port}/${p.protocol}` : p.protocol)).join(", ")
-                  : "";
-              const mx = (s.x + t.x) / 2;
-              const my = (s.y + t.y) / 2;
-
-              return (
-                <g
-                  key={`${e.source}-${e.target}-${e.direction}-${i}`}
-                  style={{ transition: "opacity 0.2s" }}
-                  opacity={opacity}
-                >
-                  <path
-                    d={edgePath(s.x, s.y, t.x, t.y)}
-                    fill="none"
-                    stroke={color}
-                    strokeWidth={1.5}
-                    strokeDasharray="4 3"
-                    markerEnd={marker}
-                  />
-                  {portLabel && (
-                    <text
-                      x={mx}
-                      y={my - 6}
-                      fill={color}
-                      fontSize={8}
-                      fontFamily="SFMono-Regular, Menlo, Monaco, Consolas, monospace"
-                      textAnchor="middle"
-                      opacity={0.8}
-                    >
-                      {portLabel}
-                    </text>
-                  )}
-                </g>
-              );
-            })}
-
-            {/* Nodes */}
-            {simNodes.map((node) => {
-              const opacity = getNodeOpacity(node.id);
-              const isHovered = hoveredNode === node.id;
-              const isCidr = node.type === "cidr";
-              const color = isCidr ? CIDR_COLOR : getGroupColor(node.kind);
-              const r = isCidr ? CIDR_RADIUS : NODE_RADIUS;
-              const isIsolated = node.isIsolatedIngress || node.isIsolatedEgress;
-
-              return (
-                <g
-                  key={node.id}
-                  opacity={opacity}
-                  style={{ transition: "opacity 0.2s", cursor: "grab" }}
-                  onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
-                  onMouseEnter={() => setHoveredNode(node.id)}
-                  onMouseLeave={() => setHoveredNode(null)}
-                >
-                  {/* Isolation ring */}
-                  {isIsolated && (
-                    <circle
-                      cx={node.x}
-                      cy={node.y}
-                      r={r + 6}
-                      fill="none"
-                      stroke="#ef4444"
-                      strokeWidth={2}
-                      strokeDasharray="4 2"
-                      opacity={0.6}
-                    />
-                  )}
-                  {/* Hover glow */}
-                  {isHovered && (
-                    <circle
-                      cx={node.x}
-                      cy={node.y}
-                      r={r + 4}
-                      fill="none"
-                      stroke={color.stroke}
-                      strokeWidth={1}
-                      opacity={0.5}
-                    />
-                  )}
-                  {/* Node circle */}
-                  <circle
-                    cx={node.x}
-                    cy={node.y}
-                    r={r}
-                    fill={color.fill}
-                    stroke={color.stroke}
-                    strokeWidth={isHovered ? 2 : 1.5}
-                  />
-                  {/* Icon */}
-                  <foreignObject
-                    x={node.x - 7}
-                    y={node.y - (isCidr ? 7 : 14)}
-                    width={14}
-                    height={14}
-                  >
-                    <div
-                      // @ts-expect-error xmlns is valid for foreignObject children
-                      xmlns="http://www.w3.org/1999/xhtml"
-                      style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
-                    >
-                      <KindIcon kind={node.kind} color={color.text} />
-                    </div>
-                  </foreignObject>
-                  {/* Label */}
-                  <text
-                    x={node.x}
-                    y={node.y + (isCidr ? 5 : 6)}
-                    fill="#e2e8f0"
-                    fontSize={isCidr ? 7 : 9}
-                    fontFamily="SFMono-Regular, Menlo, Monaco, Consolas, monospace"
-                    textAnchor="middle"
-                    fontWeight={500}
-                  >
-                    {node.label.length > 16 ? node.label.slice(0, 14) + ".." : node.label}
-                  </text>
-                  {/* Pod count badge */}
-                  {!isCidr && node.podCount > 0 && (
-                    <>
-                      <circle
-                        cx={node.x + r - 4}
-                        cy={node.y - r + 4}
-                        r={8}
-                        fill="#0f172a"
-                        stroke={color.stroke}
-                        strokeWidth={1}
-                      />
-                      <text
-                        x={node.x + r - 4}
-                        y={node.y - r + 7}
-                        fill={color.text}
-                        fontSize={8}
-                        fontFamily="SFMono-Regular, Menlo, Monaco, Consolas, monospace"
-                        textAnchor="middle"
-                        fontWeight={600}
-                      >
-                        {node.podCount}
-                      </text>
-                    </>
-                  )}
-                  {/* Isolation shield icon */}
-                  {isIsolated && (
-                    <foreignObject x={node.x - r + 1} y={node.y - r + 1} width={12} height={12}>
-                      <div
-                        // @ts-expect-error xmlns is valid for foreignObject children
-                        xmlns="http://www.w3.org/1999/xhtml"
-                        style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
-                      >
-                        <ShieldAlert width={10} height={10} color="#ef4444" strokeWidth={2} />
-                      </div>
-                    </foreignObject>
-                  )}
-                </g>
-              );
-            })}
-          </g>
-        </svg>
-
-        {/* Simulation Panel */}
-        <AnimatePresence>
-          {simOpen && (
-            <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", stiffness: 400, damping: 35 }}
-              className="absolute bottom-0 left-0 z-30 bg-surface/95 border-t border-slate-800 backdrop-blur-sm"
-              style={{ right: policyPanelOpen ? "300px" : "0px" }}
-            >
-              <div className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-medium text-slate-200 flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4 text-accent" />
-                    Traffic Simulation
-                  </h3>
-                  <button
-                    onClick={() => setSimOpen(false)}
-                    className="text-slate-500 hover:text-slate-300"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-                <div className="flex items-end gap-3 flex-wrap">
-                  <div className="flex-1 min-w-[140px]">
-                    <label className="text-[10px] text-slate-500 uppercase mb-1 block">
-                      Source NS
-                    </label>
-                    <select
-                      value={simSourceNs}
-                      onChange={(e) => {
-                        setSimSourceNs(e.target.value);
-                        setSimSourcePod("");
-                      }}
-                      className="w-full bg-background border border-slate-800 rounded px-2 py-1.5 text-xs text-slate-200 focus:border-accent/50 outline-none"
-                    >
-                      <option value="">Select...</option>
-                      {podNamespaces.map((ns) => (
-                        <option key={ns} value={ns}>
-                          {ns}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="flex-1 min-w-[160px]">
-                    <label className="text-[10px] text-slate-500 uppercase mb-1 block">
-                      Source Pod
-                    </label>
-                    <select
-                      value={simSourcePod}
-                      onChange={(e) => setSimSourcePod(e.target.value)}
-                      className="w-full bg-background border border-slate-800 rounded px-2 py-1.5 text-xs text-slate-200 focus:border-accent/50 outline-none"
-                    >
-                      <option value="">Select...</option>
-                      {allPods
-                        .filter((p) => p.namespace === simSourceNs)
-                        .map((p) => (
-                          <option key={p.name} value={p.name}>
-                            {p.name}
-                          </option>
-                        ))}
-                    </select>
-                  </div>
-                  <div className="text-slate-600 text-sm px-2 pb-1">&rarr;</div>
-                  <div className="flex-1 min-w-[140px]">
-                    <label className="text-[10px] text-slate-500 uppercase mb-1 block">
-                      Dest NS
-                    </label>
-                    <select
-                      value={simDestNs}
-                      onChange={(e) => {
-                        setSimDestNs(e.target.value);
-                        setSimDestPod("");
-                      }}
-                      className="w-full bg-background border border-slate-800 rounded px-2 py-1.5 text-xs text-slate-200 focus:border-accent/50 outline-none"
-                    >
-                      <option value="">Select...</option>
-                      {podNamespaces.map((ns) => (
-                        <option key={ns} value={ns}>
-                          {ns}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="flex-1 min-w-[160px]">
-                    <label className="text-[10px] text-slate-500 uppercase mb-1 block">
-                      Dest Pod
-                    </label>
-                    <select
-                      value={simDestPod}
-                      onChange={(e) => setSimDestPod(e.target.value)}
-                      className="w-full bg-background border border-slate-800 rounded px-2 py-1.5 text-xs text-slate-200 focus:border-accent/50 outline-none"
-                    >
-                      <option value="">Select...</option>
-                      {allPods
-                        .filter((p) => p.namespace === simDestNs)
-                        .map((p) => (
-                          <option key={p.name} value={p.name}>
-                            {p.name}
-                          </option>
-                        ))}
-                    </select>
-                  </div>
-                  <div className="w-20">
-                    <label className="text-[10px] text-slate-500 uppercase mb-1 block">Port</label>
-                    <input
-                      value={simPort}
-                      onChange={(e) => setSimPort(e.target.value)}
-                      placeholder="Any"
-                      className="w-full bg-background border border-slate-800 rounded px-2 py-1.5 text-xs text-slate-200 focus:border-accent/50 outline-none placeholder:text-slate-600"
-                    />
-                  </div>
-                  <div className="w-20">
-                    <label className="text-[10px] text-slate-500 uppercase mb-1 block">Proto</label>
-                    <select
-                      value={simProtocol}
-                      onChange={(e) => setSimProtocol(e.target.value)}
-                      className="w-full bg-background border border-slate-800 rounded px-2 py-1.5 text-xs text-slate-200 focus:border-accent/50 outline-none"
-                    >
-                      <option value="TCP">TCP</option>
-                      <option value="UDP">UDP</option>
-                      <option value="SCTP">SCTP</option>
-                    </select>
-                  </div>
-                  <button
-                    onClick={runSimulation}
-                    disabled={simLoading || !simSourcePod || !simDestPod}
-                    className="px-4 py-1.5 text-xs font-medium rounded bg-accent/20 text-accent border border-accent/30 hover:bg-accent/30 transition disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    {simLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Test"}
-                  </button>
-                </div>
-
-                {simResult && (
-                  <div
-                    className={`mt-3 px-3 py-2 rounded-lg border text-xs ${
-                      simResult.allowed
-                        ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
-                        : "bg-red-500/10 border-red-500/30 text-red-400"
-                    }`}
-                  >
-                    <div className="font-medium mb-1">
-                      {simResult.allowed ? "ALLOWED" : "DENIED"}
-                    </div>
-                    <div className="text-slate-400">{simResult.summary}</div>
-                    {simResult.egress_evaluation.policy_results.length > 0 && (
-                      <div className="mt-2">
-                        <span className="text-slate-500">Egress:</span>
-                        {simResult.egress_evaluation.policy_results
-                          .filter((r) => r.selects_pod)
-                          .map((r) => (
-                            <span
-                              key={r.policy_name}
-                              className={`ml-2 ${r.allows_traffic ? "text-emerald-400" : "text-red-400"}`}
-                            >
-                              {r.policy_name}: {r.reason}
-                            </span>
-                          ))}
-                      </div>
-                    )}
-                    {simResult.ingress_evaluation.policy_results.length > 0 && (
-                      <div className="mt-1">
-                        <span className="text-slate-500">Ingress:</span>
-                        {simResult.ingress_evaluation.policy_results
-                          .filter((r) => r.selects_pod)
-                          .map((r) => (
-                            <span
-                              key={r.policy_name}
-                              className={`ml-2 ${r.allows_traffic ? "text-emerald-400" : "text-red-400"}`}
-                            >
-                              {r.policy_name}: {r.reason}
-                            </span>
-                          ))}
-                      </div>
-                    )}
-                  </div>
-                )}
+            {/* Streaming indicator */}
+            {isStreaming && messages[messages.length - 1]?.role !== "assistant" && (
+              <div className="flex items-center gap-2 text-xs text-slate-500">
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-accent" />
+                <span>Thinking...</span>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+            )}
 
-      {/* Policy List Panel */}
-      <div
-        className={`relative transition-all duration-300 ${policyPanelOpen ? "w-[300px]" : "w-0"}`}
-      >
-        <button
-          onClick={() => setPolicyPanelOpen(!policyPanelOpen)}
-          className="absolute -left-6 top-3 z-30 w-6 h-8 bg-surface/90 border border-slate-800 border-r-0 rounded-l-md flex items-center justify-center text-slate-500 hover:text-slate-300 transition"
-        >
-          {policyPanelOpen ? (
-            <ChevronDown className="w-3 h-3 rotate-[-90deg]" />
-          ) : (
-            <ChevronUp className="w-3 h-3 rotate-[-90deg]" />
-          )}
-        </button>
-
-        {policyPanelOpen && (
-          <div className="w-[300px] h-full border-l border-slate-800 bg-surface/80 glass flex flex-col overflow-hidden">
-            <div className="p-3 border-b border-slate-800/50">
-              <h3 className="text-xs font-medium text-slate-300 mb-2 flex items-center gap-1.5">
-                <Shield className="w-3.5 h-3.5 text-accent" />
-                Network Policies ({graph.policies.length})
-              </h3>
-              <div className="relative">
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-500" />
-                <input
-                  value={policySearch}
-                  onChange={(e) => setPolicySearch(e.target.value)}
-                  placeholder="Filter policies..."
-                  className="w-full pl-6 pr-6 py-1 text-[11px] font-mono bg-background border border-slate-800 rounded placeholder:text-slate-600 text-slate-300 focus:outline-none focus:border-accent/50 transition"
-                />
-                {policySearch && (
-                  <button
-                    onClick={() => setPolicySearch("")}
-                    className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                )}
-              </div>
-            </div>
-            <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
-              {filteredPolicies.map((policy) => (
-                <PolicyCard
-                  key={`${policy.namespace}/${policy.name}`}
-                  policy={policy}
-                  isSelected={selectedPolicy === policy.name}
-                  onClick={() =>
-                    setSelectedPolicy(selectedPolicy === policy.name ? null : policy.name)
-                  }
-                />
-              ))}
-              {filteredPolicies.length === 0 && (
-                <p className="text-[10px] text-slate-600 text-center py-4">No matching policies</p>
-              )}
-            </div>
+            <div ref={messagesEndRef} />
           </div>
-        )}
+
+          {/* Suggested questions (when conversation started) */}
+          {messages.length > 0 && suggestedQuestions.length > 0 && (
+            <div className="px-4 py-2 border-t border-slate-800/30 shrink-0">
+              <div className="flex gap-1.5 overflow-x-auto">
+                {suggestedQuestions.map((q) => (
+                  <button
+                    key={q}
+                    onClick={() => sendMessage(q)}
+                    disabled={isStreaming || !hasAIConfig}
+                    className={cn(
+                      "px-2.5 py-1 rounded-md border text-[10px] transition whitespace-nowrap shrink-0",
+                      "border-slate-800 text-slate-400 hover:border-accent/50 hover:text-accent",
+                      "disabled:opacity-40 disabled:cursor-not-allowed",
+                    )}
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Input bar */}
+          <form
+            onSubmit={handleSubmit}
+            className="px-4 py-3 border-t border-slate-800 bg-surface/80 shrink-0"
+          >
+            <div className="flex items-center gap-2">
+              {messages.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleClearChat}
+                  disabled={isStreaming}
+                  className={cn(
+                    "p-2 rounded-lg transition shrink-0",
+                    "text-slate-500 hover:text-red-400 hover:bg-muted/50",
+                    "disabled:opacity-40 disabled:cursor-not-allowed",
+                  )}
+                  title="Clear chat"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+              <input
+                ref={inputRef}
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder={
+                  isStreaming
+                    ? "Waiting for response..."
+                    : "Ask about network policies..."
+                }
+                disabled={isStreaming || !hasAIConfig}
+                className={cn(
+                  "flex-1 px-3 py-2 rounded-lg bg-background border border-slate-800 text-sm text-slate-100 placeholder-slate-600",
+                  "focus:outline-none focus:border-accent/50 transition",
+                  "disabled:opacity-50 disabled:cursor-not-allowed",
+                )}
+              />
+              <button
+                type="submit"
+                disabled={isStreaming || !input.trim() || !hasAIConfig}
+                className={cn(
+                  "p-2 rounded-lg transition shrink-0",
+                  input.trim() && !isStreaming && hasAIConfig
+                    ? "bg-accent/20 text-accent hover:bg-accent/30 border border-accent/50"
+                    : "bg-muted/30 text-slate-600 border border-slate-800 cursor-not-allowed",
+                )}
+                aria-label="Send message"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="mt-1.5 text-[10px] text-slate-600 text-center">
+              AI responses may be inaccurate. Simulation results are computed locally.
+            </p>
+          </form>
+        </div>
+
+        {/* Policy List Panel */}
+        <div
+          className={`relative transition-all duration-300 shrink-0 ${policyPanelOpen ? "w-[300px]" : "w-0"}`}
+        >
+          <button
+            onClick={() => setPolicyPanelOpen(!policyPanelOpen)}
+            className="absolute -left-6 top-3 z-30 w-6 h-8 bg-surface/90 border border-slate-800 border-r-0 rounded-l-md flex items-center justify-center text-slate-500 hover:text-slate-300 transition"
+          >
+            {policyPanelOpen ? (
+              <ChevronDown className="w-3 h-3 rotate-[-90deg]" />
+            ) : (
+              <ChevronRight className="w-3 h-3 rotate-[-90deg]" />
+            )}
+          </button>
+
+          {policyPanelOpen && (
+            <div className="w-[300px] h-full border-l border-slate-800 bg-surface/80 glass flex flex-col overflow-hidden">
+              <div className="p-3 border-b border-slate-800/50">
+                <h3 className="text-xs font-medium text-slate-300 mb-2 flex items-center gap-1.5">
+                  <Shield className="w-3.5 h-3.5 text-accent" />
+                  Network Policies ({graph.policies.length})
+                </h3>
+                <div className="relative">
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-500" />
+                  <input
+                    value={policySearch}
+                    onChange={(e) => setPolicySearch(e.target.value)}
+                    placeholder="Filter policies..."
+                    className="w-full pl-6 pr-6 py-1 text-[11px] font-mono bg-background border border-slate-800 rounded placeholder:text-slate-600 text-slate-300 focus:outline-none focus:border-accent/50 transition"
+                  />
+                  {policySearch && (
+                    <button
+                      onClick={() => setPolicySearch("")}
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
+                {filteredPolicies.map((policy) => (
+                  <PolicyCard
+                    key={`${policy.namespace}/${policy.name}`}
+                    policy={policy}
+                    isSelected={selectedPolicy === policy.name}
+                    onClick={() =>
+                      setSelectedPolicy(selectedPolicy === policy.name ? null : policy.name)
+                    }
+                  />
+                ))}
+                {filteredPolicies.length === 0 && (
+                  <p className="text-[10px] text-slate-600 text-center py-4">
+                    No matching policies
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </motion.div>
+  );
+}
+
+// ── Simulation Result Card ──────────────────────────────────────────
+
+function SimulationResultCard({
+  result,
+  sourceLabel,
+  destLabel,
+}: {
+  result: TrafficSimulationResult;
+  sourceLabel: string;
+  destLabel: string;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  const egressResults = result.egress_evaluation.policy_results.filter((r) => r.selects_pod);
+  const ingressResults = result.ingress_evaluation.policy_results.filter((r) => r.selects_pod);
+  const hasDetails = egressResults.length > 0 || ingressResults.length > 0;
+
+  return (
+    <div
+      className={cn(
+        "max-w-[85%] rounded-lg border text-xs overflow-hidden",
+        result.allowed
+          ? "border-emerald-500/30 bg-emerald-500/5"
+          : "border-red-500/30 bg-red-500/5",
+      )}
+    >
+      {/* Header: source → dest + badge */}
+      <div className="flex items-center justify-between px-3 py-2 gap-3">
+        <div className="flex items-center gap-2 font-mono text-slate-300 min-w-0">
+          <span className="truncate">{sourceLabel}</span>
+          <ArrowRight className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+          <span className="truncate">{destLabel}</span>
+        </div>
+        <span
+          className={cn(
+            "px-2 py-0.5 rounded font-semibold text-[10px] shrink-0 flex items-center gap-1",
+            result.allowed
+              ? "bg-emerald-500/20 text-emerald-400"
+              : "bg-red-500/20 text-red-400",
+          )}
+        >
+          {result.allowed ? (
+            <CheckCircle2 className="w-3 h-3" />
+          ) : (
+            <XCircle className="w-3 h-3" />
+          )}
+          {result.allowed ? "ALLOWED" : "DENIED"}
+        </span>
+      </div>
+
+      {/* Summary */}
+      <div className="px-3 pb-2 text-slate-400">{result.summary}</div>
+
+      {/* Egress/Ingress quick summary */}
+      <div className="px-3 pb-2 flex gap-3">
+        <div className="flex items-center gap-1">
+          <span className="text-slate-500">Egress:</span>
+          {result.egress_evaluation.isolated ? (
+            <span className="text-amber-400">Isolated</span>
+          ) : egressResults.some((r) => r.allows_traffic) ? (
+            <span className="text-emerald-400 flex items-center gap-0.5">
+              <CheckCircle2 className="w-2.5 h-2.5" /> Allowed
+            </span>
+          ) : egressResults.length > 0 ? (
+            <span className="text-red-400 flex items-center gap-0.5">
+              <XCircle className="w-2.5 h-2.5" /> Denied
+            </span>
+          ) : (
+            <span className="text-slate-500">No policy</span>
+          )}
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="text-slate-500">Ingress:</span>
+          {result.ingress_evaluation.isolated ? (
+            <span className="text-amber-400">Isolated</span>
+          ) : ingressResults.some((r) => r.allows_traffic) ? (
+            <span className="text-emerald-400 flex items-center gap-0.5">
+              <CheckCircle2 className="w-2.5 h-2.5" /> Allowed
+            </span>
+          ) : ingressResults.length > 0 ? (
+            <span className="text-red-400 flex items-center gap-0.5">
+              <XCircle className="w-2.5 h-2.5" /> Denied
+            </span>
+          ) : (
+            <span className="text-slate-500">No policy</span>
+          )}
+        </div>
+      </div>
+
+      {/* Expandable policy details */}
+      {hasDetails && (
+        <>
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="w-full px-3 py-1.5 flex items-center gap-1 text-[10px] text-slate-500 hover:text-slate-300 border-t border-slate-800/30 transition"
+          >
+            {expanded ? (
+              <ChevronUp className="w-3 h-3" />
+            ) : (
+              <ChevronDown className="w-3 h-3" />
+            )}
+            Policy details ({egressResults.length + ingressResults.length} evaluations)
+          </button>
+
+          <AnimatePresence>
+            {expanded && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="px-3 pb-2 space-y-1">
+                  {egressResults.map((r) => (
+                    <div
+                      key={`e-${r.policy_name}`}
+                      className={cn(
+                        "px-2 py-1 rounded text-[10px]",
+                        r.allows_traffic
+                          ? "bg-emerald-500/10 text-emerald-400"
+                          : "bg-red-500/10 text-red-400",
+                      )}
+                    >
+                      <span className="text-slate-500">egress</span> {r.policy_name}:{" "}
+                      {r.reason}
+                    </div>
+                  ))}
+                  {ingressResults.map((r) => (
+                    <div
+                      key={`i-${r.policy_name}`}
+                      className={cn(
+                        "px-2 py-1 rounded text-[10px]",
+                        r.allows_traffic
+                          ? "bg-emerald-500/10 text-emerald-400"
+                          : "bg-red-500/10 text-red-400",
+                      )}
+                    >
+                      <span className="text-slate-500">ingress</span> {r.policy_name}:{" "}
+                      {r.reason}
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </>
+      )}
+    </div>
   );
 }
 

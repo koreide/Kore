@@ -137,6 +137,9 @@ fn main() {
             rbac_list_roles,
             rbac_natural_language_query,
             rbac_who_can,
+            // Update checker
+            check_for_updates,
+            perform_update,
             // Secure key storage
             store_api_key,
             get_api_key,

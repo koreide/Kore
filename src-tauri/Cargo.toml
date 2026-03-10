@@ -28,6 +28,7 @@ rusqlite = { version = "0.31", features = ["bundled"] }
 reqwest = { version = "0.12", features = ["json", "stream"] }
 keyring = "2"
 uuid = { version = "1", features = ["v4"] }
+tempfile = "3"
 
 [dev-dependencies]
 tokio-test = "0.4"

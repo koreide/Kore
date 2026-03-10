@@ -926,6 +926,19 @@ pub async fn rbac_who_can(
         .map_err(|e| e.to_string())
 }
 
+// ── Update Checker ───────────────────────────────────────────────────
+
+#[tauri::command]
+pub async fn check_for_updates(
+) -> std::result::Result<crate::state::update::UpdateInfo, String> {
+    crate::state::update::check_for_updates().await
+}
+
+#[tauri::command]
+pub async fn perform_update() -> std::result::Result<String, String> {
+    crate::state::update::perform_update().await
+}
+
 // ── Favorites Persistence ────────────────────────────────────────────
 
 fn favorites_path() -> std::result::Result<std::path::PathBuf, String> {

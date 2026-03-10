@@ -141,6 +141,14 @@ export interface ConnectionStatus {
   current_context: string | null;
 }
 
+export interface UpdateInfo {
+  has_update: boolean;
+  current_version: string;
+  latest_version: string;
+  release_url: string;
+  release_notes: string;
+}
+
 export interface PortForwardInfo {
   id: string;
   localPort: number;

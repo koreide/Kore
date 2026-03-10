@@ -15,6 +15,7 @@ pub mod port_forward;
 pub mod rbac;
 pub mod resources;
 pub mod rollback;
+pub mod update;
 pub mod watcher;
 pub mod yaml;
 

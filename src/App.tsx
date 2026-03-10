@@ -25,6 +25,7 @@ import { useResourceWatch } from "./hooks/use-resource-watch";
 import { useKeyboardShortcuts } from "./hooks/use-keyboard-shortcuts";
 import { usePinnedResources } from "./hooks/use-pinned-resources";
 import { useRestartHistory } from "./hooks/use-restart-history";
+import { useUpdateCheck } from "./hooks/use-update-check";
 import { deleteResource } from "./lib/api";
 import { formatError } from "./lib/errors";
 import type { ResourceItem, ResourceKind, AppView } from "./lib/types";
@@ -122,6 +123,7 @@ export default function App() {
   const { pinned, togglePin, isPinned, removePin } = usePinnedResources();
   const { getHistory: getRestartHistory } = useRestartHistory();
   const settings = useSettings();
+  const update = useUpdateCheck();
 
   // Apply accent color CSS variable when settings change
   useEffect(() => {
@@ -379,6 +381,9 @@ export default function App() {
         onPinRemove={(k, n, ns) => removePin(k, n, ns)}
         multiCluster={multiCluster}
         onMultiClusterToggle={setMultiCluster}
+        updateAvailable={update.updateAvailable}
+        onUpdateClick={update.performUpdate}
+        updating={update.updating}
       />
       <main className="flex-1 flex flex-col overflow-hidden">
         <AnimatePresence>
@@ -389,7 +394,7 @@ export default function App() {
             />
           )}
         </AnimatePresence>
-        <div className="flex-1 p-4 grid grid-rows-[auto,1fr] gap-3">
+        <div className="flex-1 min-h-0 p-4 grid grid-rows-[auto,1fr] gap-3">
           {showHeader && (
             <header className="flex flex-col gap-2">
               <div className="flex items-center gap-3">
@@ -512,7 +517,21 @@ export default function App() {
                   onBack={handleBack}
                 />
               ) : viewMode === "settings" ? (
-                <SettingsPage key="settings" onBack={() => setViewMode("table")} />
+                <SettingsPage
+                  key="settings"
+                  onBack={() => setViewMode("table")}
+                  updateAvailable={update.updateAvailable}
+                  latestVersion={update.latestVersion}
+                  currentVersion={update.currentVersion}
+                  releaseUrl={update.releaseUrl}
+                  releaseNotes={update.releaseNotes}
+                  onCheckForUpdates={update.checkNow}
+                  updateChecking={update.checking}
+                  onPerformUpdate={update.performUpdate}
+                  updating={update.updating}
+                  updateError={update.updateError}
+                  updateSuccess={update.updateSuccess}
+                />
               ) : isTableView ? (
                 loading ? (
                   <SkeletonTable key="skeleton" />

@@ -110,6 +110,9 @@ interface SidebarProps {
   onPinRemove?: (kind: string, name: string, namespace: string) => void;
   multiCluster?: boolean;
   onMultiClusterToggle?: (enabled: boolean) => void;
+  updateAvailable?: boolean;
+  onUpdateClick?: () => void;
+  updating?: boolean;
 }
 
 export function Sidebar({
@@ -130,6 +133,9 @@ export function Sidebar({
   onPinRemove,
   multiCluster = false,
   onMultiClusterToggle,
+  updateAvailable = false,
+  onUpdateClick,
+  updating = false,
 }: SidebarProps) {
   const isResourceActive = (id: ResourceKind) =>
     currentResource === id && (currentView === "table" || currentView === "details");
@@ -143,10 +149,24 @@ export function Sidebar({
           <div className="w-8 h-8 rounded-lg bg-accent/15 flex items-center justify-center">
             <span className="text-accent font-bold text-sm">K</span>
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <div className="text-sm font-semibold text-slate-100">Kore</div>
             <div className="text-[10px] text-slate-500">Kubernetes Desktop</div>
           </div>
+          {updateAvailable && (
+            <button
+              onClick={onUpdateClick}
+              disabled={updating}
+              title={updating ? "Updating..." : "Update available — click to install"}
+              className="px-2 py-1 rounded-md text-[10px] font-medium bg-accent/15 border border-accent/40 text-accent hover:bg-accent/25 transition disabled:opacity-60 flex items-center gap-1 shrink-0"
+            >
+              {updating ? (
+                <span className="w-3 h-3 border-[1.5px] border-accent/30 border-t-accent rounded-full animate-spin" />
+              ) : (
+                "Update"
+              )}
+            </button>
+          )}
         </div>
       </div>
 

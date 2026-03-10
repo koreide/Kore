@@ -804,6 +804,16 @@ export async function rbacNaturalLanguageQuery(
   return invoke("rbac_natural_language_query", { query, namespace });
 }
 
+// ── Update Checker ───────────────────────────────────────────────────
+
+export async function checkForUpdates(): Promise<import("./types").UpdateInfo> {
+  return invoke("check_for_updates");
+}
+
+export async function performUpdate(): Promise<string> {
+  return invoke("perform_update");
+}
+
 // ── Favorites Persistence ────────────────────────────────────────────
 
 export async function loadFavorites(key: string): Promise<string[]> {
