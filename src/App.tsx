@@ -548,7 +548,9 @@ export default function App() {
                       </button>
                     )}
                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-800 bg-surface/60 text-xs text-slate-300">
-                      <span className={`w-1.5 h-1.5 rounded-full ${connectionStatus?.connected ? "bg-emerald-400" : "bg-red-400"}`} />
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full ${connectionStatus?.connected ? "bg-emerald-400" : "bg-red-400"}`}
+                      />
                       <span className="font-mono truncate max-w-[140px]">
                         {currentContext ?? "No context"}
                       </span>
