@@ -24,6 +24,14 @@ If you spend your day switching between `kubectl`, `k9s`, Lens, and your browser
 - **Multi-cluster** — View and compare resources across multiple contexts side-by-side.
 - **AI-assisted troubleshooting** — Diagnose issues with built-in AI support (OpenAI, Anthropic, or Ollama).
 
+## Install
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/koreide/Kore/main/install.sh | bash
+```
+
+Or [download the latest release](https://github.com/koreide/Kore/releases/latest) directly.
+
 ## Screenshots
 
 <p align="center">
@@ -95,15 +103,12 @@ For full Tauri prerequisites, see the [Tauri v2 docs](https://v2.tauri.app/start
 
 ## Getting Started
 
+The fastest way to get Kore is the one-liner in the [Install](#install) section above. To develop locally:
+
 ```bash
-# Clone the repository
 git clone https://github.com/eladbash/kore.git
 cd kore
-
-# Install frontend dependencies
 npm install
-
-# Run in development mode (launches Vite + Tauri dev window)
 npm run tauri:dev
 ```
 

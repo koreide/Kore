@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft,
   Settings as SettingsIcon,
@@ -11,6 +11,7 @@ import {
   Layout,
   Info,
   RefreshCw,
+  CheckCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AppView } from "@/lib/types";
@@ -130,7 +131,7 @@ function Kbd({ children }: { children: React.ReactNode }) {
 interface SettingsProps {
   onBack: () => void;
   currentVersion?: string | null;
-  onCheckForUpdates?: () => void;
+  onCheckForUpdates?: () => Promise<boolean> | boolean;
   updateChecking?: boolean;
 }
 
@@ -143,6 +144,7 @@ export function Settings({
   const [settings, setSettings] = useState<KoreSettings>(() => loadSettings());
   const [contextInput, setContextInput] = useState("");
   const [namespaceInput, setNamespaceInput] = useState("");
+  const [showUpToDate, setShowUpToDate] = useState(false);
 
   // Esc to go back
   useEffect(() => {
@@ -447,7 +449,12 @@ export function Settings({
             </div>
 
             <button
-              onClick={onCheckForUpdates}
+              onClick={async () => {
+                const hasUpdate = await onCheckForUpdates?.();
+                if (!hasUpdate) {
+                  setShowUpToDate(true);
+                }
+              }}
               disabled={updateChecking}
               className="flex items-center gap-2 px-3 py-2 bg-background border border-slate-800 rounded-md text-xs text-slate-300 hover:border-accent/50 hover:text-slate-100 transition disabled:opacity-50"
             >
@@ -457,6 +464,39 @@ export function Settings({
           </div>
         </motion.div>
       </div>
+
+      {/* Up-to-date modal */}
+      <AnimatePresence>
+        {showUpToDate && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowUpToDate(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="glass rounded-xl p-6 max-w-sm w-full mx-4 border border-slate-700/50 text-center"
+            >
+              <CheckCircle className="w-10 h-10 text-emerald-400 mx-auto mb-3" />
+              <h3 className="text-sm font-semibold text-slate-100 mb-1">You're up to date!</h3>
+              <p className="text-xs text-slate-400 mb-4">
+                Kore {currentVersion ?? ""} is the latest version.
+              </p>
+              <button
+                onClick={() => setShowUpToDate(false)}
+                className="px-4 py-2 bg-accent/15 border border-accent/40 rounded-md text-xs text-accent hover:bg-accent/25 transition"
+              >
+                OK
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
