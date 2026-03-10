@@ -140,9 +140,7 @@ function buildGraphContext(graph: NetworkPolicyGraph): string {
         e.ports.length > 0
           ? e.ports.map((p) => (p.port ? `${p.port}/${p.protocol}` : p.protocol)).join(", ")
           : "all ports";
-      lines.push(
-        `- ${e.source} → ${e.target} [${e.direction}] via ${e.policy_name} (${ports})`,
-      );
+      lines.push(`- ${e.source} → ${e.target} [${e.direction}] via ${e.policy_name} (${ports})`);
     }
     lines.push("");
   }
@@ -157,10 +155,7 @@ interface SimulationMatch {
   destGroup: NetworkPolicyPodGroup;
 }
 
-function detectSimulation(
-  text: string,
-  groups: NetworkPolicyPodGroup[],
-): SimulationMatch | null {
+function detectSimulation(text: string, groups: NetworkPolicyPodGroup[]): SimulationMatch | null {
   // Pattern: "can X talk/reach/connect/access Y"
   const pattern =
     /can\s+(.+?)\s+(?:talk|reach|connect|access|communicate|send)\s+(?:to|with)\s+(.+?)[\s?]*$/i;
@@ -178,9 +173,7 @@ function detectSimulation(
     found = groups.find((g) => g.name.toLowerCase().includes(query));
     if (found) return found;
     // Match by pod name
-    found = groups.find((g) =>
-      g.pods.some((p) => p.name.toLowerCase().includes(query)),
-    );
+    found = groups.find((g) => g.pods.some((p) => p.name.toLowerCase().includes(query)));
     return found;
   };
 
@@ -289,9 +282,7 @@ export function NetworkPolicyView({ namespace, currentContext }: NetworkPolicyVi
     }
 
     // Isolated pods
-    const isolated = graph.groups.filter(
-      (g) => g.is_isolated_ingress || g.is_isolated_egress,
-    );
+    const isolated = graph.groups.filter((g) => g.is_isolated_ingress || g.is_isolated_egress);
     if (isolated.length > 0) {
       questions.push("Which pods are isolated and why?");
     }
@@ -361,9 +352,7 @@ When a simulation result is provided with the user's question, explain WHY the t
 Available workloads: ${graph.groups.map((g) => g.name).join(", ")}
 Total pods: ${allPods.length}`;
 
-      const chatMessages: ChatMessage[] = [
-        { role: "system", content: systemPrompt },
-      ];
+      const chatMessages: ChatMessage[] = [{ role: "system", content: systemPrompt }];
 
       // Add conversation history (last 10 messages)
       const recentMsgs = [...messages, userMsg].slice(-10);
@@ -400,10 +389,7 @@ Total pods: ${allPods.length}`;
                 };
                 return updated;
               }
-              return [
-                ...prev,
-                { id: msgId(), role: "assistant", content: payload.content! },
-              ];
+              return [...prev, { id: msgId(), role: "assistant", content: payload.content! }];
             });
           } else if (payload.type === "done") {
             setIsStreaming(false);
@@ -420,10 +406,7 @@ Total pods: ${allPods.length}`;
                 };
                 return updated;
               }
-              return [
-                ...prev,
-                { id: msgId(), role: "assistant", content: `[Error: ${errorMsg}]` },
-              ];
+              return [...prev, { id: msgId(), role: "assistant", content: `[Error: ${errorMsg}]` }];
             });
           }
           // status events are ignored (could show "Thinking..." but keeping it simple)
@@ -584,18 +567,14 @@ Total pods: ${allPods.length}`;
                 <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center mb-4">
                   <Bot className="w-7 h-7 text-accent/60" />
                 </div>
-                <p className="text-sm text-slate-400 mb-1">
-                  Ask about your network policies
-                </p>
+                <p className="text-sm text-slate-400 mb-1">Ask about your network policies</p>
                 <p className="text-xs text-slate-600 mb-6">
                   "Can X talk to Y?", "Which pods are isolated?", "What does this policy do?"
                 </p>
 
                 {!hasAIConfig && !showSettings && (
                   <div className="mb-6 px-4 py-3 rounded-lg border border-amber-500/30 bg-amber-500/5 max-w-sm">
-                    <p className="text-xs text-amber-400 mb-2">
-                      No AI provider configured
-                    </p>
+                    <p className="text-xs text-amber-400 mb-2">No AI provider configured</p>
                     <button
                       onClick={() => setShowSettings(true)}
                       className="text-xs text-accent hover:text-accent/80 underline underline-offset-2"
@@ -657,9 +636,7 @@ Total pods: ${allPods.length}`;
                     </div>
                     <div className="relative group max-w-[85%] rounded-lg rounded-bl-sm px-3 py-2 bg-muted/60 text-slate-200 border border-slate-800/50 text-sm leading-relaxed overflow-hidden">
                       <div className="ai-markdown">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                          {msg.content}
-                        </ReactMarkdown>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                       </div>
                       <button
                         onClick={() => handleCopyMessage(msg.content)}
@@ -734,9 +711,7 @@ Total pods: ${allPods.length}`;
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder={
-                  isStreaming
-                    ? "Waiting for response..."
-                    : "Ask about network policies..."
+                  isStreaming ? "Waiting for response..." : "Ask about network policies..."
                 }
                 disabled={isStreaming || !hasAIConfig}
                 className={cn(
@@ -866,16 +841,10 @@ function SimulationResultCard({
         <span
           className={cn(
             "px-2 py-0.5 rounded font-semibold text-[10px] shrink-0 flex items-center gap-1",
-            result.allowed
-              ? "bg-emerald-500/20 text-emerald-400"
-              : "bg-red-500/20 text-red-400",
+            result.allowed ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400",
           )}
         >
-          {result.allowed ? (
-            <CheckCircle2 className="w-3 h-3" />
-          ) : (
-            <XCircle className="w-3 h-3" />
-          )}
+          {result.allowed ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
           {result.allowed ? "ALLOWED" : "DENIED"}
         </span>
       </div>
@@ -926,11 +895,7 @@ function SimulationResultCard({
             onClick={() => setExpanded(!expanded)}
             className="w-full px-3 py-1.5 flex items-center gap-1 text-[10px] text-slate-500 hover:text-slate-300 border-t border-slate-800/30 transition"
           >
-            {expanded ? (
-              <ChevronUp className="w-3 h-3" />
-            ) : (
-              <ChevronDown className="w-3 h-3" />
-            )}
+            {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
             Policy details ({egressResults.length + ingressResults.length} evaluations)
           </button>
 
@@ -953,8 +918,7 @@ function SimulationResultCard({
                           : "bg-red-500/10 text-red-400",
                       )}
                     >
-                      <span className="text-slate-500">egress</span> {r.policy_name}:{" "}
-                      {r.reason}
+                      <span className="text-slate-500">egress</span> {r.policy_name}: {r.reason}
                     </div>
                   ))}
                   {ingressResults.map((r) => (
@@ -967,8 +931,7 @@ function SimulationResultCard({
                           : "bg-red-500/10 text-red-400",
                       )}
                     >
-                      <span className="text-slate-500">ingress</span> {r.policy_name}:{" "}
-                      {r.reason}
+                      <span className="text-slate-500">ingress</span> {r.policy_name}: {r.reason}
                     </div>
                   ))}
                 </div>

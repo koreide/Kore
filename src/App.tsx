@@ -30,8 +30,18 @@ import { deleteResource } from "./lib/api";
 import { formatError } from "./lib/errors";
 import type { ResourceItem, ResourceKind, AppView } from "./lib/types";
 import type { SortingState } from "@tanstack/react-table";
-import { Search, ChevronRight, Filter, Sparkles } from "lucide-react";
-import { AnimatePresence } from "framer-motion";
+import {
+  Search,
+  ChevronRight,
+  Filter,
+  Sparkles,
+  Download,
+  X,
+  CheckCircle,
+  AlertTriangle,
+  ExternalLink,
+} from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import { ConfirmDialog } from "./components/confirm-dialog";
 import { useToast } from "./components/toast";
 
@@ -361,217 +371,306 @@ export default function App() {
     return <ConnectionSetup status={connectionStatus} onRetry={handleRetryConnection} />;
   }
 
+  const showUpdateBanner = update.updateAvailable && !update.updateSuccess;
+  const showUpdateSuccess = !!update.updateSuccess;
+  const showUpdateError = !!update.updateError && !update.updateSuccess;
+
   return (
-    <div className="h-screen w-screen bg-background text-slate-100 flex overflow-hidden">
-      <Sidebar
-        contexts={contexts}
-        currentContext={currentContext}
-        namespaces={namespaces}
-        currentNamespace={namespace}
-        currentResource={kind}
-        currentView={viewMode}
-        onContextChange={handleContextSwitch}
-        onNamespaceChange={setNamespace}
-        onResourceChange={handleKindChange}
-        onViewChange={handleViewChange}
-        resourceCount={filteredResources.length}
-        onNamespaceDropdownOpen={refreshNamespaces}
-        pinned={pinned}
-        onPinSelect={handlePinSelect}
-        onPinRemove={(k, n, ns) => removePin(k, n, ns)}
-        multiCluster={multiCluster}
-        onMultiClusterToggle={setMultiCluster}
-        updateAvailable={update.updateAvailable}
-        onUpdateClick={update.performUpdate}
-        updating={update.updating}
-      />
-      <main className="flex-1 flex flex-col overflow-hidden">
-        <AnimatePresence>
-          {impersonatedIdentity && (
-            <RbacImpersonationBanner
-              identity={impersonatedIdentity}
-              onExit={() => setImpersonatedIdentity(null)}
-            />
-          )}
-        </AnimatePresence>
-        <div className="flex-1 min-h-0 p-4 grid grid-rows-[auto,1fr] gap-3">
-          {showHeader && (
-            <header className="flex flex-col gap-2">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 text-sm min-w-0 shrink-0">
-                  <span className="text-slate-400 font-medium">{kindLabel}</span>
-                  {isDetailView && selected ? (
-                    <>
-                      <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
-                      <span className="text-slate-100 font-medium truncate max-w-[200px]">
-                        {selected.name}
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-[10px] bg-slate-800/80 text-slate-400 px-1.5 py-0.5 rounded-full font-medium">
-                      {filteredResources.length}
-                    </span>
-                  )}
-                </div>
-
-                <div className="relative flex-1 max-w-md mx-auto">
-                  <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input
-                    ref={searchRef}
-                    placeholder="Search..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="w-full bg-surface/60 border border-slate-800 rounded-lg px-10 py-1.5 text-sm outline-none focus:border-accent/50 transition placeholder:text-slate-600"
-                  />
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    <Kbd>/</Kbd>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  {isTableView && (
-                    <button
-                      onClick={() => setShowLabelFilter(!showLabelFilter)}
-                      className={`px-2 py-1.5 rounded-lg border transition text-xs ${
-                        showLabelFilter || labelFilters.length > 0
-                          ? "border-accent/50 text-accent bg-accent/10"
-                          : "border-slate-800 text-slate-400 hover:text-slate-200"
-                      }`}
-                    >
-                      <Filter className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-800 bg-surface/60 text-xs text-slate-300">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                    <span className="font-mono truncate max-w-[140px]">
-                      {currentContext ?? "No context"}
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => setAiPanelOpen(true)}
-                    className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg border border-slate-800 text-slate-400 hover:text-accent hover:border-accent/50 hover:bg-accent/10 transition text-xs"
-                    title="Ask AI"
-                  >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">AI</span>
-                  </button>
-                  <Kbd>⌘K</Kbd>
-                </div>
-              </div>
-
-              {(showLabelFilter || labelFilters.length > 0) && isTableView && (
-                <LabelFilterBar labels={labelFilters} onLabelsChange={setLabelFilters} />
+    <div className="h-screen w-screen bg-background text-slate-100 flex flex-col overflow-hidden">
+      {/* Update banner */}
+      <AnimatePresence>
+        {showUpdateSuccess && (
+          <motion.div
+            key="update-success"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="bg-emerald-500/15 border-b border-emerald-500/30 overflow-hidden"
+          >
+            <div className="flex items-center justify-center gap-3 px-4 py-2">
+              <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span className="text-xs text-emerald-300">
+                Updated to {update.updateSuccess} — restart Kore to apply.
+              </span>
+            </div>
+          </motion.div>
+        )}
+        {showUpdateError && (
+          <motion.div
+            key="update-error"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="bg-red-500/10 border-b border-red-500/30 overflow-hidden"
+          >
+            <div className="flex items-center justify-center gap-3 px-4 py-2">
+              <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+              <span className="text-xs text-red-300">Update failed: {update.updateError}</span>
+              {update.releaseUrl && (
+                <button
+                  onClick={async () => {
+                    try {
+                      const { open } = await import("@tauri-apps/plugin-shell");
+                      await open(update.releaseUrl!);
+                    } catch {
+                      window.open(update.releaseUrl!, "_blank");
+                    }
+                  }}
+                  className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-slate-200 transition"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  Download manually
+                </button>
               )}
-            </header>
-          )}
-
-          {!showHeader && <div />}
-
-          <section className="overflow-hidden relative">
-            <AnimatePresence mode="wait">
-              {viewMode === "chat" ? (
-                <AIChatView key="chat" namespace={namespace === "*" ? undefined : namespace} />
-              ) : viewMode === "dashboard" ? (
-                <ClusterDashboard
-                  key="dashboard"
-                  onNavigateToResource={handleDashboardNavigate}
-                  multiCluster={multiCluster}
-                />
-              ) : viewMode === "graph" ? (
-                <ResourceGraphView
-                  key="graph"
-                  namespace={namespace === "*" ? undefined : namespace}
-                  onSelectResource={handleGraphSelect}
-                />
-              ) : viewMode === "network-policies" ? (
-                <NetworkPolicyView
-                  key="network-policies"
-                  namespace={namespace === "*" ? undefined : namespace}
-                  currentContext={currentContext}
-                />
-              ) : viewMode === "rbac" ? (
-                <RbacView
-                  key="rbac"
-                  namespace={namespace === "*" ? undefined : namespace}
-                  onBack={() => setViewMode("table")}
-                  initialAnalysis={forbiddenAnalysis}
-                  impersonatedIdentity={impersonatedIdentity}
-                  onSetImpersonation={setImpersonatedIdentity}
-                />
-              ) : viewMode === "crds" ? (
-                <CrdBrowser
-                  key="crds"
-                  namespace={namespace === "*" ? undefined : namespace}
-                  onBack={() => setViewMode("table")}
-                />
-              ) : viewMode === "helm" ? (
-                <HelmReleases
-                  key="helm"
-                  namespace={namespace === "*" ? undefined : namespace}
-                  onSelectRelease={handleHelmSelect}
-                />
-              ) : viewMode === "helm-detail" && selectedHelmRelease ? (
-                <HelmDetailView
-                  key="helm-detail"
-                  release={selectedHelmRelease}
-                  onBack={handleBack}
-                />
-              ) : viewMode === "settings" ? (
-                <SettingsPage
-                  key="settings"
-                  onBack={() => setViewMode("table")}
-                  updateAvailable={update.updateAvailable}
-                  latestVersion={update.latestVersion}
-                  currentVersion={update.currentVersion}
-                  releaseUrl={update.releaseUrl}
-                  releaseNotes={update.releaseNotes}
-                  onCheckForUpdates={update.checkNow}
-                  updateChecking={update.checking}
-                  onPerformUpdate={update.performUpdate}
-                  updating={update.updating}
-                  updateError={update.updateError}
-                  updateSuccess={update.updateSuccess}
-                />
-              ) : isTableView ? (
-                loading ? (
-                  <SkeletonTable key="skeleton" />
+              <button
+                onClick={update.dismiss}
+                className="ml-auto p-0.5 text-red-400/60 hover:text-red-300 transition"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+        {showUpdateBanner && !showUpdateError && (
+          <motion.div
+            key="update-banner"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="bg-accent/10 border-b border-accent/30 overflow-hidden"
+          >
+            <div className="flex items-center justify-center gap-3 px-4 py-2">
+              <span className="text-xs text-accent">Kore {update.latestVersion} is available</span>
+              <button
+                onClick={update.performUpdate}
+                disabled={update.updating}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30 transition disabled:opacity-50"
+              >
+                {update.updating ? (
+                  <>
+                    <span className="w-3 h-3 border-[1.5px] border-accent/30 border-t-accent rounded-full animate-spin" />
+                    Installing...
+                  </>
                 ) : (
-                  <ResourceTable
-                    key="table"
-                    data={filteredResources}
-                    sorting={sorting}
-                    onSortingChange={setSorting}
-                    onRowSelect={handleRowSelect}
-                    kind={kind}
-                    selectedRowIndex={selectedRowIndex}
-                    onSelectedRowIndexChange={setSelectedRowIndex}
-                    onRowAction={handleRowAction}
-                    onTogglePin={togglePin}
-                    isPinned={isPinned}
-                    getRestartHistory={kind === "pods" ? getRestartHistory : undefined}
+                  <>
+                    <Download className="w-3 h-3" />
+                    Update
+                  </>
+                )}
+              </button>
+              <button
+                onClick={update.dismiss}
+                disabled={update.updating}
+                className="p-0.5 text-accent/40 hover:text-accent/80 transition disabled:opacity-50"
+                title="Dismiss until next launch"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+        <Sidebar
+          contexts={contexts}
+          currentContext={currentContext}
+          namespaces={namespaces}
+          currentNamespace={namespace}
+          currentResource={kind}
+          currentView={viewMode}
+          onContextChange={handleContextSwitch}
+          onNamespaceChange={setNamespace}
+          onResourceChange={handleKindChange}
+          onViewChange={handleViewChange}
+          resourceCount={filteredResources.length}
+          onNamespaceDropdownOpen={refreshNamespaces}
+          pinned={pinned}
+          onPinSelect={handlePinSelect}
+          onPinRemove={(k, n, ns) => removePin(k, n, ns)}
+          multiCluster={multiCluster}
+          onMultiClusterToggle={setMultiCluster}
+        />
+        <main className="flex-1 flex flex-col overflow-hidden">
+          <AnimatePresence>
+            {impersonatedIdentity && (
+              <RbacImpersonationBanner
+                identity={impersonatedIdentity}
+                onExit={() => setImpersonatedIdentity(null)}
+              />
+            )}
+          </AnimatePresence>
+          <div className="flex-1 min-h-0 p-4 grid grid-rows-[auto,1fr] gap-3">
+            {showHeader && (
+              <header className="flex flex-col gap-2">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 text-sm min-w-0 shrink-0">
+                    <span className="text-slate-400 font-medium">{kindLabel}</span>
+                    {isDetailView && selected ? (
+                      <>
+                        <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
+                        <span className="text-slate-100 font-medium truncate max-w-[200px]">
+                          {selected.name}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-[10px] bg-slate-800/80 text-slate-400 px-1.5 py-0.5 rounded-full font-medium">
+                        {filteredResources.length}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="relative flex-1 max-w-md mx-auto">
+                    <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      ref={searchRef}
+                      placeholder="Search..."
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="w-full bg-surface/60 border border-slate-800 rounded-lg px-10 py-1.5 text-sm outline-none focus:border-accent/50 transition placeholder:text-slate-600"
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <Kbd>/</Kbd>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    {isTableView && (
+                      <button
+                        onClick={() => setShowLabelFilter(!showLabelFilter)}
+                        className={`px-2 py-1.5 rounded-lg border transition text-xs ${
+                          showLabelFilter || labelFilters.length > 0
+                            ? "border-accent/50 text-accent bg-accent/10"
+                            : "border-slate-800 text-slate-400 hover:text-slate-200"
+                        }`}
+                      >
+                        <Filter className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-800 bg-surface/60 text-xs text-slate-300">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                      <span className="font-mono truncate max-w-[140px]">
+                        {currentContext ?? "No context"}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setAiPanelOpen(true)}
+                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg border border-slate-800 text-slate-400 hover:text-accent hover:border-accent/50 hover:bg-accent/10 transition text-xs"
+                      title="Ask AI"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">AI</span>
+                    </button>
+                    <Kbd>⌘K</Kbd>
+                  </div>
+                </div>
+
+                {(showLabelFilter || labelFilters.length > 0) && isTableView && (
+                  <LabelFilterBar labels={labelFilters} onLabelsChange={setLabelFilters} />
+                )}
+              </header>
+            )}
+
+            {!showHeader && <div />}
+
+            <section className="overflow-hidden relative">
+              <AnimatePresence mode="wait">
+                {viewMode === "chat" ? (
+                  <AIChatView key="chat" namespace={namespace === "*" ? undefined : namespace} />
+                ) : viewMode === "dashboard" ? (
+                  <ClusterDashboard
+                    key="dashboard"
+                    onNavigateToResource={handleDashboardNavigate}
                     multiCluster={multiCluster}
                   />
-                )
-              ) : selected && kind === "pods" ? (
-                <PodDetailsView key="pod-details" pod={selected} onBack={handleBack} />
-              ) : selected && kind === "deployments" ? (
-                <DeploymentDetailsView
-                  key="deploy-details"
-                  deployment={selected}
-                  onBack={handleBack}
-                />
-              ) : selected ? (
-                <ResourceDetailsView
-                  key="resource-details"
-                  resource={selected}
-                  kind={kind}
-                  onBack={handleBack}
-                />
-              ) : null}
-            </AnimatePresence>
-          </section>
-        </div>
-      </main>
+                ) : viewMode === "graph" ? (
+                  <ResourceGraphView
+                    key="graph"
+                    namespace={namespace === "*" ? undefined : namespace}
+                    onSelectResource={handleGraphSelect}
+                  />
+                ) : viewMode === "network-policies" ? (
+                  <NetworkPolicyView
+                    key="network-policies"
+                    namespace={namespace === "*" ? undefined : namespace}
+                    currentContext={currentContext}
+                  />
+                ) : viewMode === "rbac" ? (
+                  <RbacView
+                    key="rbac"
+                    namespace={namespace === "*" ? undefined : namespace}
+                    onBack={() => setViewMode("table")}
+                    initialAnalysis={forbiddenAnalysis}
+                    impersonatedIdentity={impersonatedIdentity}
+                    onSetImpersonation={setImpersonatedIdentity}
+                  />
+                ) : viewMode === "crds" ? (
+                  <CrdBrowser
+                    key="crds"
+                    namespace={namespace === "*" ? undefined : namespace}
+                    onBack={() => setViewMode("table")}
+                  />
+                ) : viewMode === "helm" ? (
+                  <HelmReleases
+                    key="helm"
+                    namespace={namespace === "*" ? undefined : namespace}
+                    onSelectRelease={handleHelmSelect}
+                  />
+                ) : viewMode === "helm-detail" && selectedHelmRelease ? (
+                  <HelmDetailView
+                    key="helm-detail"
+                    release={selectedHelmRelease}
+                    onBack={handleBack}
+                  />
+                ) : viewMode === "settings" ? (
+                  <SettingsPage
+                    key="settings"
+                    onBack={() => setViewMode("table")}
+                    currentVersion={update.currentVersion}
+                    onCheckForUpdates={update.checkNow}
+                    updateChecking={update.checking}
+                  />
+                ) : isTableView ? (
+                  loading ? (
+                    <SkeletonTable key="skeleton" />
+                  ) : (
+                    <ResourceTable
+                      key="table"
+                      data={filteredResources}
+                      sorting={sorting}
+                      onSortingChange={setSorting}
+                      onRowSelect={handleRowSelect}
+                      kind={kind}
+                      selectedRowIndex={selectedRowIndex}
+                      onSelectedRowIndexChange={setSelectedRowIndex}
+                      onRowAction={handleRowAction}
+                      onTogglePin={togglePin}
+                      isPinned={isPinned}
+                      getRestartHistory={kind === "pods" ? getRestartHistory : undefined}
+                      multiCluster={multiCluster}
+                    />
+                  )
+                ) : selected && kind === "pods" ? (
+                  <PodDetailsView key="pod-details" pod={selected} onBack={handleBack} />
+                ) : selected && kind === "deployments" ? (
+                  <DeploymentDetailsView
+                    key="deploy-details"
+                    deployment={selected}
+                    onBack={handleBack}
+                  />
+                ) : selected ? (
+                  <ResourceDetailsView
+                    key="resource-details"
+                    resource={selected}
+                    kind={kind}
+                    onBack={handleBack}
+                  />
+                ) : null}
+              </AnimatePresence>
+            </section>
+          </div>
+        </main>
+      </div>
 
       <CommandPalette
         open={paletteOpen}

@@ -13,6 +13,7 @@ interface StoredCheck {
 export function useUpdateCheck() {
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [checking, setChecking] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
   const [updateSuccess, setUpdateSuccess] = useState<string | null>(null);
@@ -22,6 +23,7 @@ export function useUpdateCheck() {
     try {
       const info = await checkForUpdates();
       setUpdateInfo(info);
+      setDismissed(false);
       const stored: StoredCheck = { timestamp: Date.now(), info };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
     } catch {
@@ -38,10 +40,9 @@ export function useUpdateCheck() {
     try {
       const version = await apiPerformUpdate();
       setUpdateSuccess(version);
-      // Clear cached check so it re-checks after restart
       localStorage.removeItem(STORAGE_KEY);
     } catch (e) {
-      setUpdateError(typeof e === "string" ? e : (e as Error).message ?? "Update failed");
+      setUpdateError(typeof e === "string" ? e : ((e as Error).message ?? "Update failed"));
     } finally {
       setUpdating(false);
     }
@@ -64,13 +65,14 @@ export function useUpdateCheck() {
   }, [doCheck]);
 
   return {
-    updateAvailable: updateInfo?.has_update ?? false,
+    updateAvailable: (updateInfo?.has_update ?? false) && !dismissed,
     latestVersion: updateInfo?.latest_version ?? null,
     currentVersion: updateInfo?.current_version ?? null,
     releaseUrl: updateInfo?.release_url ?? null,
     releaseNotes: updateInfo?.release_notes ?? null,
     checking,
     checkNow: doCheck,
+    dismiss: () => setDismissed(true),
     performUpdate: doUpdate,
     updating,
     updateError,
