@@ -929,8 +929,7 @@ pub async fn rbac_who_can(
 // ── Update Checker ───────────────────────────────────────────────────
 
 #[tauri::command]
-pub async fn check_for_updates(
-) -> std::result::Result<crate::state::update::UpdateInfo, String> {
+pub async fn check_for_updates() -> std::result::Result<crate::state::update::UpdateInfo, String> {
     crate::state::update::check_for_updates().await
 }
 

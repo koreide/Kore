@@ -1,8 +1,7 @@
 use serde::{Deserialize, Serialize};
 use tracing::{info, warn};
 
-const GITHUB_RELEASES_URL: &str =
-    "https://api.github.com/repos/koreide/Kore/releases/latest";
+const GITHUB_RELEASES_URL: &str = "https://api.github.com/repos/koreide/Kore/releases/latest";
 
 #[derive(Debug, Clone, Serialize)]
 pub struct UpdateInfo {
@@ -85,7 +84,9 @@ fn find_dmg_url(assets: &[GitHubAsset]) -> Option<&str> {
         })
         .or_else(|| {
             // Fallback: any DMG
-            assets.iter().find(|a| a.name.to_lowercase().ends_with(".dmg"))
+            assets
+                .iter()
+                .find(|a| a.name.to_lowercase().ends_with(".dmg"))
         })
         .map(|a| a.browser_download_url.as_str());
 
@@ -125,8 +126,7 @@ pub async fn perform_update() -> Result<String, String> {
     // Write to temp file
     let tmp_dir = tempfile::tempdir().map_err(|e| format!("Failed to create temp dir: {e}"))?;
     let dmg_path = tmp_dir.path().join("Kore-update.dmg");
-    std::fs::write(&dmg_path, &dmg_bytes)
-        .map_err(|e| format!("Failed to write DMG: {e}"))?;
+    std::fs::write(&dmg_path, &dmg_bytes).map_err(|e| format!("Failed to write DMG: {e}"))?;
 
     info!("Mounting DMG...");
     let mount_point = tmp_dir.path().join("kore_mount");
@@ -173,11 +173,7 @@ pub async fn perform_update() -> Result<String, String> {
         }
     };
 
-    let app_name = app_path
-        .file_name()
-        .unwrap()
-        .to_string_lossy()
-        .to_string();
+    let app_name = app_path.file_name().unwrap().to_string_lossy().to_string();
     let dest = std::path::PathBuf::from("/Applications").join(&app_name);
 
     info!(dest = %dest.display(), "Installing...");
