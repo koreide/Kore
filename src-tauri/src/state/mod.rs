@@ -201,8 +201,25 @@ impl K8sState {
                     .or_else(|| kc.contexts.first().map(|c| c.name.clone()));
                 match Self::client_for_context(&kc, ctx.clone()).await {
                     Ok(c) => {
-                        info!(context = ?ctx, "Reconnected successfully");
-                        (Some(c), Some(kc), ctx, None)
+                        // Probe cluster reachability (5s timeout)
+                        let probe_err = match tokio::time::timeout(
+                            std::time::Duration::from_secs(5),
+                            c.apiserver_version(),
+                        )
+                        .await
+                        {
+                            Ok(Ok(_)) => None,
+                            Ok(Err(e)) => Some(K8sError::Kube(e)),
+                            Err(_) => Some(K8sError::Validation(
+                                "Cluster did not respond within 5 seconds".into(),
+                            )),
+                        };
+                        if probe_err.is_none() {
+                            info!(context = ?ctx, "Reconnected successfully");
+                        } else {
+                            warn!(context = ?ctx, "Retry: cluster unreachable");
+                        }
+                        (Some(c), Some(kc), ctx, probe_err)
                     }
                     Err(e) => {
                         warn!(error = %e, "Retry: failed to create client");
@@ -262,10 +279,26 @@ impl K8sState {
 
         let kubeconfig = self.reload_kubeconfig().await?;
         let client = Self::client_for_context(&kubeconfig, Some(name.clone())).await?;
+
+        // Probe cluster reachability (5s timeout)
+        let probe_err = match tokio::time::timeout(
+            std::time::Duration::from_secs(5),
+            client.apiserver_version(),
+        )
+        .await
+        {
+            Ok(Ok(_)) => None,
+            Ok(Err(e)) => Some(K8sError::Kube(e)),
+            Err(_) => Some(K8sError::Validation(
+                "Cluster did not respond within 5 seconds".into(),
+            )),
+        };
+
         let mut inner = self.inner.write().await;
         inner.client = Some(client);
         inner.kubeconfig = Some(kubeconfig);
         inner.current_context = Some(name.clone());
+        inner.connection_error = probe_err;
         info!(context = %name, "Switched context");
         Ok(name)
     }

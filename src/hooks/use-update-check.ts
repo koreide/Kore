@@ -18,7 +18,7 @@ export function useUpdateCheck() {
   const [updateError, setUpdateError] = useState<string | null>(null);
   const [updateSuccess, setUpdateSuccess] = useState<string | null>(null);
 
-  const doCheck = useCallback(async () => {
+  const doCheck = useCallback(async (): Promise<boolean> => {
     setChecking(true);
     try {
       const info = await checkForUpdates();
@@ -26,8 +26,10 @@ export function useUpdateCheck() {
       setDismissed(false);
       const stored: StoredCheck = { timestamp: Date.now(), info };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
+      return info.has_update;
     } catch {
       // Silently fail — update checks are non-critical
+      return false;
     } finally {
       setChecking(false);
     }

@@ -106,5 +106,5 @@ ok "Kore ${TAG} installed to ${BOLD}/Applications/$(basename "$APP_PATH")${RESET
 xattr -dr com.apple.quarantine "/Applications/$(basename "$APP_PATH")" 2>/dev/null || true
 
 printf "\n${GREEN}${BOLD}Installation complete!${RESET}\n"
-printf "Open Kore from your Applications folder or run:\n"
-printf "  ${CYAN}open /Applications/Kore.app${RESET}\n\n"
+info "Launching Kore..."
+open "/Applications/$(basename "$APP_PATH")"
