@@ -73,77 +73,110 @@ impl K8sState {
         };
 
         let client = self.current_client().await?;
-        let handle = app.clone();
         let event_name = format!("pod-logs://{namespace}/{pod_name}");
-        let ns = namespace.clone();
-        let pn = pod_name.clone();
-        let cont = container.clone();
 
-        tauri::async_runtime::spawn(async move {
-            let api: Api<k8s_openapi::api::core::v1::Pod> = Api::namespaced(client, &ns);
+        // Determine which containers to stream
+        let containers: Vec<String> = if let Some(c) = container {
+            vec![c]
+        } else {
+            // Fetch pod spec to discover containers
+            let api: Api<k8s_openapi::api::core::v1::Pod> =
+                Api::namespaced(client.clone(), &namespace);
+            let pod = api.get(&pod_name).await.map_err(K8sError::Kube)?;
+            let spec = pod.spec.unwrap_or_default();
+            let names: Vec<String> = spec.containers.iter().map(|c| c.name.clone()).collect();
+            if names.is_empty() {
+                return Err(K8sError::Validation("Pod has no containers".to_string()));
+            }
+            names
+        };
 
-            let lp = LogParams {
-                follow: !previous, // Can't follow previous logs
-                tail_lines: Some(DEFAULT_LOG_TAIL_LINES),
-                container: cont,
-                previous,
-                ..Default::default()
-            };
+        let multi = containers.len() > 1;
 
-            // log_stream returns impl AsyncBufRead
-            let stream = match api.log_stream(&pn, &lp).await {
-                Ok(stream) => stream,
-                Err(err) => {
-                    if let Err(e) = handle.emit(&event_name, &json!({ "error": err.to_string() })) {
-                        error!(error = %e, "Failed to emit log error");
-                    }
-                    return;
-                }
-            };
+        for cont_name in containers {
+            let client = client.clone();
+            let handle = app.clone();
+            let event = event_name.clone();
+            let ns = namespace.clone();
+            let pn = pod_name.clone();
+            let token = new_token.clone();
 
-            // Convert the AsyncBufRead stream into a tokio BufReader for line-by-line reading
-            use futures::AsyncBufReadExt;
-            let mut lines_stream = stream.lines();
-            let mut first_batch = true;
+            tauri::async_runtime::spawn(async move {
+                let api: Api<k8s_openapi::api::core::v1::Pod> = Api::namespaced(client, &ns);
 
-            loop {
-                tokio::select! {
-                    _ = new_token.cancelled() => {
-                        info!(pod = %pn, "Log stream cancelled");
+                let lp = LogParams {
+                    follow: !previous, // Can't follow previous logs
+                    tail_lines: Some(DEFAULT_LOG_TAIL_LINES),
+                    container: Some(cont_name.clone()),
+                    previous,
+                    ..Default::default()
+                };
+
+                let stream = match api.log_stream(&pn, &lp).await {
+                    Ok(stream) => stream,
+                    Err(err) => {
+                        let err_str = err.to_string();
+                        // "previous terminated container" not found means it was never restarted
+                        if previous && err_str.contains("previous terminated container") {
+                            if multi {
+                                // All containers mode — silently skip
+                                info!(pod = %pn, container = %cont_name, "No previous logs, skipping");
+                            } else {
+                                let _ = handle.emit(&event, &json!({ "logs": "No previous logs — this container has not been restarted.\n" }));
+                            }
+                            return;
+                        }
+                        if let Err(e) = handle.emit(&event, &json!({ "error": err_str })) {
+                            error!(error = %e, "Failed to emit log error");
+                        }
                         return;
                     }
-                    line_result = lines_stream.next() => {
-                        match line_result {
-                            Some(Ok(line)) => {
-                                let log_line = format!("{line}\n");
-                                let append = !first_batch;
-                                first_batch = false;
-                                if let Err(e) = handle.emit(
-                                    &event_name,
-                                    &json!({ "logs": log_line, "append": append }),
-                                ) {
-                                    warn!(error = %e, "Frontend listener gone, stopping log stream");
+                };
+
+                use futures::AsyncBufReadExt;
+                let mut lines_stream = stream.lines();
+
+                loop {
+                    tokio::select! {
+                        _ = token.cancelled() => {
+                            info!(pod = %pn, container = %cont_name, "Log stream cancelled");
+                            return;
+                        }
+                        line_result = lines_stream.next() => {
+                            match line_result {
+                                Some(Ok(line)) => {
+                                    let log_line = if multi {
+                                        format!("[{cont_name}] {line}\n")
+                                    } else {
+                                        format!("{line}\n")
+                                    };
+                                    if let Err(e) = handle.emit(
+                                        &event,
+                                        &json!({ "logs": log_line, "append": true }),
+                                    ) {
+                                        warn!(error = %e, "Frontend listener gone, stopping log stream");
+                                        break;
+                                    }
+                                }
+                                Some(Err(err)) => {
+                                    warn!(pod = %pn, container = %cont_name, error = %err, "Log stream error");
+                                    if let Err(e) =
+                                        handle.emit(&event, &json!({ "error": err.to_string() }))
+                                    {
+                                        error!(error = %e, "Failed to emit log error");
+                                    }
                                     break;
                                 }
-                            }
-                            Some(Err(err)) => {
-                                warn!(pod = %pn, error = %err, "Log stream error");
-                                if let Err(e) =
-                                    handle.emit(&event_name, &json!({ "error": err.to_string() }))
-                                {
-                                    error!(error = %e, "Failed to emit log error");
+                                None => {
+                                    info!(pod = %pn, container = %cont_name, "Log stream ended");
+                                    break;
                                 }
-                                break;
-                            }
-                            None => {
-                                info!(pod = %pn, "Log stream ended (pod may have terminated)");
-                                break;
                             }
                         }
                     }
                 }
-            }
-        });
+            });
+        }
 
         Ok(())
     }
