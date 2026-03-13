@@ -341,6 +341,7 @@ export function PodDetailsView({ pod, onBack }: PodDetailsViewProps) {
     let isMounted = true;
 
     // Resolve container name (strip init: prefix for the API call)
+    // When undefined, backend streams all containers with [name] prefix
     const containerName = selectedContainer ? selectedContainer.replace(/^init:/, "") : undefined;
 
     const eventName = `pod-logs://${namespace}/${podName}`;
@@ -375,6 +376,8 @@ export function PodDetailsView({ pod, onBack }: PodDetailsViewProps) {
           return;
         }
         unlistenFn = unlisten;
+        // Clear loading once stream is connected — container may produce no output
+        setLoading(false);
       } catch (err) {
         if (!isMounted) return;
         setLogs(`Error starting log stream: ${err}`);
@@ -1043,7 +1046,8 @@ export function PodDetailsView({ pod, onBack }: PodDetailsViewProps) {
                     podName={podName}
                     container={
                       debugContainer?.name ||
-                      (selectedContainer ? selectedContainer.replace(/^init:/, "") : undefined)
+                      ((selectedContainer || containers.find((c) => !c.startsWith("init:")) || "")
+                        .replace(/^init:/, "") || undefined)
                     }
                   />
                 </motion.div>
