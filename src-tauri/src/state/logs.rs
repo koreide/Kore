@@ -84,11 +84,7 @@ impl K8sState {
                 Api::namespaced(client.clone(), &namespace);
             let pod = api.get(&pod_name).await.map_err(K8sError::Kube)?;
             let spec = pod.spec.unwrap_or_default();
-            let names: Vec<String> = spec
-                .containers
-                .iter()
-                .map(|c| c.name.clone())
-                .collect();
+            let names: Vec<String> = spec.containers.iter().map(|c| c.name.clone()).collect();
             if names.is_empty() {
                 return Err(K8sError::Validation("Pod has no containers".to_string()));
             }
@@ -130,9 +126,7 @@ impl K8sState {
                             }
                             return;
                         }
-                        if let Err(e) =
-                            handle.emit(&event, &json!({ "error": err_str }))
-                        {
+                        if let Err(e) = handle.emit(&event, &json!({ "error": err_str })) {
                             error!(error = %e, "Failed to emit log error");
                         }
                         return;

@@ -1046,8 +1046,12 @@ export function PodDetailsView({ pod, onBack }: PodDetailsViewProps) {
                     podName={podName}
                     container={
                       debugContainer?.name ||
-                      ((selectedContainer || containers.find((c) => !c.startsWith("init:")) || "")
-                        .replace(/^init:/, "") || undefined)
+                      (
+                        selectedContainer ||
+                        containers.find((c) => !c.startsWith("init:")) ||
+                        ""
+                      ).replace(/^init:/, "") ||
+                      undefined
                     }
                   />
                 </motion.div>
