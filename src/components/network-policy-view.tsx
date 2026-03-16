@@ -12,8 +12,6 @@ import {
   ChevronRight,
   Send,
   Bot,
-  Copy,
-  Settings2,
   Trash2,
   ArrowRight,
   CheckCircle2,
@@ -21,12 +19,12 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 import { useNetworkPolicyGraph } from "@/hooks/use-network-policy-graph";
 import { useToast } from "./toast";
-import { AISettings, type AIConfig } from "./ai-settings";
+import { useAIConfig } from "@/hooks/use-ai-config";
+import { AIConfigWarning } from "./ai-config-warning";
+import { ChatMessageBubble } from "./chat-message-bubble";
 import type {
   NetworkPolicySummary,
   TrafficSimulationResult,
@@ -56,19 +54,6 @@ interface AIResponsePayload {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────
-
-function loadAIConfig(): AIConfig {
-  try {
-    const stored = localStorage.getItem("kore-ai-config");
-    if (stored) {
-      const { api_key: _, ...config } = JSON.parse(stored);
-      return config as AIConfig;
-    }
-  } catch {
-    // ignore parse errors
-  }
-  return { provider: "openai", model: "gpt-4o" };
-}
 
 let sessionCounter = 0;
 function nextSessionId(): string {
@@ -203,8 +188,7 @@ export function NetworkPolicyView({ namespace, currentContext }: NetworkPolicyVi
   const [messages, setMessages] = useState<NPMessage[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
-  const [aiConfig, setAiConfig] = useState<AIConfig>(() => loadAIConfig());
-  const [showSettings, setShowSettings] = useState(false);
+  const { aiConfig, isConfigured: hasAIConfig } = useAIConfig();
 
   // Policy sidebar
   const [selectedPolicy, setSelectedPolicy] = useState<string | null>(null);
@@ -491,13 +475,6 @@ Total pods: ${allPods.length}`;
     );
   }
 
-  // Check if AI is configured
-  const hasAIConfig =
-    aiConfig.provider === "ollama" ||
-    aiConfig.provider === "claude_cli" ||
-    aiConfig.provider === "cursor_agent" ||
-    !!aiConfig.api_key;
-
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -518,18 +495,6 @@ Total pods: ${allPods.length}`;
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setShowSettings((v) => !v)}
-            className={cn(
-              "flex items-center gap-1.5 px-2 py-1 text-[11px] rounded-md border transition",
-              showSettings
-                ? "bg-accent/10 border-accent/50 text-accent"
-                : "bg-surface/80 border-slate-800 text-slate-400 hover:border-accent/50 hover:text-slate-300",
-            )}
-          >
-            <Settings2 className="w-3 h-3" />
-            AI Settings
-          </button>
-          <button
             onClick={refresh}
             className="flex items-center gap-1.5 px-2 py-1 text-[11px] text-slate-400 bg-surface/80 border border-slate-800 rounded-md hover:border-accent/50 hover:text-slate-300 transition"
             title="Refresh"
@@ -538,23 +503,6 @@ Total pods: ${allPods.length}`;
           </button>
         </div>
       </div>
-
-      {/* AI Settings (collapsible) */}
-      <AnimatePresence>
-        {showSettings && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 400, damping: 35 }}
-            className="border-b border-slate-800/50 overflow-hidden shrink-0"
-          >
-            <div className="px-4 py-4 bg-background/50">
-              <AISettings config={aiConfig} onConfigChange={setAiConfig} />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Main content */}
       <div className="flex-1 flex min-h-0 overflow-hidden">
@@ -572,16 +520,8 @@ Total pods: ${allPods.length}`;
                   "Can X talk to Y?", "Which pods are isolated?", "What does this policy do?"
                 </p>
 
-                {!hasAIConfig && !showSettings && (
-                  <div className="mb-6 px-4 py-3 rounded-lg border border-amber-500/30 bg-amber-500/5 max-w-sm">
-                    <p className="text-xs text-amber-400 mb-2">No AI provider configured</p>
-                    <button
-                      onClick={() => setShowSettings(true)}
-                      className="text-xs text-accent hover:text-accent/80 underline underline-offset-2"
-                    >
-                      Open AI Settings
-                    </button>
-                  </div>
+                {!hasAIConfig && (
+                  <AIConfigWarning className="mb-6 rounded-lg border border-amber-500/30 max-w-sm" />
                 )}
 
                 {/* Suggested questions */}
@@ -608,14 +548,11 @@ Total pods: ${allPods.length}`;
 
             {messages.map((msg) => (
               <div key={msg.id}>
-                {/* User message */}
-                {msg.role === "user" && (
-                  <div className="flex gap-2.5 justify-end">
-                    <div className="max-w-[85%] rounded-lg rounded-br-sm px-3 py-2 bg-accent/15 text-slate-100 text-sm leading-relaxed">
-                      <p className="whitespace-pre-wrap break-words">{msg.content}</p>
-                    </div>
-                  </div>
-                )}
+                <ChatMessageBubble
+                  role={msg.role}
+                  content={msg.content}
+                  onCopy={msg.role === "assistant" ? handleCopyMessage : undefined}
+                />
 
                 {/* Simulation result card (attached to user message) */}
                 {msg.role === "user" && msg.simulationResult && (
@@ -625,27 +562,6 @@ Total pods: ${allPods.length}`;
                       sourceLabel={msg.sourceLabel || "Source"}
                       destLabel={msg.destLabel || "Destination"}
                     />
-                  </div>
-                )}
-
-                {/* Assistant message */}
-                {msg.role === "assistant" && (
-                  <div className="flex gap-2.5 justify-start">
-                    <div className="w-6 h-6 rounded-md bg-accent/15 flex items-center justify-center shrink-0 mt-0.5">
-                      <Bot className="w-3.5 h-3.5 text-accent" />
-                    </div>
-                    <div className="relative group max-w-[85%] rounded-lg rounded-bl-sm px-3 py-2 bg-muted/60 text-slate-200 border border-slate-800/50 text-sm leading-relaxed overflow-hidden">
-                      <div className="ai-markdown">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
-                      </div>
-                      <button
-                        onClick={() => handleCopyMessage(msg.content)}
-                        className="absolute -top-2 -right-2 p-1 rounded bg-surface border border-slate-700 opacity-0 group-hover:opacity-100 transition-opacity hover:border-accent/50"
-                        aria-label="Copy message"
-                      >
-                        <Copy className="w-3 h-3 text-slate-400" />
-                      </button>
-                    </div>
                   </div>
                 )}
               </div>
@@ -711,7 +627,11 @@ Total pods: ${allPods.length}`;
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder={
-                  isStreaming ? "Waiting for response..." : "Ask about network policies..."
+                  !hasAIConfig
+                    ? "Configure an AI provider to get started..."
+                    : isStreaming
+                      ? "Waiting for response..."
+                      : "Ask about network policies..."
                 }
                 disabled={isStreaming || !hasAIConfig}
                 className={cn(

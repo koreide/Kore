@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AppView } from "@/lib/types";
+import { AISettings, type AIConfig } from "./ai-settings";
+import { loadAIConfig } from "@/hooks/use-ai-config";
 
 const SETTINGS_KEY = "kore-settings";
 
@@ -142,6 +144,7 @@ export function Settings({
   updateChecking,
 }: SettingsProps) {
   const [settings, setSettings] = useState<KoreSettings>(() => loadSettings());
+  const [aiConfig, setAiConfig] = useState<AIConfig>(() => loadAIConfig());
   const [contextInput, setContextInput] = useState("");
   const [namespaceInput, setNamespaceInput] = useState("");
   const [showUpToDate, setShowUpToDate] = useState(false);
@@ -219,7 +222,7 @@ export function Settings({
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-auto p-6 space-y-6 max-w-3xl">
+      <div className="flex-1 overflow-auto p-6 space-y-6">
         {/* General Section */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -274,6 +277,16 @@ export function Settings({
               </p>
             </div>
           </div>
+        </motion.div>
+
+        {/* AI Provider Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.075 }}
+          className="glass rounded-xl p-5"
+        >
+          <AISettings config={aiConfig} onConfigChange={setAiConfig} />
         </motion.div>
 
         {/* Display Section */}

@@ -1,21 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bot, Send, X, Copy, Sparkles, Loader2, Settings2, Trash2 } from "lucide-react";
+import { Bot, Send, X, Sparkles, Loader2, Trash2 } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 import { useToast } from "./toast";
-import { AISettings } from "./ai-settings";
+import { useAIConfig } from "@/hooks/use-ai-config";
+import { AIConfigWarning } from "./ai-config-warning";
+import { ChatMessageBubble } from "./chat-message-bubble";
+import type { AIConfig } from "./ai-settings";
 
 // ── Types ────────────────────────────────────────────────────────────────
-
-export interface AIConfig {
-  provider: "openai" | "anthropic" | "ollama" | "claude_cli" | "cursor_agent";
-  api_key?: string;
-  model: string;
-  base_url?: string;
-}
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -50,19 +44,6 @@ async function aiDiagnose(_config: AIConfig, _request: DiagnoseRequest): Promise
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
-function loadAIConfig(): AIConfig {
-  try {
-    const stored = localStorage.getItem("kore-ai-config");
-    if (stored) {
-      const { api_key: _, ...config } = JSON.parse(stored);
-      return config as AIConfig;
-    }
-  } catch {
-    // ignore parse errors
-  }
-  return { provider: "openai", model: "gpt-4o" };
-}
-
 let sessionCounter = 0;
 function nextSessionId(): string {
   sessionCounter += 1;
@@ -87,8 +68,7 @@ export function AIPanel({ open, onClose, resourceContext }: AIPanelProps) {
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [, setSessionId] = useState(() => nextSessionId());
-  const [showSettings, setShowSettings] = useState(false);
-  const [aiConfig, setAiConfig] = useState<AIConfig>(() => loadAIConfig());
+  const { aiConfig, isConfigured } = useAIConfig();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -136,7 +116,7 @@ export function AIPanel({ open, onClose, resourceContext }: AIPanelProps) {
 
   const sendMessage = useCallback(
     async (text: string) => {
-      if (!text.trim() || isStreaming) return;
+      if (!text.trim() || isStreaming || !isConfigured) return;
 
       const userMessage: ChatMessage = { role: "user", content: text.trim() };
       setMessages((prev) => [...prev, userMessage]);
@@ -213,7 +193,7 @@ export function AIPanel({ open, onClose, resourceContext }: AIPanelProps) {
         setMessages((prev) => [...prev, { role: "assistant", content: `[Error: ${errMsg}]` }]);
       }
     },
-    [isStreaming, resourceContext, aiConfig],
+    [isStreaming, resourceContext, aiConfig, isConfigured],
   );
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -288,16 +268,6 @@ export function AIPanel({ open, onClose, resourceContext }: AIPanelProps) {
                   <Trash2 className="w-4 h-4" />
                 </button>
                 <button
-                  onClick={() => setShowSettings((v) => !v)}
-                  className={cn(
-                    "p-1.5 rounded-md hover:bg-muted/50 transition",
-                    showSettings ? "text-accent" : "text-slate-400 hover:text-slate-200",
-                  )}
-                  aria-label="AI settings"
-                >
-                  <Settings2 className="w-4 h-4" />
-                </button>
-                <button
                   onClick={onClose}
                   className="p-1.5 rounded-md hover:bg-muted/50 transition text-slate-400 hover:text-slate-200"
                   aria-label="Close AI panel"
@@ -307,15 +277,11 @@ export function AIPanel({ open, onClose, resourceContext }: AIPanelProps) {
               </div>
             </div>
 
-            {/* AI Settings (collapsible) */}
-            {showSettings && (
-              <div className="px-4 py-4 border-b border-slate-800/50 bg-background/50">
-                <AISettings config={aiConfig} onConfigChange={setAiConfig} />
-              </div>
-            )}
+            {/* Configuration Warning */}
+            {!isConfigured && <AIConfigWarning className="w-full" />}
 
             {/* Resource Context Indicator */}
-            {resourceContext && !showSettings && (
+            {resourceContext && (
               <div className="px-4 py-2 border-b border-slate-800/50 bg-accent/5">
                 <div className="flex items-center gap-2 text-xs">
                   <Sparkles className="w-3.5 h-3.5 text-accent shrink-0" />
@@ -338,7 +304,7 @@ export function AIPanel({ open, onClose, resourceContext }: AIPanelProps) {
                     <button
                       key={action.label}
                       onClick={() => handleQuickAction(action.prompt)}
-                      disabled={isStreaming}
+                      disabled={isStreaming || !isConfigured}
                       className={cn(
                         "px-3 py-1.5 rounded-lg border text-xs transition",
                         "border-slate-700 text-slate-300 hover:border-accent/50 hover:text-accent hover:bg-accent/5",
@@ -367,47 +333,12 @@ export function AIPanel({ open, onClose, resourceContext }: AIPanelProps) {
               )}
 
               {messages.map((msg, idx) => (
-                <div
+                <ChatMessageBubble
                   key={idx}
-                  className={cn(
-                    "flex gap-2.5",
-                    msg.role === "user" ? "justify-end" : "justify-start",
-                  )}
-                >
-                  {msg.role === "assistant" && (
-                    <div className="w-6 h-6 rounded-md bg-accent/15 flex items-center justify-center shrink-0 mt-0.5">
-                      <Bot className="w-3.5 h-3.5 text-accent" />
-                    </div>
-                  )}
-
-                  <div
-                    className={cn(
-                      "relative group max-w-[85%] rounded-lg px-3 py-2 text-sm leading-relaxed overflow-hidden",
-                      msg.role === "user"
-                        ? "bg-accent/15 text-slate-100 rounded-br-sm"
-                        : "bg-muted/60 text-slate-200 border border-slate-800/50 rounded-bl-sm",
-                    )}
-                  >
-                    {msg.role === "user" ? (
-                      <p className="whitespace-pre-wrap break-words">{msg.content}</p>
-                    ) : (
-                      <div className="ai-markdown">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
-                      </div>
-                    )}
-
-                    {/* Copy button on assistant messages */}
-                    {msg.role === "assistant" && (
-                      <button
-                        onClick={() => handleCopyMessage(msg.content)}
-                        className="absolute -top-2 -right-2 p-1 rounded bg-surface border border-slate-700 opacity-0 group-hover:opacity-100 transition-opacity hover:border-accent/50"
-                        aria-label="Copy message"
-                      >
-                        <Copy className="w-3 h-3 text-slate-400" />
-                      </button>
-                    )}
-                  </div>
-                </div>
+                  role={msg.role}
+                  content={msg.content}
+                  onCopy={msg.role === "assistant" ? handleCopyMessage : undefined}
+                />
               ))}
 
               {/* Streaming indicator */}
@@ -433,9 +364,13 @@ export function AIPanel({ open, onClose, resourceContext }: AIPanelProps) {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder={
-                    isStreaming ? "Waiting for response..." : "Ask about this resource..."
+                    !isConfigured
+                      ? "Configure an AI provider to get started..."
+                      : isStreaming
+                        ? "Waiting for response..."
+                        : "Ask about this resource..."
                   }
-                  disabled={isStreaming}
+                  disabled={isStreaming || !isConfigured}
                   className={cn(
                     "flex-1 px-3 py-2 rounded-lg bg-background border border-slate-800 text-sm text-slate-100 placeholder-slate-600",
                     "focus:outline-none focus:border-accent/50 transition",
@@ -444,10 +379,10 @@ export function AIPanel({ open, onClose, resourceContext }: AIPanelProps) {
                 />
                 <button
                   type="submit"
-                  disabled={isStreaming || !input.trim()}
+                  disabled={isStreaming || !input.trim() || !isConfigured}
                   className={cn(
                     "p-2 rounded-lg transition",
-                    input.trim() && !isStreaming
+                    input.trim() && !isStreaming && isConfigured
                       ? "bg-accent/20 text-accent hover:bg-accent/30 border border-accent/50"
                       : "bg-muted/30 text-slate-600 border border-slate-800 cursor-not-allowed",
                   )}

@@ -481,12 +481,9 @@ export async function listResourcesMultiCluster(
 
 // ── Phase 4: AI Troubleshooting ──────────────────────────────────────
 
-export interface AIConfig {
-  provider: "openai" | "anthropic" | "ollama" | "claude_cli" | "cursor_agent";
-  api_key?: string;
-  model: string;
-  base_url?: string;
-}
+// Re-export AIConfig from its canonical source
+import type { AIConfig } from "@/components/ai-settings";
+export type { AIConfig } from "@/components/ai-settings";
 
 export interface DiagnoseRequest {
   kind: string;

@@ -1,11 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Bot,
   Send,
-  Copy,
   Loader2,
-  Settings2,
   Trash2,
   Wrench,
   Activity,
@@ -15,12 +13,11 @@ import {
   LayoutList,
 } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 import { useToast } from "./toast";
-import { AISettings } from "./ai-settings";
-import type { AIConfig } from "./ai-settings";
+import { useAIConfig } from "@/hooks/use-ai-config";
+import { AIConfigWarning } from "./ai-config-warning";
+import { ChatMessageBubble } from "./chat-message-bubble";
 import { aiChat } from "@/lib/api";
 import type { ChatMessage } from "@/lib/api";
 
@@ -42,19 +39,6 @@ interface AIChatViewProps {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────
-
-function loadAIConfig(): AIConfig {
-  try {
-    const stored = localStorage.getItem("kore-ai-config");
-    if (stored) {
-      const { api_key: _, ...config } = JSON.parse(stored);
-      return config as AIConfig;
-    }
-  } catch {
-    // ignore
-  }
-  return { provider: "openai", model: "gpt-4o" };
-}
 
 let sessionCounter = 0;
 function nextSessionId(): string {
@@ -99,8 +83,7 @@ export function AIChatView({ namespace }: AIChatViewProps) {
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [toolStatus, setToolStatus] = useState<string | null>(null);
-  const [showSettings, setShowSettings] = useState(false);
-  const [aiConfig, setAiConfig] = useState<AIConfig>(() => loadAIConfig());
+  const { aiConfig, isConfigured } = useAIConfig();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -129,7 +112,7 @@ export function AIChatView({ namespace }: AIChatViewProps) {
 
   const sendMessage = useCallback(
     async (text: string) => {
-      if (!text.trim() || isStreaming) return;
+      if (!text.trim() || isStreaming || !isConfigured) return;
 
       const userMsg: DisplayMessage = { role: "user", content: text.trim() };
       const updatedMessages = [...messages, userMsg];
@@ -215,7 +198,7 @@ export function AIChatView({ namespace }: AIChatViewProps) {
         setMessages((prev) => [...prev, { role: "assistant", content: `**Error:** ${errMsg}` }]);
       }
     },
-    [isStreaming, messages, aiConfig, namespace],
+    [isStreaming, messages, aiConfig, namespace, isConfigured],
   );
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -276,34 +259,11 @@ export function AIChatView({ namespace }: AIChatViewProps) {
           >
             <Trash2 className="w-4 h-4" />
           </button>
-          <button
-            onClick={() => setShowSettings((v) => !v)}
-            className={cn(
-              "p-1.5 rounded-md hover:bg-muted/50 transition",
-              showSettings ? "text-accent" : "text-slate-400 hover:text-slate-200",
-            )}
-            title="AI settings"
-          >
-            <Settings2 className="w-4 h-4" />
-          </button>
         </div>
       </div>
 
-      {/* Settings */}
-      <AnimatePresence>
-        {showSettings && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden border-b border-slate-800/50 bg-background/50"
-          >
-            <div className="px-6 py-4">
-              <AISettings config={aiConfig} onConfigChange={setAiConfig} />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Configuration Warning */}
+      {!isConfigured && <AIConfigWarning className="px-6 shrink-0" />}
 
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto">
@@ -328,7 +288,11 @@ export function AIChatView({ namespace }: AIChatViewProps) {
                     <button
                       key={s.label}
                       onClick={() => sendMessage(s.prompt)}
-                      className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-slate-800 bg-surface/60 text-xs text-slate-300 hover:border-accent/50 hover:text-accent hover:bg-accent/5 transition text-left"
+                      disabled={isStreaming || !isConfigured}
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-2.5 rounded-lg border border-slate-800 bg-surface/60 text-xs text-slate-300 hover:border-accent/50 hover:text-accent hover:bg-accent/5 transition text-left",
+                        "disabled:opacity-40 disabled:cursor-not-allowed",
+                      )}
                     >
                       <Icon className="w-3.5 h-3.5 shrink-0" />
                       <span>{s.label}</span>
@@ -342,43 +306,13 @@ export function AIChatView({ namespace }: AIChatViewProps) {
           {/* Messages */}
           <div className="space-y-5">
             {messages.map((msg, idx) => (
-              <div
+              <ChatMessageBubble
                 key={idx}
-                className={cn("flex gap-3", msg.role === "user" ? "justify-end" : "justify-start")}
-              >
-                {msg.role === "assistant" && (
-                  <div className="w-7 h-7 rounded-lg bg-accent/15 flex items-center justify-center shrink-0 mt-0.5">
-                    <Bot className="w-4 h-4 text-accent" />
-                  </div>
-                )}
-
-                <div
-                  className={cn(
-                    "relative group max-w-[85%] rounded-xl px-4 py-3 text-sm leading-relaxed overflow-hidden",
-                    msg.role === "user"
-                      ? "bg-accent/15 text-slate-100 rounded-br-sm"
-                      : "bg-surface border border-slate-800/50 text-slate-200 rounded-bl-sm",
-                  )}
-                >
-                  {msg.role === "user" ? (
-                    <p className="whitespace-pre-wrap break-words">{msg.content}</p>
-                  ) : (
-                    <div className="ai-markdown">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
-                    </div>
-                  )}
-
-                  {msg.role === "assistant" && (
-                    <button
-                      onClick={() => handleCopy(msg.content)}
-                      className="absolute -top-2 -right-2 p-1 rounded bg-surface border border-slate-700 opacity-0 group-hover:opacity-100 transition-opacity hover:border-accent/50"
-                      title="Copy"
-                    >
-                      <Copy className="w-3 h-3 text-slate-400" />
-                    </button>
-                  )}
-                </div>
-              </div>
+                role={msg.role}
+                content={msg.content}
+                variant="comfortable"
+                onCopy={msg.role === "assistant" ? handleCopy : undefined}
+              />
             ))}
 
             {/* Tool status indicator */}
@@ -412,8 +346,14 @@ export function AIChatView({ namespace }: AIChatViewProps) {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={isStreaming ? "Waiting for response..." : "Ask about your cluster..."}
-              disabled={isStreaming}
+              placeholder={
+                !isConfigured
+                  ? "Configure an AI provider to get started..."
+                  : isStreaming
+                    ? "Waiting for response..."
+                    : "Ask about your cluster..."
+              }
+              disabled={isStreaming || !isConfigured}
               rows={1}
               className={cn(
                 "flex-1 px-4 py-2.5 rounded-xl bg-background border border-slate-800 text-sm text-slate-100 placeholder-slate-600",
@@ -429,10 +369,10 @@ export function AIChatView({ namespace }: AIChatViewProps) {
             />
             <button
               type="submit"
-              disabled={isStreaming || !input.trim()}
+              disabled={isStreaming || !input.trim() || !isConfigured}
               className={cn(
                 "p-2.5 rounded-xl transition shrink-0",
-                input.trim() && !isStreaming
+                input.trim() && !isStreaming && isConfigured
                   ? "bg-accent/20 text-accent hover:bg-accent/30 border border-accent/50"
                   : "bg-muted/30 text-slate-600 border border-slate-800 cursor-not-allowed",
               )}

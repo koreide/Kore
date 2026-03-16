@@ -20,7 +20,7 @@ interface AISettingsProps {
 
 // ── Constants ────────────────────────────────────────────────────────────
 
-type ProviderOption = {
+export type ProviderOption = {
   id: AIConfig["provider"];
   label: string;
   defaultModel: string;
@@ -29,7 +29,7 @@ type ProviderOption = {
   defaultBaseUrl?: string;
 };
 
-const providers: ProviderOption[] = [
+export const providers: ProviderOption[] = [
   { id: "openai", label: "OpenAI", defaultModel: "gpt-4o", needsApiKey: true, needsBaseUrl: false },
   {
     id: "anthropic",
@@ -101,6 +101,7 @@ export function AISettings({ config, onConfigChange }: AISettingsProps) {
     try {
       const { api_key: _, ...configWithoutKey } = config;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(configWithoutKey));
+      window.dispatchEvent(new CustomEvent("kore-ai-config-change"));
     } catch {
       // ignore write errors
     }
