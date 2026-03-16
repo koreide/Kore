@@ -12,6 +12,19 @@ export function parseKubeQuantity(qty: string): number {
   return isNaN(num) ? 0 : num;
 }
 
+/** Format a K8s memory quantity (e.g. "8051048Ki") to human-readable (e.g. "7.7 Gi") */
+export function formatMemory(qty: string | undefined): string {
+  if (!qty) return "?";
+  const bytes = parseKubeQuantity(qty);
+  if (bytes === 0) return "0";
+  const gi = bytes / (1024 * 1024 * 1024);
+  if (gi >= 1) return `${gi.toFixed(1)} Gi`;
+  const mi = bytes / (1024 * 1024);
+  if (mi >= 1) return `${mi.toFixed(0)} Mi`;
+  const ki = bytes / 1024;
+  return `${ki.toFixed(0)} Ki`;
+}
+
 export function parseUsagePercent(usage: string | undefined, capacity: string | undefined): number {
   if (!usage || !capacity) return 0;
   const u = parseKubeQuantity(usage);

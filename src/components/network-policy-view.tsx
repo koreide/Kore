@@ -176,9 +176,10 @@ function detectSimulation(text: string, groups: NetworkPolicyPodGroup[]): Simula
 interface NetworkPolicyViewProps {
   namespace?: string;
   currentContext?: string;
+  onGoToSettings?: () => void;
 }
 
-export function NetworkPolicyView({ namespace, currentContext }: NetworkPolicyViewProps) {
+export function NetworkPolicyView({ namespace, currentContext, onGoToSettings }: NetworkPolicyViewProps) {
   const { graph, loading, error, refresh, simulate } = useNetworkPolicyGraph(
     namespace,
     currentContext,
@@ -521,7 +522,7 @@ Total pods: ${allPods.length}`;
                 </p>
 
                 {!hasAIConfig && (
-                  <AIConfigWarning className="mb-6 rounded-lg border border-amber-500/30 max-w-sm" />
+                  <AIConfigWarning className="mb-6 rounded-lg border border-amber-500/30 max-w-sm" onGoToSettings={onGoToSettings} />
                 )}
 
                 {/* Suggested questions */}
