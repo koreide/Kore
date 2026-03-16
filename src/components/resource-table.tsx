@@ -28,6 +28,8 @@ import { cn } from "@/lib/utils";
 import type { ResourceItem, ResourceKind } from "@/lib/types";
 import { RestartSparkline } from "./restart-sparkline";
 import type { RestartDataPoint } from "@/hooks/use-restart-history";
+import { formatRelativeAge, getStatusVariant } from "@/lib/k8s-utils";
+import type { StatusVariant } from "@/lib/k8s-utils";
 
 interface ResourceTableProps {
   data: ResourceItem[];
@@ -44,27 +46,6 @@ interface ResourceTableProps {
   multiCluster?: boolean;
 }
 
-function formatRelativeAge(timestamp: string | undefined): string {
-  if (!timestamp) return "-";
-
-  try {
-    const created = new Date(timestamp);
-    const now = new Date();
-    const diffMs = now.getTime() - created.getTime();
-    const diffSeconds = Math.floor(diffMs / 1000);
-    const diffMinutes = Math.floor(diffSeconds / 60);
-    const diffHours = Math.floor(diffMinutes / 60);
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffDays > 0) return `${diffDays}d`;
-    if (diffHours > 0) return `${diffHours}h`;
-    if (diffMinutes > 0) return `${diffMinutes}m`;
-    return `${diffSeconds}s`;
-  } catch {
-    return "-";
-  }
-}
-
 /** Shared age sorting function — deduplicated from 4 copies. */
 function ageSortingFn(rowA: Row<ResourceItem>, rowB: Row<ResourceItem>): number {
   const timestampA = rowA.original.age;
@@ -73,34 +54,6 @@ function ageSortingFn(rowA: Row<ResourceItem>, rowB: Row<ResourceItem>): number 
   if (!timestampA) return 1;
   if (!timestampB) return -1;
   return new Date(timestampA).getTime() - new Date(timestampB).getTime();
-}
-
-type StatusVariant = "running" | "pending" | "failed" | "terminating" | "default";
-
-function getStatusVariant(status: string | undefined): StatusVariant {
-  if (!status) return "default";
-  const s = status.toLowerCase();
-  if (
-    s === "running" ||
-    s === "ready" ||
-    s === "succeeded" ||
-    s === "completed" ||
-    s === "complete"
-  )
-    return "running";
-  if (s === "pending" || s === "containercreating" || s === "init" || s === "waiting")
-    return "pending";
-  if (
-    s === "failed" ||
-    s === "crashloopbackoff" ||
-    s === "error" ||
-    s === "imagepullbackoff" ||
-    s === "evicted" ||
-    s === "oomkilled"
-  )
-    return "failed";
-  if (s === "terminating") return "terminating";
-  return "default";
 }
 
 const statusStyles: Record<

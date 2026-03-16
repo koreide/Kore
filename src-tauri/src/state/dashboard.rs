@@ -415,6 +415,267 @@ impl K8sState {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    fn make_pod(name: &str, ns: &str, phase: &str) -> serde_json::Value {
+        json!({
+            "metadata": { "name": name, "namespace": ns },
+            "status": { "phase": phase }
+        })
+    }
+
+    fn make_pod_with_restarts(
+        name: &str,
+        ns: &str,
+        phase: &str,
+        restarts: i64,
+    ) -> serde_json::Value {
+        json!({
+            "metadata": { "name": name, "namespace": ns },
+            "status": {
+                "phase": phase,
+                "containerStatuses": [{
+                    "restartCount": restarts
+                }]
+            }
+        })
+    }
+
+    fn make_crashloop_pod(name: &str, ns: &str) -> serde_json::Value {
+        json!({
+            "metadata": { "name": name, "namespace": ns },
+            "status": {
+                "phase": "Running",
+                "containerStatuses": [{
+                    "restartCount": 5,
+                    "state": { "waiting": { "reason": "CrashLoopBackOff" } }
+                }]
+            }
+        })
+    }
+
+    fn make_node(name: &str, ready: bool) -> serde_json::Value {
+        json!({
+            "metadata": { "name": name },
+            "status": {
+                "conditions": [{
+                    "type": "Ready",
+                    "status": if ready { "True" } else { "False" }
+                }],
+                "capacity": { "cpu": "4", "memory": "16Gi" },
+                "allocatable": { "cpu": "3800m", "memory": "15Gi" }
+            }
+        })
+    }
+
+    fn make_warning_event(reason: &str, message: &str) -> serde_json::Value {
+        json!({
+            "type": "Warning",
+            "reason": reason,
+            "message": message,
+            "metadata": { "namespace": "default" },
+            "involvedObject": { "kind": "Pod", "name": "my-pod" },
+            "count": 1,
+            "lastTimestamp": "2026-03-16T12:00:00Z"
+        })
+    }
+
+    fn make_normal_event(reason: &str) -> serde_json::Value {
+        json!({
+            "type": "Normal",
+            "reason": reason,
+            "message": "normal event",
+            "metadata": { "namespace": "default" },
+            "involvedObject": { "kind": "Pod", "name": "my-pod" }
+        })
+    }
+
+    #[test]
+    fn test_all_running_all_ready_no_warnings() {
+        let pods: Vec<_> = (0..5)
+            .map(|i| make_pod(&format!("pod-{i}"), "default", "Running"))
+            .collect();
+        let nodes = vec![make_node("node-1", true), make_node("node-2", true)];
+        let events: Vec<serde_json::Value> = vec![];
+
+        let health = compute_health(&pods, &nodes, &events);
+
+        // All nodes ready (30) + all pods running (40) + base 30 = 100
+        assert_eq!(health.score, 100);
+        assert_eq!(health.pods.running, 5);
+        assert_eq!(health.pods.failed, 0);
+        assert_eq!(health.pods.pending, 0);
+        assert_eq!(health.pods.crash_looping, 0);
+        assert_eq!(health.pods.total, 5);
+        assert_eq!(health.nodes.len(), 2);
+        assert!(health.nodes.iter().all(|n| n.status == "Ready"));
+    }
+
+    #[test]
+    fn test_all_pods_failed() {
+        let pods: Vec<_> = (0..5)
+            .map(|i| make_pod(&format!("pod-{i}"), "default", "Failed"))
+            .collect();
+        let nodes = vec![make_node("node-1", true)];
+        let events: Vec<serde_json::Value> = vec![];
+
+        let health = compute_health(&pods, &nodes, &events);
+
+        assert_eq!(health.pods.failed, 5);
+        assert_eq!(health.pods.running, 0);
+        // Score: node_score = 30, pod_score = 0, base = 30 → 60
+        assert_eq!(health.score, 60);
+    }
+
+    #[test]
+    fn test_mixed_pod_states() {
+        let pods = vec![
+            make_pod("pod-1", "default", "Running"),
+            make_pod("pod-2", "default", "Running"),
+            make_pod("pod-3", "default", "Pending"),
+            make_crashloop_pod("pod-4", "default"),
+        ];
+        let nodes = vec![make_node("node-1", true)];
+        let events: Vec<serde_json::Value> = vec![];
+
+        let health = compute_health(&pods, &nodes, &events);
+
+        assert_eq!(health.pods.running, 2);
+        assert_eq!(health.pods.pending, 1);
+        assert_eq!(health.pods.crash_looping, 1);
+        assert_eq!(health.pods.total, 4);
+
+        // crash_penalty = 5, pending_penalty = 2
+        // node_score = 30, pod_score = (2/4)*40 = 20, base = 30
+        // score = 30 + 20 + 30 - 5 - 2 = 73
+        assert_eq!(health.score, 73);
+    }
+
+    #[test]
+    fn test_crashloop_detection() {
+        let pods = vec![
+            make_crashloop_pod("crash-1", "default"),
+            make_crashloop_pod("crash-2", "default"),
+        ];
+        let health = compute_health(&pods, &[], &[]);
+
+        assert_eq!(health.pods.crash_looping, 2);
+        assert_eq!(health.pods.running, 0);
+    }
+
+    #[test]
+    fn test_pending_pod_reason_extraction() {
+        let pod = json!({
+            "metadata": { "name": "pending-pod", "namespace": "default", "creationTimestamp": "2026-03-16T10:00:00Z" },
+            "status": {
+                "phase": "Pending",
+                "conditions": [{
+                    "type": "PodScheduled",
+                    "status": "False",
+                    "reason": "Unschedulable"
+                }]
+            }
+        });
+        let health = compute_health(&[pod], &[], &[]);
+
+        assert_eq!(health.pending_pods.len(), 1);
+        assert_eq!(health.pending_pods[0].reason, "Unschedulable");
+        assert_eq!(health.pending_pods[0].name, "pending-pod");
+    }
+
+    #[test]
+    fn test_restart_hotlist_sorted_and_truncated() {
+        let pods: Vec<_> = (0..15)
+            .map(|i| make_pod_with_restarts(&format!("pod-{i}"), "default", "Running", i as i64))
+            .collect();
+
+        let health = compute_health(&pods, &[], &[]);
+
+        // Should be sorted descending and truncated to 10
+        assert_eq!(health.restart_hotlist.len(), 10);
+        assert_eq!(health.restart_hotlist[0].restarts, 14);
+        assert_eq!(health.restart_hotlist[9].restarts, 5);
+
+        // Verify sorted descending
+        for i in 0..health.restart_hotlist.len() - 1 {
+            assert!(health.restart_hotlist[i].restarts >= health.restart_hotlist[i + 1].restarts);
+        }
+    }
+
+    #[test]
+    fn test_node_health_ready_vs_not_ready() {
+        let nodes = vec![
+            make_node("node-1", true),
+            make_node("node-2", false),
+            make_node("node-3", true),
+        ];
+        let health = compute_health(&[], &nodes, &[]);
+
+        assert_eq!(health.nodes.len(), 3);
+        let ready_count = health.nodes.iter().filter(|n| n.status == "Ready").count();
+        let not_ready_count = health
+            .nodes
+            .iter()
+            .filter(|n| n.status == "NotReady")
+            .count();
+        assert_eq!(ready_count, 2);
+        assert_eq!(not_ready_count, 1);
+    }
+
+    #[test]
+    fn test_warning_events_filtered_and_limited() {
+        let mut events: Vec<serde_json::Value> = (0..25)
+            .map(|i| make_warning_event(&format!("Reason{i}"), &format!("msg {i}")))
+            .collect();
+        // Add some normal events that should be filtered out
+        events.push(make_normal_event("Scheduled"));
+        events.push(make_normal_event("Pulled"));
+
+        let health = compute_health(&[], &[], &events);
+
+        // Should only have 20 warnings (limited)
+        assert_eq!(health.recent_warnings.len(), 20);
+        // All should be from warning events
+        assert!(health
+            .recent_warnings
+            .iter()
+            .all(|w| w.reason.starts_with("Reason")));
+    }
+
+    #[test]
+    fn test_empty_inputs_base_score() {
+        let health = compute_health(&[], &[], &[]);
+
+        assert_eq!(health.pods.total, 0);
+        assert_eq!(health.nodes.len(), 0);
+        assert_eq!(health.recent_warnings.len(), 0);
+        assert_eq!(health.restart_hotlist.len(), 0);
+        assert_eq!(health.pending_pods.len(), 0);
+        // node_score = 0 (no nodes), pod_score = 0 (no pods), base = 30
+        assert_eq!(health.score, 30);
+    }
+
+    #[test]
+    fn test_score_clamping() {
+        // Many crash loops and pending pods to drive score very low
+        let pods: Vec<_> = (0..20)
+            .map(|i| make_crashloop_pod(&format!("crash-{i}"), "default"))
+            .collect();
+        let nodes = vec![make_node("node-1", false)];
+        let events: Vec<serde_json::Value> = (0..30)
+            .map(|i| make_warning_event(&format!("R{i}"), "msg"))
+            .collect();
+
+        let health = compute_health(&pods, &nodes, &events);
+
+        // Score should be clamped to 0-100 (u32 is always >= 0)
+        assert!(health.score <= 100);
+    }
+}
+
 /// Fetch resources using a specific client (for multi-cluster). Returns empty vec on error.
 async fn fetch_resources_with_client(
     client: &Client,

@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   Clock,
   Heart,
+  Info,
   RefreshCw,
   Server,
   Skull,
@@ -14,6 +15,14 @@ import {
 import { getClusterHealth, getClusterHealthMultiCluster } from "@/lib/api";
 import type { ClusterHealth, ClusterHealthEntry } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import {
+  parseUsagePercent,
+  scoreColor,
+  scoreBorderColor,
+  scoreGlowColor,
+  scoreLabel,
+  scoreBgColor,
+} from "@/lib/k8s-utils";
 
 interface ClusterDashboardProps {
   onNavigateToResource?: (kind: string, name: string, namespace: string) => void;
@@ -35,36 +44,6 @@ const NODE_STATUS_COLORS: Record<string, string> = {
   NotReady: "#ef4444",
   Unknown: "#f59e0b",
 };
-
-function scoreColor(score: number): string {
-  if (score >= 80) return "text-emerald-400";
-  if (score >= 50) return "text-amber-400";
-  return "text-red-400";
-}
-
-function scoreBorderColor(score: number): string {
-  if (score >= 80) return "border-emerald-500/30";
-  if (score >= 50) return "border-amber-500/30";
-  return "border-red-500/30";
-}
-
-function scoreGlowColor(score: number): string {
-  if (score >= 80) return "shadow-emerald-500/10";
-  if (score >= 50) return "shadow-amber-500/10";
-  return "shadow-red-500/10";
-}
-
-function scoreLabel(score: number): string {
-  if (score >= 80) return "Healthy";
-  if (score >= 50) return "Degraded";
-  return "Critical";
-}
-
-function scoreBgColor(score: number): string {
-  if (score >= 80) return "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
-  if (score >= 50) return "bg-amber-500/15 text-amber-400 border-amber-500/30";
-  return "bg-red-500/15 text-red-400 border-red-500/30";
-}
 
 // ── Card wrapper ──────────────────────────────────────────────────────
 
@@ -118,6 +97,92 @@ function PieTooltipContent({
   );
 }
 
+// ── Score breakdown ──────────────────────────────────────────────────
+
+function ScoreBreakdown({ health }: { health: ClusterHealth }) {
+  const readyNodes = health.nodes.filter((n) => n.status === "Ready").length;
+  const totalNodes = Math.max(health.nodes.length, 1);
+  const nodeScore = (readyNodes / totalNodes) * 30;
+
+  const runningPods = health.pods.running;
+  const totalPods = Math.max(health.pods.total, 1);
+  const podScore = (runningPods / totalPods) * 40;
+
+  const crashPenalty = Math.min(health.pods.crash_looping * 5, 15);
+  const pendingPenalty = Math.min(health.pods.pending * 2, 10);
+  const warningPenalty = Math.min(health.recent_warnings.length * 0.5, 5);
+
+  const rows: { label: string; detail: string; value: string; negative?: boolean }[] = [
+    {
+      label: "Node health",
+      detail: `${readyNodes}/${health.nodes.length} ready`,
+      value: `+${nodeScore.toFixed(1)}`,
+    },
+    {
+      label: "Pod health",
+      detail: `${runningPods}/${health.pods.total} running`,
+      value: `+${podScore.toFixed(1)}`,
+    },
+    { label: "Base score", detail: "", value: "+30.0" },
+  ];
+
+  if (crashPenalty > 0) {
+    rows.push({
+      label: "CrashLoop penalty",
+      detail: `${health.pods.crash_looping} pod${health.pods.crash_looping !== 1 ? "s" : ""}`,
+      value: `-${crashPenalty.toFixed(1)}`,
+      negative: true,
+    });
+  }
+  if (pendingPenalty > 0) {
+    rows.push({
+      label: "Pending penalty",
+      detail: `${health.pods.pending} pod${health.pods.pending !== 1 ? "s" : ""}`,
+      value: `-${pendingPenalty.toFixed(1)}`,
+      negative: true,
+    });
+  }
+  if (warningPenalty > 0) {
+    rows.push({
+      label: "Warning penalty",
+      detail: `${health.recent_warnings.length} event${health.recent_warnings.length !== 1 ? "s" : ""}`,
+      value: `-${warningPenalty.toFixed(1)}`,
+      negative: true,
+    });
+  }
+
+  return (
+    <div className="mt-3 pt-3 border-t border-slate-800/60 space-y-1.5 text-[11px] font-mono">
+      {rows.map((row) => (
+        <div key={row.label} className="flex items-center gap-2">
+          <span className="text-slate-400 flex-1">{row.label}</span>
+          {row.detail && <span className="text-slate-600">{row.detail}</span>}
+          <span
+            className={cn(
+              "w-12 text-right tabular-nums font-medium",
+              row.negative ? "text-red-400/80" : "text-emerald-400/80",
+            )}
+          >
+            {row.value}
+          </span>
+        </div>
+      ))}
+      <div className="flex items-center gap-2 pt-1.5 border-t border-slate-800/40">
+        <span className="text-slate-300 flex-1 font-medium">Total</span>
+        <span
+          className={cn("w-12 text-right tabular-nums font-semibold", scoreColor(health.score))}
+        >
+          {health.score}
+        </span>
+      </div>
+      <p className="text-[10px] text-slate-600 leading-relaxed pt-1">
+        Score is clamped to 0-100. Node &amp; pod ratios scale up to 30 and 40 points respectively.
+        Penalties are capped at -15 (crash), -10 (pending), -5 (warnings).
+      </p>
+    </div>
+  );
+}
+
 // ── Health cards (shared between single and multi-cluster) ───────────
 
 function HealthCards({
@@ -136,6 +201,7 @@ function HealthCards({
   ].filter((d) => d.value > 0);
 
   const hasNoPods = podData.length === 0;
+  const [showBreakdown, setShowBreakdown] = useState(false);
 
   return (
     <>
@@ -159,7 +225,27 @@ function HealthCards({
           <span className="text-xs text-slate-500 mt-1">
             {health.pods.total} pods across {health.nodes.length} nodes
           </span>
+          <button
+            onClick={() => setShowBreakdown((v) => !v)}
+            className="mt-2 flex items-center gap-1 text-[10px] text-slate-500 hover:text-slate-300 transition-colors"
+          >
+            <Info className="w-3 h-3" />
+            {showBreakdown ? "Hide breakdown" : "How is this calculated?"}
+          </button>
         </div>
+        <AnimatePresence>
+          {showBreakdown && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <ScoreBreakdown health={health} />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </DashboardCard>
 
       {/* ── Pod Health Pie ───────────────────────────────────────── */}
@@ -523,30 +609,4 @@ export function ClusterDashboard({ onNavigateToResource, multiCluster }: Cluster
       </AnimatePresence>
     </div>
   );
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────
-
-/**
- * Rough percentage from two k8s quantity strings.
- * Handles common patterns: "500m" / "2", "4Gi" / "16Gi", plain numbers, etc.
- */
-function parseUsagePercent(usage: string | undefined, capacity: string | undefined): number {
-  if (!usage || !capacity) return 0;
-  const u = parseKubeQuantity(usage);
-  const c = parseKubeQuantity(capacity);
-  if (c === 0) return 0;
-  return Math.min(Math.round((u / c) * 100), 100);
-}
-
-function parseKubeQuantity(qty: string): number {
-  const trimmed = qty.trim();
-  if (trimmed.endsWith("Ki")) return parseFloat(trimmed) * 1024;
-  if (trimmed.endsWith("Mi")) return parseFloat(trimmed) * 1024 * 1024;
-  if (trimmed.endsWith("Gi")) return parseFloat(trimmed) * 1024 * 1024 * 1024;
-  if (trimmed.endsWith("Ti")) return parseFloat(trimmed) * 1024 * 1024 * 1024 * 1024;
-  if (trimmed.endsWith("m")) return parseFloat(trimmed) / 1000;
-  if (trimmed.endsWith("n")) return parseFloat(trimmed) / 1_000_000_000;
-  const num = parseFloat(trimmed);
-  return isNaN(num) ? 0 : num;
 }
