@@ -14,6 +14,14 @@ import {
 import { getClusterHealth, getClusterHealthMultiCluster } from "@/lib/api";
 import type { ClusterHealth, ClusterHealthEntry } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import {
+  parseUsagePercent,
+  scoreColor,
+  scoreBorderColor,
+  scoreGlowColor,
+  scoreLabel,
+  scoreBgColor,
+} from "@/lib/k8s-utils";
 
 interface ClusterDashboardProps {
   onNavigateToResource?: (kind: string, name: string, namespace: string) => void;
@@ -35,36 +43,6 @@ const NODE_STATUS_COLORS: Record<string, string> = {
   NotReady: "#ef4444",
   Unknown: "#f59e0b",
 };
-
-function scoreColor(score: number): string {
-  if (score >= 80) return "text-emerald-400";
-  if (score >= 50) return "text-amber-400";
-  return "text-red-400";
-}
-
-function scoreBorderColor(score: number): string {
-  if (score >= 80) return "border-emerald-500/30";
-  if (score >= 50) return "border-amber-500/30";
-  return "border-red-500/30";
-}
-
-function scoreGlowColor(score: number): string {
-  if (score >= 80) return "shadow-emerald-500/10";
-  if (score >= 50) return "shadow-amber-500/10";
-  return "shadow-red-500/10";
-}
-
-function scoreLabel(score: number): string {
-  if (score >= 80) return "Healthy";
-  if (score >= 50) return "Degraded";
-  return "Critical";
-}
-
-function scoreBgColor(score: number): string {
-  if (score >= 80) return "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
-  if (score >= 50) return "bg-amber-500/15 text-amber-400 border-amber-500/30";
-  return "bg-red-500/15 text-red-400 border-red-500/30";
-}
 
 // ── Card wrapper ──────────────────────────────────────────────────────
 
@@ -523,30 +501,4 @@ export function ClusterDashboard({ onNavigateToResource, multiCluster }: Cluster
       </AnimatePresence>
     </div>
   );
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────
-
-/**
- * Rough percentage from two k8s quantity strings.
- * Handles common patterns: "500m" / "2", "4Gi" / "16Gi", plain numbers, etc.
- */
-function parseUsagePercent(usage: string | undefined, capacity: string | undefined): number {
-  if (!usage || !capacity) return 0;
-  const u = parseKubeQuantity(usage);
-  const c = parseKubeQuantity(capacity);
-  if (c === 0) return 0;
-  return Math.min(Math.round((u / c) * 100), 100);
-}
-
-function parseKubeQuantity(qty: string): number {
-  const trimmed = qty.trim();
-  if (trimmed.endsWith("Ki")) return parseFloat(trimmed) * 1024;
-  if (trimmed.endsWith("Mi")) return parseFloat(trimmed) * 1024 * 1024;
-  if (trimmed.endsWith("Gi")) return parseFloat(trimmed) * 1024 * 1024 * 1024;
-  if (trimmed.endsWith("Ti")) return parseFloat(trimmed) * 1024 * 1024 * 1024 * 1024;
-  if (trimmed.endsWith("m")) return parseFloat(trimmed) / 1000;
-  if (trimmed.endsWith("n")) return parseFloat(trimmed) / 1_000_000_000;
-  const num = parseFloat(trimmed);
-  return isNaN(num) ? 0 : num;
 }

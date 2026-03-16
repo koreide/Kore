@@ -72,4 +72,28 @@ mod tests {
         let err = K8sError::Cancelled;
         assert_eq!(err.to_string(), "Operation cancelled");
     }
+
+    #[test]
+    fn test_classify_validation_error() {
+        let err = K8sError::Validation("bad input".to_string());
+        assert_eq!(classify_connection_error(&err), "unknown");
+    }
+
+    #[test]
+    fn test_classify_client_missing() {
+        let err = K8sError::ClientMissing;
+        assert_eq!(classify_connection_error(&err), "unknown");
+    }
+
+    #[test]
+    fn test_classify_cancelled() {
+        let err = K8sError::Cancelled;
+        assert_eq!(classify_connection_error(&err), "unknown");
+    }
+
+    #[test]
+    fn test_classify_port_forward() {
+        let err = K8sError::PortForward("port in use".to_string());
+        assert_eq!(classify_connection_error(&err), "unknown");
+    }
 }

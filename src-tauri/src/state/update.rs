@@ -134,14 +134,12 @@ pub async fn perform_update() -> Result<String, String> {
         .map_err(|e| format!("Failed to create mount point: {e}"))?;
 
     let mount_out = std::process::Command::new("hdiutil")
-        .args([
-            "attach",
-            dmg_path.to_str().unwrap(),
-            "-nobrowse",
-            "-quiet",
-            "-mountpoint",
-            mount_point.to_str().unwrap(),
-        ])
+        .arg("attach")
+        .arg(&dmg_path)
+        .arg("-nobrowse")
+        .arg("-quiet")
+        .arg("-mountpoint")
+        .arg(&mount_point)
         .output()
         .map_err(|e| format!("Failed to run hdiutil attach: {e}"))?;
 
@@ -167,13 +165,19 @@ pub async fn perform_update() -> Result<String, String> {
         Some(entry) => entry.path(),
         None => {
             let _ = std::process::Command::new("hdiutil")
-                .args(["detach", mount_point.to_str().unwrap(), "-quiet"])
+                .arg("detach")
+                .arg(&mount_point)
+                .arg("-quiet")
                 .output();
             return Err("No .app found in DMG".to_string());
         }
     };
 
-    let app_name = app_path.file_name().unwrap().to_string_lossy().to_string();
+    let app_name = app_path
+        .file_name()
+        .ok_or_else(|| "DMG app bundle has no file name".to_string())?
+        .to_string_lossy()
+        .to_string();
     let dest = std::path::PathBuf::from("/Applications").join(&app_name);
 
     info!(dest = %dest.display(), "Installing...");
@@ -186,13 +190,17 @@ pub async fn perform_update() -> Result<String, String> {
 
     // Copy new .app
     let cp_out = std::process::Command::new("cp")
-        .args(["-R", app_path.to_str().unwrap(), dest.to_str().unwrap()])
+        .arg("-R")
+        .arg(&app_path)
+        .arg(&dest)
         .output()
         .map_err(|e| format!("Failed to copy app: {e}"))?;
 
     if !cp_out.status.success() {
         let _ = std::process::Command::new("hdiutil")
-            .args(["detach", mount_point.to_str().unwrap(), "-quiet"])
+            .arg("detach")
+            .arg(&mount_point)
+            .arg("-quiet")
             .output();
         return Err(format!(
             "Failed to copy to /Applications: {}",
@@ -202,12 +210,16 @@ pub async fn perform_update() -> Result<String, String> {
 
     // Unmount
     let _ = std::process::Command::new("hdiutil")
-        .args(["detach", mount_point.to_str().unwrap(), "-quiet"])
+        .arg("detach")
+        .arg(&mount_point)
+        .arg("-quiet")
         .output();
 
     // Clear quarantine
     let _ = std::process::Command::new("xattr")
-        .args(["-dr", "com.apple.quarantine", dest.to_str().unwrap()])
+        .arg("-dr")
+        .arg("com.apple.quarantine")
+        .arg(&dest)
         .output();
 
     info!(version = %release.tag_name, "Update installed successfully");
