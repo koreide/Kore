@@ -17,6 +17,7 @@ import type { ClusterHealth, ClusterHealthEntry } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import {
   parseUsagePercent,
+  formatMemory,
   scoreColor,
   scoreBorderColor,
   scoreGlowColor,
@@ -257,7 +258,7 @@ function HealthCards({
                       />
                     </div>
                     <span className="w-20 text-right tabular-nums text-slate-400">
-                      {node.memory_usage || "?"} / {node.memory_capacity || "?"}
+                      {formatMemory(node.memory_usage)} / {formatMemory(node.memory_capacity)}
                     </span>
                   </div>
                 </div>
