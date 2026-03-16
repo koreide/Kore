@@ -34,6 +34,7 @@ interface AIPanelProps {
   open: boolean;
   onClose: () => void;
   resourceContext?: { kind: string; namespace: string; name: string };
+  onGoToSettings?: () => void;
 }
 
 // Placeholder for the backend invoke — imported from api.ts in production
@@ -63,7 +64,7 @@ const quickActions = [
 
 // ── Component ────────────────────────────────────────────────────────────
 
-export function AIPanel({ open, onClose, resourceContext }: AIPanelProps) {
+export function AIPanel({ open, onClose, resourceContext, onGoToSettings }: AIPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
@@ -278,7 +279,7 @@ export function AIPanel({ open, onClose, resourceContext }: AIPanelProps) {
             </div>
 
             {/* Configuration Warning */}
-            {!isConfigured && <AIConfigWarning className="w-full" />}
+            {!isConfigured && <AIConfigWarning className="w-full" onGoToSettings={onGoToSettings} />}
 
             {/* Resource Context Indicator */}
             {resourceContext && (
