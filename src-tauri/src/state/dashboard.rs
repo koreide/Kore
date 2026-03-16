@@ -57,6 +57,8 @@ pub struct WarningEvent {
     pub reason: String,
     pub message: String,
     pub involved_object: String,
+    pub object_kind: String,
+    pub object_name: String,
     pub namespace: String,
     pub count: i64,
     pub last_seen: String,
@@ -259,16 +261,22 @@ pub fn compute_health(
         })
         .take(20)
         .map(|e| {
-            let involved = e
-                .pointer("/involvedObject")
-                .map(|io| {
-                    format!(
-                        "{}/{}",
-                        io.get("kind").and_then(|v| v.as_str()).unwrap_or(""),
-                        io.get("name").and_then(|v| v.as_str()).unwrap_or("")
-                    )
-                })
-                .unwrap_or_default();
+            let io = e.pointer("/involvedObject");
+            let obj_kind = io
+                .and_then(|o| o.get("kind"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            let obj_name = io
+                .and_then(|o| o.get("name"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            let involved = if !obj_kind.is_empty() || !obj_name.is_empty() {
+                format!("{}/{}", obj_kind, obj_name)
+            } else {
+                String::new()
+            };
 
             WarningEvent {
                 reason: e
@@ -282,6 +290,8 @@ pub fn compute_health(
                     .unwrap_or("")
                     .to_string(),
                 involved_object: involved,
+                object_kind: obj_kind,
+                object_name: obj_name,
                 namespace: e
                     .pointer("/metadata/namespace")
                     .and_then(|v| v.as_str())

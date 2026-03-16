@@ -116,6 +116,21 @@ function PieTooltipContent({
   );
 }
 
+// ── Kind mapping ────────────────────────────────────────────────────
+
+const KIND_TO_RESOURCE: Record<string, string> = {
+  Pod: "pods",
+  Deployment: "deployments",
+  Service: "services",
+  Node: "nodes",
+  Ingress: "ingresses",
+  Job: "jobs",
+  CronJob: "cronjobs",
+  ConfigMap: "configmaps",
+  Secret: "secrets",
+  ReplicaSet: "deployments",
+};
+
 // ── Health cards (shared between single and multi-cluster) ───────────
 
 function HealthCards({
@@ -355,27 +370,40 @@ function HealthCards({
           </div>
         ) : (
           <div className="space-y-2 overflow-auto max-h-48">
-            {health.recent_warnings.map((evt, idx) => (
-              <div
-                key={`${evt.involved_object}-${evt.reason}-${idx}`}
-                className="px-2 py-1.5 rounded border border-amber-500/10 bg-amber-500/5 text-xs"
-              >
-                <div className="flex items-center gap-1.5">
-                  <AlertTriangle className="w-3 h-3 text-amber-400 flex-shrink-0" />
-                  <span className="text-amber-300 font-medium truncate">{evt.reason}</span>
-                  {evt.count > 1 && (
-                    <span className="text-slate-500 font-mono text-[10px] ml-auto flex-shrink-0">
-                      x{evt.count}
-                    </span>
-                  )}
+            {health.recent_warnings.map((evt, idx) => {
+              const resourceKind = KIND_TO_RESOURCE[evt.object_kind];
+              const canNavigate = !!(resourceKind && evt.object_name && onNavigateToResource);
+              return (
+                <div
+                  key={`${evt.involved_object}-${evt.reason}-${idx}`}
+                  className="px-2 py-1.5 rounded border border-amber-500/10 bg-amber-500/5 text-xs"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <AlertTriangle className="w-3 h-3 text-amber-400 flex-shrink-0" />
+                    <span className="text-amber-300 font-medium truncate">{evt.reason}</span>
+                    {evt.count > 1 && (
+                      <span className="text-slate-500 font-mono text-[10px] ml-auto flex-shrink-0">
+                        x{evt.count}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-slate-400 mt-0.5 line-clamp-2 leading-relaxed">{evt.message}</p>
+                  <div className="flex items-center justify-between mt-1 text-[10px] text-slate-600">
+                    {canNavigate ? (
+                      <button
+                        onClick={() => onNavigateToResource!(resourceKind, evt.object_name, evt.namespace)}
+                        className="truncate max-w-[60%] text-accent hover:text-accent/80 transition-colors"
+                      >
+                        {evt.involved_object}
+                      </button>
+                    ) : (
+                      <span className="truncate max-w-[60%]">{evt.involved_object}</span>
+                    )}
+                    <span>{evt.last_seen}</span>
+                  </div>
                 </div>
-                <p className="text-slate-400 mt-0.5 line-clamp-2 leading-relaxed">{evt.message}</p>
-                <div className="flex items-center justify-between mt-1 text-[10px] text-slate-600">
-                  <span className="truncate max-w-[60%]">{evt.involved_object}</span>
-                  <span>{evt.last_seen}</span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </DashboardCard>
