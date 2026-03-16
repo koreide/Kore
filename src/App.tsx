@@ -578,7 +578,7 @@ export default function App() {
             <section className="overflow-hidden relative">
               <AnimatePresence mode="wait">
                 {viewMode === "chat" ? (
-                  <AIChatView key="chat" namespace={namespace === "*" ? undefined : namespace} />
+                  <AIChatView key="chat" namespace={namespace === "*" ? undefined : namespace} onGoToSettings={() => setViewMode("settings")} />
                 ) : viewMode === "dashboard" ? (
                   <ClusterDashboard
                     key="dashboard"
@@ -596,6 +596,7 @@ export default function App() {
                     key="network-policies"
                     namespace={namespace === "*" ? undefined : namespace}
                     currentContext={currentContext}
+                    onGoToSettings={() => setViewMode("settings")}
                   />
                 ) : viewMode === "rbac" ? (
                   <RbacView
@@ -709,6 +710,7 @@ export default function App() {
             ? { kind, namespace: selected.namespace || "default", name: selected.name }
             : undefined
         }
+        onGoToSettings={() => setViewMode("settings")}
       />
     </div>
   );

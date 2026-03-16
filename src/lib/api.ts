@@ -285,6 +285,8 @@ export interface WarningEvent {
   reason: string;
   message: string;
   involved_object: string;
+  object_kind: string;
+  object_name: string;
   namespace: string;
   count: number;
   last_seen: string;

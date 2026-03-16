@@ -36,6 +36,7 @@ interface DisplayMessage {
 
 interface AIChatViewProps {
   namespace?: string;
+  onGoToSettings?: () => void;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────
@@ -78,7 +79,7 @@ const suggestions = [
 
 // ── Component ────────────────────────────────────────────────────────────
 
-export function AIChatView({ namespace }: AIChatViewProps) {
+export function AIChatView({ namespace, onGoToSettings }: AIChatViewProps) {
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
@@ -263,7 +264,7 @@ export function AIChatView({ namespace }: AIChatViewProps) {
       </div>
 
       {/* Configuration Warning */}
-      {!isConfigured && <AIConfigWarning className="px-6 shrink-0" />}
+      {!isConfigured && <AIConfigWarning className="px-6 shrink-0" onGoToSettings={onGoToSettings} />}
 
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto">
