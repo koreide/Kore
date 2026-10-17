@@ -1,0 +1,6 @@
+# Open the Jobs list via the command palette ("Go to Jobs").
+- key: cmd+k
+- wait: {text: "Go to", timeout: 5}
+- type: "Jobs"
+- click: {text: "Go to Jobs"}
+- wait: {text: "re:(?i)^Jobs$", within: [0.2, 0, 1, 0.2], timeout: 10}

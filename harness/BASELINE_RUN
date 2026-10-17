@@ -1,0 +1,3 @@
+# Known-good reference run for Layer 2 visual regression checks (`just compare <new-run>`).
+# harness/runs/ is not committed: after a clean full `just test-app` on a trusted build, point this at it.
+harness/runs/l2-full-2   # 39/39 Layer 2 scenarios pass (off-screen render, 2800x1800 window space)

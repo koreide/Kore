@@ -1,0 +1,5 @@
+# Clear the header search box (table/details views) and leave focus outside any input.
+- click_at: [0.47, 0.073]
+- key: cmd+a
+- key: backspace
+- click_at: [0.205, 0.073]

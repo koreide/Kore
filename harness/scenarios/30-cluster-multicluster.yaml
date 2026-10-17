@@ -1,0 +1,24 @@
+name: cluster-multicluster
+description: >
+  Multi-Cluster toggle: the Dashboard shows one section per context (kind-kore-harness,
+  kind-kore-harness-2) with a score pill, and the Deployments table across all namespaces includes
+  remote-web from kind-kore-harness-2. The toggle is switched off again at the end.
+tags: [cluster, multicluster]
+steps:
+  - include: cluster-start
+  - shell: {cmd: "kubectl --context kind-kore-harness-2 -n kore-remote get deploy remote-web -o name", expect_output: remote-web}
+  - click: {text: Multi-Cluster, within: [0, 0.25, 0.19, 0.4]}
+  - click: {text: Dashboard, within: [0, 0.3, 0.19, 1]}
+  - wait: {text: "re:^kind-kore-harness-2$", within: [0.19, 0, 1, 1], timeout: 40}
+  - expect: {texts: ["re:^kind-kore-harness$", "re:^\\d+ - (Healthy|Degraded|Critical)$"], within: [0.19, 0, 1, 1]}
+  - screenshot: {name: multi-dashboard, mask: ["re:^\\d+$", "re:\\d{4}-\\d\\d-\\d\\dT", "re:^x\\d+$", "re:pods across", "re:^\\d+Ki", "re:^\\d+/\\d+$", "re:^\\d+ - "], mask_rects: [[0.19, 0.1, 1, 1]], tolerance: 0.2}
+  - click: {text: "re:^(default|\\*|kore-demo|kube-system|kore-rbac|All Namespaces)$", within: [0, 0.18, 0.2, 0.32], until: All Namespaces, timeout: 20}
+  - click: {text: All Namespaces, within: [0, 0.3, 0.35, 0.8]}
+  - wait_gone: {text: Search namespaces, timeout: 5}
+  - click: {text: Deployments, within: [0, 0.5, 0.19, 1]}
+  - wait: {text: remote-web, timeout: 40}
+  - expect: {texts: [CLUSTER, kore-remote, logger, "kind-kore-harne"]}
+  - screenshot: {name: multi-deployments, mask: ["re:^\\d+[smhd]$", "re:^\\d+/\\d+$"]}
+  - click: {text: Multi-Cluster, within: [0, 0.25, 0.19, 0.4]}
+  - wait_gone: {text: remote-web, timeout: 20}
+  - include: cluster-ns-kore-demo

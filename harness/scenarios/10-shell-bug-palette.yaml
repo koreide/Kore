@@ -1,0 +1,76 @@
+name: shell-bug-palette
+description: >-
+  Command palette fixes: group headings are small uppercase muted labels (slate-500, not 16px
+  white); the keyboard selection is highlighted and follows Up/Down; "Network Policies" is a view
+  entry; the status quick filters filter the table (":failed" keeps crashloop, hides running pods,
+  shows a "Status: Failed" chip whose x clears it); and Recent updates live, without a restart
+  (spec 01 §14).
+tags: [shell, bugfix, palette]
+steps:
+  - include: shell-pods-kore-demo
+  - key: cmd+k
+  - wait: {text: "Search resources, navigate, switch context...", timeout: 5}
+  - expect: {texts: [Network Policies, Resource Graph]}
+  # Headings are drawn in slate-500 (#64748b); before the fix they were slate-100.
+  - expect_color: {text: Views, exact: true, within: [0.25, 0.25, 0.75, 0.45], colors: ["#64748b"], min_pixels: 6, max_dist: 40}
+  # Keyboard selection: first item by default, Down moves it, and it is painted.
+  - element: {id: palette.selected, label: "^view-AI Chat$", timeout: 3}
+  - element: {id: palette.item.view-AI Chat, timeout: 3}
+  - key: down
+  - key: down
+  - element: {id: palette.selected, label: "^view-Resource Graph$", timeout: 3}
+  - screenshot: {name: palette-selection, mask_rects: [[0.25, 0.6, 0.75, 1]]}
+  - key: up
+  - element: {id: palette.selected, label: "^view-Dashboard$", timeout: 3}
+  # Network Policies entry navigates to that view.
+  - type: Network Policies
+  - element: {id: palette.selected, label: "^view-Network Policies$", timeout: 3}
+  - key: enter
+  - wait_gone: {text: "Search resources, navigate, switch context...", timeout: 5}
+  - state: [["/view", "network-policies"]]
+  - include: nav-pods
+  - wait: {text: multi-container, within: [0.19, 0.12, 1, 1], timeout: 20}
+  # Status quick filter ":failed" filters the pods table.
+  - key: cmd+k
+  - wait: {text: "Search resources, navigate, switch context...", timeout: 5}
+  - type: ":failed"
+  - wait: {text: Show failed/error resources, timeout: 5}
+  - key: enter
+  - wait_gone: {text: Show failed/error resources, timeout: 5}
+  - element: {id: header.status-filter, label: "^Status: Failed$", timeout: 5}
+  - state: [["/statusFilter", "Failed"]]
+  - wait: {text: crashloop, within: [0.19, 0.14, 0.45, 1], timeout: 5}
+  - expect_not: {texts: [multi-container, unschedulable, one-shot-], within: [0.19, 0.14, 0.45, 1], timeout: 1}
+  - expect: {texts: ["Status: Failed"], within: [0.19, 0.04, 0.5, 0.1]}
+  - screenshot: {name: status-filter-failed, mask: ["re:^\\d+[smhd]$", "re:^\\d+$"], mask_rects: [[0.7, 0.14, 0.8, 1]]}
+  # ":pending" swaps the filter.
+  - key: cmd+k
+  - wait: {text: "Search resources, navigate, switch context...", timeout: 5}
+  - type: ":pending"
+  - wait: {text: Show pending resources, timeout: 5}
+  - key: enter
+  - element: {id: header.status-filter, label: "^Status: Pending$", timeout: 5}
+  - wait: {text: unschedulable, within: [0.19, 0.14, 0.45, 1], timeout: 5}
+  - expect_not: {texts: [crashloop, multi-container], within: [0.19, 0.14, 0.45, 1], timeout: 1}
+  # The chip's x clears it.
+  # The chip's x (chip right after "Pods <count>").
+  - click_at: [0.331, 0.072]
+  - wait: {text: multi-container, within: [0.19, 0.14, 0.45, 1], timeout: 5}
+  - state: [["/statusFilter", null]]
+  # Recent is live: a search-result selection shows up on the next open, no restart needed.
+  - key: cmd+k
+  - wait: {text: "Search resources, navigate, switch context...", timeout: 5}
+  - type: unschedul
+  - wait: {text: Search Results, timeout: 10}
+  - click: {text: unschedulable, within: [0.25, 0.28, 0.75, 0.8]}
+  - wait: {text: unschedulable, within: [0.19, 0.04, 0.5, 0.1], timeout: 10}
+  - key: h
+  - wait: {text: RESTARTS, within: [0.19, 0.1, 1, 0.14], timeout: 10}
+  - key: cmd+k
+  - wait: {text: "Search resources, navigate, switch context...", timeout: 5}
+  - type: recent-pods-unsch
+  - wait: {text: Recent, timeout: 5}
+  - element: {id: palette.item.recent-pods-unschedulable, timeout: 3}
+  - expect: {texts: [unschedulable]}
+  - key: escape
+  - wait_gone: {text: "Search resources, navigate, switch context...", timeout: 5}

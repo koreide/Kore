@@ -1,0 +1,7 @@
+# Common start for cluster scenarios: scroll the sidebar to the top (earlier scenarios may have
+# left it scrolled down to the Cluster kinds), dismiss stray popovers, and pass through the
+# Dashboard so the next view remounts with fresh state.
+- scroll: {at: [0.1, 0.75], dy: -3000}
+- wait: {text: VIEWS, within: [0, 0.3, 0.19, 0.6], timeout: 5}
+- click: {text: Dashboard, within: [0, 0.3, 0.19, 1]}
+- wait: {text: CLUSTER HEALTH, timeout: 30}

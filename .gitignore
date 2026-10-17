@@ -1,50 +1,23 @@
-# Dependencies
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-# Build outputs
-dist/
-dist-ssr/
-build/
-*.local
-
-# Rust/Cargo
+# Rust/Cargo (Cargo.lock is committed for reproducible app builds)
 target/
 **/*.rs.bk
-# Cargo.lock is committed for applications to ensure reproducible builds
 
-# Tauri
-src-tauri/gen/
-src-tauri/target/
-src-tauri/WixTools/
+# Release packaging output (crates/kore-app/packaging/*)
+dist/
 
 # Environment variables
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea/
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
 *.sw?
-*.swp
-*.swo
 *~
 
 # OS files
 .DS_Store
-.DS_Store?
 ._*
 .Spotlight-V100
 .Trashes
@@ -52,56 +25,13 @@ ehthumbs.db
 Thumbs.db
 Desktop.ini
 
-# Logs
+# Logs and temporary files
 logs/
 *.log
-
-# Testing
-coverage/
-.nyc_output/
-
-# Temporary files
 *.tmp
 *.temp
 .cache/
 
-# Vite
-.vite/
-
-# TypeScript
-*.tsbuildinfo
-
-# ESLint
-.eslintcache
-
-# Optional npm cache directory
-.npm
-
-# Optional eslint cache
-.eslintcache
-
-# Optional REPL history
-.node_repl_history
-
-# Output of 'npm pack'
-*.tgz
-
-# Yarn Integrity file
-.yarn-integrity
-
-# parcel-bundler cache
-.parcel-cache
-
-# Next.js (if ever used)
-.next/
-out/
-
-# Nuxt.js (if ever used)
-.nuxt/
-
-# Vercel (if ever used)
-.vercel
-
-# Turbo (if ever used)
-.turbo
-
+# Kore harness (local cluster creds, run artifacts)
+harness/.kube/
+harness/runs/

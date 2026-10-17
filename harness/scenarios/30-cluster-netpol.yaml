@@ -1,0 +1,26 @@
+name: cluster-netpol
+description: >
+  Network Policies view for kore-demo: stats bar (2 policies, workloads, edges), policy panel with
+  cards for default-deny-ingress (Ingress, all pods) and allow-logger-to-web (Ingress + Egress,
+  app=web, 1 ingress rule, 1 egress rule), the policy filter, suggested question chips, and the
+  panel collapse toggle.
+tags: [cluster, netpol]
+steps:
+  - include: cluster-start
+  - include: cluster-ai-ollama-mock
+  - include: cluster-ns-kore-demo
+  - click: {text: Network Policies, within: [0, 0.3, 0.19, 1]}
+  - wait: {text: "2 policies", timeout: 20}
+  - expect: {texts: ["re:\\d+ workloads", "re:\\d+ edges", "Network Policies (2)", default-deny-ingress, allow-logger-to-web, all pods, app=web, Ingress, Egress]}
+  # Small card text by automation id (OCR misses 10px labels now and then).
+  - element: {id: np.policy.default-deny-ingress.ns, label: "^ns: kore-demo$"}
+  - element: {id: np.policy.allow-logger-to-web.rules, label: "^1 ingress rule, 1 egress rule$"}
+  - expect: {texts: [Ask about your network policies, "Which pods are isolated and why?", Summarize the network security posture]}
+  - screenshot: {name: netpol-list, mask: ["re:\\d+ pods?$", "re:\\d+ workloads", "re:\\d+ edges"]}
+  # OCR may split the mono placeholder into "Filter" | "policies...".
+  - click: {text: "re:^(Q )?Filter", within: [0.7, 0.05, 1, 0.3]}
+  - type: deny
+  - wait_gone: {text: allow-logger-to-web, within: [0.75, 0.1, 1, 1], timeout: 5}
+  - expect: {texts: [default-deny-ingress]}
+  - click: {text: default-deny-ingress, within: [0.7, 0.1, 1, 0.6]}
+  - screenshot: {name: netpol-filtered-selected, mask: ["re:\\d+ pods?$", "re:\\d+ workloads", "re:\\d+ edges"]}

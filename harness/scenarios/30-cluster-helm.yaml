@@ -1,0 +1,33 @@
+name: cluster-helm
+description: >
+  Helm view lists release kore-demo (namespace, revision, deployed badge, chart kore-demo-0.1.0,
+  app version) with sortable headers; keyboard ArrowDown + Enter opens the detail, whose Values,
+  Manifest and Notes tabs show the release content (Notes: "No notes available for this release.",
+  the chart has no NOTES.txt); Esc returns to the list.
+tags: [cluster, helm]
+steps:
+  - include: cluster-start
+  - include: cluster-helm-restore
+  - include: cluster-ns-kore-demo
+  - click: {text: Helm, within: [0, 0.3, 0.19, 1]}
+  - wait: {text: kore-demo-0.1.0, timeout: 20}
+  - expect: {texts: [NAME, NAMESPACE, REVISION, STATUS, CHART, APP VERSION, UPDATED, deployed, "1.0"], within: [0.19, 0.05, 1, 0.3]}
+  - screenshot: {name: helm-list, mask: ["re:^\\d+$", "re:\\d{4}-\\d\\d-\\d\\d", "re:\\d\\d:\\d\\d"]}
+  - click: {text: REVISION, within: [0.19, 0.05, 1, 0.15]}
+  - click: {text: "re:^NAME\\b", within: [0.19, 0.05, 1, 0.15]}
+  - key: down
+  - key: enter
+  - wait: {text: Manifest, timeout: 10}
+  - expect: {texts: [Back, Release, Namespace, Values, History, Notes, Copy, "message: hello-from-helm-v2", "replicaCount: 1"]}
+  - screenshot: {name: helm-values}
+  - click: {text: Manifest, within: [0.19, 0.1, 1, 0.35]}
+  - wait: {text: "re:# Source: kore-demo/templates/", timeout: 10}
+  - expect: {texts: [ConfigMap, Deployment]}
+  - screenshot: {name: helm-manifest, mask: ["re:^\\s*(uid|resourceVersion)"]}
+  # Notes shows `helm get notes` (the chart has no NOTES.txt), not the values (quirk 10.8, fixed).
+  - click: {text: Notes, within: [0.19, 0.1, 1, 0.35], until: No notes available for this release.}
+  - expect_not: {texts: [COMPUTED VALUES, "message: hello-from-helm-v2"]}
+  - screenshot: {name: helm-notes}
+  - key: escape
+  - wait: {text: kore-demo-0.1.0, timeout: 10}
+  - expect: {texts: [APP VERSION]}

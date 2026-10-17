@@ -1,0 +1,40 @@
+name: details-bug-log-wrap
+description: >
+  Bugfix: pod log rows take the height of their wrapped text (variable-height virtualized list),
+  so a long line that wraps no longer paints over the rows after it. A throwaway pod prints 120
+  long lines (WRAP-n segment-01 … segment-40 WRAP-END-n) and a final marker line; the marker and
+  the end of the last long line must OCR intact, search navigation must bring a wrapped line into
+  view, and scrolling the list must stay within the frame budget (p95 < 16.7ms).
+tags: [details, bugfix]
+steps:
+  - include: details-reset
+  - shell: |
+      kubectl -n kore-demo delete pod kore-bug-wrap --ignore-not-found --grace-period=0
+      kubectl -n kore-demo run kore-bug-wrap --image=busybox:1.36 --restart=Never -- sh -c 'i=0; while [ $i -lt 120 ]; do i=$((i+1)); printf "WRAP-%s " $i; j=0; while [ $j -lt 40 ]; do j=$((j+1)); printf "segment-%02d " $j; done; echo "WRAP-END-$i"; done; echo "KORE-AFTER-WRAP marker line"; sleep 3600'
+      kubectl -n kore-demo wait --for=condition=Ready pod/kore-bug-wrap --timeout=120s
+  - include: nav-pods
+  - click: {text: kore-bug-wrap, within: [0.2, 0.12, 1, 1], until: "Auto-scroll"}
+  # Auto-scroll shows the end: the last long line ends intact and the next row is readable.
+  - wait: {text: "KORE-AFTER-WRAP marker line", within: [0.2, 0.25, 1, 1], timeout: 20}
+  - expect: {texts: ["WRAP-END-120", "KORE-AFTER-WRAP marker line"], within: [0.2, 0.25, 1, 1], crop: true}
+  - screenshot: {name: log-wrap-end, mask_rects: [[0.2, 0.25, 1, 1]]}
+  # Smooth scrolling over wrapped rows.
+  - perf:
+      max_p95_ms: 16.7
+      steps:
+        - scroll: {at: [0.6, 0.6], dy: -3000}
+        - scroll: {at: [0.6, 0.6], dy: -3000}
+        - scroll: {at: [0.6, 0.6], dy: 3000}
+        - scroll: {at: [0.6, 0.6], dy: -1500}
+  # Search navigation reveals a wrapped line in the middle of the buffer.
+  - key: cmd+f
+  - wait: {text: "re:earch logs", timeout: 5}
+  - type: "WRAP-END-60"
+  - element: {id: searchbar.count, label: "^1/1$", timeout: 5}
+  - key: enter
+  - wait: {text: "WRAP-END-60", within: [0.2, 0.3, 1, 1], timeout: 5}
+  - expect: {texts: ["WRAP-END-59", "WRAP-END-61"], within: [0.2, 0.3, 1, 1]}
+  - key: escape
+  - key: escape
+  - wait: {text: kore-bug-wrap, within: [0.2, 0.12, 1, 1], timeout: 10}
+  - shell: "kubectl -n kore-demo delete pod kore-bug-wrap --ignore-not-found --grace-period=0 --wait=false"

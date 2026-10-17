@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "kore": {
+      "command": "cargo",
+      "args": ["run", "--quiet", "-p", "kore-harness", "--", "mcp"]
+    }
+  }
+}

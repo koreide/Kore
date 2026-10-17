@@ -1,0 +1,6 @@
+# Open the ConfigMaps list via the command palette ("Go to ConfigMaps").
+- key: cmd+k
+- wait: {text: "Go to", timeout: 5}
+- type: "ConfigMaps"
+- click: {text: "Go to ConfigMaps"}
+- wait: {text: "re:(?i)^ConfigMaps$", within: [0.2, 0, 1, 0.2], timeout: 10}

@@ -1,36 +1,40 @@
 <p align="center">
-  <img src="src-tauri/icons/icon.png" alt="Kore" width="128" height="128" />
+  <img src="crates/kore-app/assets/icons/icon.png" alt="Kore" width="128" height="128" />
 </p>
 
 <h1 align="center">Kore</h1>
 
 <p align="center">
-  A fast, terminal-inspired Kubernetes IDE for macOS — built with Tauri v2, Rust, and React.
+  A fast, terminal-inspired Kubernetes IDE — a native Rust app for macOS, Linux and Windows, built with GPUI.
 </p>
 
 ---
 
 ## What is Kore?
 
-Kore is a native macOS desktop app that brings a **k9s-style**, keyboard-driven experience to Kubernetes cluster management — without living in the terminal. It pairs a **Rust backend** (powered by [kube-rs](https://github.com/kube-rs/kube)) with a **React frontend** (Vite + Tailwind + shadcn/ui) inside a lightweight [Tauri v2](https://v2.tauri.app/) shell.
+Kore is a native desktop app that brings a **k9s-style**, keyboard-driven experience to Kubernetes cluster management — without living in the terminal. It is a single Rust binary: a **backend library** (`kore-core`, powered by [kube-rs](https://github.com/kube-rs/kube)) and a **GPU-rendered native UI** (`kore-app`, built on [GPUI](https://www.gpui.rs/)). No webview, no JavaScript.
 
 If you spend your day switching between `kubectl`, `k9s`, Lens, and your browser to manage clusters, Kore consolidates that workflow into a single, fast, keyboard-first app.
 
 ## Why Kore?
 
-- **Native performance** — Rust backend with direct Kubernetes API access, no Electron overhead.
+- **Native performance** — one Rust process, GPU-rendered UI, direct Kubernetes API access. No Electron, no webview.
 - **Real-time** — Resources are streamed via Kubernetes watch API; changes appear instantly.
-- **Keyboard-driven** — Navigate entirely with keyboard shortcuts, vim-style bindings, and a command palette (`Cmd+K`).
+- **Keyboard-driven** — Navigate entirely with keyboard shortcuts, vim-style bindings, and a command palette (`Cmd+K` / `Ctrl+K`).
 - **Multi-cluster** — View and compare resources across multiple contexts side-by-side.
 - **AI-assisted troubleshooting** — Diagnose issues with built-in AI support (OpenAI, Anthropic, or Ollama).
 
 ## Install
 
+**macOS 14+** (Apple Silicon or Intel):
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/koreide/Kore/main/install.sh | bash
 ```
 
-Or [download the latest release](https://github.com/koreide/Kore/releases/latest) directly.
+**Windows 10+:** run `kore_<version>_x64-setup.exe` from the [latest release](https://github.com/koreide/Kore/releases/latest) (per-user install, no admin needed), or use the portable zip.
+
+**Linux (x86_64):** download `kore_<version>_x86_64.tar.gz` from the [latest release](https://github.com/koreide/Kore/releases/latest), extract it and run `./install.sh` (installs to `~/.local`; set `PREFIX` to change).
 
 ## Screenshots
 
@@ -60,7 +64,7 @@ Or [download the latest release](https://github.com/koreide/Kore/releases/latest
 |---|---|
 | **Resource Management** | Browse, describe, edit YAML, and delete across 10 resource types: Pods, Deployments, Services, Nodes, Events, ConfigMaps, Secrets, Ingresses, Jobs, CronJobs |
 | **Real-time Watches** | Live-streaming resource updates via Kubernetes watch API |
-| **Pod Operations** | Logs (single & multi-pod), exec shell (xterm.js), metrics (CPU/memory charts), port forwarding |
+| **Pod Operations** | Logs (single & multi-pod), exec shell (native terminal), metrics (CPU/memory charts), port forwarding |
 | **Deployments** | Revision history, image diffs, one-click rollback |
 | **YAML Editor** | View, edit, and apply YAML with side-by-side diff preview |
 | **CRD Browser** | Discover and browse Custom Resource Definitions dynamically |
@@ -80,26 +84,26 @@ Or [download the latest release](https://github.com/koreide/Kore/releases/latest
 
 | Shortcut | Action |
 |---|---|
-| `Cmd+K` | Open command palette |
+| `Cmd+K` (`Ctrl+K` on Linux/Windows) | Open command palette |
 | `/` | Focus search |
 | `j` / `k` | Navigate rows up/down |
 | `l` | Enter detail view |
 | `h` | Go back |
 | `1`–`6` | Switch tabs in detail views |
 | `?` | Show shortcut overlay |
+| `Cmd+R` | Refresh resources |
+| `Cmd+F` | Search logs / describe / YAML |
 | `Cmd+Shift+R` | Open RBAC Simulator |
 
 ## Prerequisites
 
-- **macOS 14+**
 - **Rust** stable toolchain + `cargo`
-- **Node.js 18+** and `npm`
-- **Xcode Command Line Tools** — `xcode-select --install`
 - A valid `~/.kube/config` with at least one reachable context
 - *(Optional)* `helm` in `PATH` for Helm features
 - *(Optional)* `kubectl` in `PATH` for port forwarding and exec
-
-For full Tauri prerequisites, see the [Tauri v2 docs](https://v2.tauri.app/start/prerequisites/).
+- **macOS 14+**: Xcode Command Line Tools (`xcode-select --install`)
+- **Linux**: X11/Wayland, Vulkan, fontconfig and xkbcommon development packages (see `crates/kore-app/packaging/linux/deps.sh`)
+- **Windows**: MSVC toolchain. Release builds must be made on Windows, because GPUI precompiles its HLSL shaders with `fxc.exe`.
 
 ## Getting Started
 
@@ -108,92 +112,81 @@ The fastest way to get Kore is the one-liner in the [Install](#install) section 
 ```bash
 git clone https://github.com/eladbash/kore.git
 cd kore
-npm install
-npm run tauri:dev
+cargo run -p kore-app
 ```
 
 The app will open a native window connected to your active kubeconfig context.
 
-## Available Scripts
+## Commands
 
 | Command | Description |
 |---|---|
-| `npm run tauri:dev` | Full app dev mode (Vite + Tauri) — **primary dev command** |
-| `npm run tauri:build` | Production macOS binary |
-| `npm run dev` | Frontend only (Vite dev server on `localhost:5173`) |
-| `npm run build` | TypeScript check + Vite production build |
-| `npm run lint` | ESLint |
-| `npm run lint:fix` | ESLint with auto-fix |
-| `npm run format` | Prettier format |
-| `npm run format:check` | Prettier check |
-| `npm run test` | Run frontend unit tests (Vitest) |
-| `npm run test:watch` | Run tests in watch mode |
-| `npm run rust:check` | Cargo clippy on the Rust backend |
-| `npm run rust:fmt` | Cargo fmt on the Rust backend |
+| `cargo run -p kore-app` | Run the app (debug) |
+| `cargo build --release -p kore-app` | Release binary `target/release/kore` |
+| `crates/kore-app/packaging/macos/bundle.sh` | Build `kore.app` (bundle id `dev.kore.desktop`; `TARGET=<triple>` for a cross build) |
+| `crates/kore-app/packaging/macos/dmg.sh <app> <out.dmg>` | Package `kore.app` into a DMG |
+| `crates/kore-app/packaging/linux/install.sh` | Install binary, `.desktop` entry and icons on Linux |
+| `crates/kore-app/packaging/linux/package.sh <bin> <dir>` | Linux release tarball |
+| `cargo test -p kore-core -p kore-app` | Unit tests |
+| `KORE_KIND=1 cargo test -p kore-core -- --include-ignored --test-threads=1` | Backend tests against the kind test clusters |
+| `cargo clippy -p kore-app -p kore-core -- -D warnings` | Lints |
+
+### End-to-end harness
+
+`crates/kore-harness` drives the real app the way a user does: it captures the window, reads it with OCR, and sends clicks and keystrokes. It runs scenario files in `harness/scenarios/` against two local kind clusters. See [`harness/README.md`](harness/README.md).
+
+```bash
+cargo build -p kore-harness
+./target/debug/kore-harness cluster up && ./target/debug/kore-harness cluster seed
+cargo build --release -p kore-app
+./target/debug/kore-harness run               # all scenarios against target/release/kore
+./target/debug/kore-harness run -f details    # filtered
+```
 
 ## Architecture
 
-Kore uses a **two-process model**:
-
 ```
-┌─────────────────────────────────┐
-│         Tauri Shell             │
-│                                 │
-│  ┌───────────┐  ┌────────────┐  │
-│  │   Rust    │  │   React    │  │
-│  │  Backend  │◄─►  Frontend  │  │
-│  │ (kube-rs) │  │(Vite+React)│  │
-│  └───────────┘  └────────────┘  │
-│                                 │
-│  invoke (req/res) + events (push)│
-└─────────────────────────────────┘
+┌──────────────────────── kore (one process) ────────────────────────┐
+│                                                                     │
+│  kore-app (GPUI)  ── async calls / Subscription<T> ──►  kore-core   │
+│  views, keymap, theme                                   kube-rs,    │
+│  control server (test builds only)                      tokio, SQLite│
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
-- **Backend** (`src-tauri/src/`) — Rust process handling all Kubernetes API calls, streaming watches, pod exec sessions, port forwarding, SQLite event storage, and AI provider integration.
-- **Frontend** (`src/`) — React app rendered in a native webview with TanStack Table, Recharts, xterm.js, cmdk, and Framer Motion.
-- **Communication** — Tauri `invoke` for request/response and Tauri `events` for streaming (logs, watches, AI responses, exec I/O).
+- **`crates/kore-core`** — Kubernetes and backend logic with no UI dependency: resources and watches, logs, exec, metrics, port forwarding, YAML apply/diff, rollback, dashboard, SQLite event history, CRDs, dependency graph, Helm, RBAC, network policies, multi-cluster, and AI providers. `Core` owns its tokio runtime; streams are `Subscription<T>` values that cancel on drop.
+- **`crates/kore-app`** — the GPUI application (binary `kore`): routing, sidebar, resource table, details views, terminal (alacritty_terminal), charts, command palette, settings and AI chat.
+- **`crates/kore-automation`** — the protocol of the Layer 2 control server, which exists only in `--features test-harness` builds. The harness uses it to drive the app and read UI state.
+- **`crates/kore-testkit`** — test doubles: an in-memory Kubernetes API, sandboxed environments and fixtures, for the headless UI tests.
+- **`crates/kore-harness`** — end-to-end test driver (Layers 2 and 3; see `CLAUDE.md` "Testing layers").
 
 ## Project Structure
 
 ```
 kore/
-├── src/                    # React frontend
-│   ├── components/         # UI components (30+ files)
-│   ├── hooks/              # Custom React hooks
-│   ├── lib/                # API wrappers, types, transforms, utils
-│   └── App.tsx             # Root component
-├── src-tauri/              # Rust backend
-│   └── src/
-│       ├── main.rs         # Tauri app setup
-│       ├── commands.rs     # ~30 Tauri command handlers
-│       └── state/          # Core K8s logic (resources, logs, exec,
-│                           #   metrics, yaml, rollback, dashboard,
-│                           #   helm, CRDs, graph, AI, multi-cluster...)
-├── package.json
-├── vite.config.ts
-├── tailwind.config.js
-└── tsconfig.json
+├── crates/
+│   ├── kore-core/        # Backend library (kube-rs)
+│   ├── kore-app/         # Native GPUI app (binary `kore`)
+│   │   ├── src/views/    # Feature views
+│   │   ├── src/ui/       # Shared widgets (inputs, dropdowns, mono text, markdown…)
+│   │   ├── assets/       # Lucide icons, app icons
+│   │   └── packaging/    # macOS bundle + DMG, Linux tarball + .desktop, Windows resources + NSIS installer
+│   ├── kore-automation/  # Automation protocol types
+│   └── kore-harness/     # End-to-end harness
+├── harness/              # Scenarios, kind cluster fixtures
+└── docs/gpui-port/       # UI conventions and behavior specs
 ```
 
 ## Tech Stack
 
-**Backend (Rust)**
+- [GPUI](https://www.gpui.rs/) + gpui-component — GPU-accelerated native UI
 - [kube-rs](https://github.com/kube-rs/kube) + k8s-openapi — Kubernetes API client
-- [Tauri v2](https://v2.tauri.app/) — Native app shell and IPC
 - tokio — Async runtime
+- alacritty_terminal — Terminal emulation for pod exec
 - rusqlite — SQLite for persistent event history
 - reqwest — HTTP client for AI providers
 - similar — Diff algorithm for YAML comparison
-
-**Frontend (TypeScript/React)**
-- React 18 + Vite
-- TanStack Table — Resource tables
-- Recharts — Charts and metrics visualization
-- xterm.js — Terminal emulator for pod exec
-- cmdk — Command palette
-- Framer Motion — Animations
-- Tailwind CSS — Styling
-- Lucide React — Icons
+- Lucide — Icons
 
 ## Contributing
 
@@ -203,9 +196,9 @@ Contributions are welcome! Here's how to get started:
 2. **Create a branch** for your feature or fix: `git checkout -b feat/my-feature`
 3. **Make your changes** and ensure they pass checks:
    ```bash
-   npm run lint
-   npm run test
-   cd src-tauri && cargo clippy
+   cargo clippy -p kore-app -p kore-core -- -D warnings
+   cargo test -p kore-core -p kore-app
+   ./target/debug/kore-harness run -f <area>
    ```
 4. **Commit** with a clear message describing the change
 5. **Open a Pull Request** against `main`
@@ -213,10 +206,18 @@ Contributions are welcome! Here's how to get started:
 ### Guidelines
 
 - Follow existing code patterns and directory structure
-- Frontend code uses the `@` path alias (maps to `src/`)
-- Rust backend follows the modular structure in `src-tauri/src/state/`
+- UI conventions (view contract, keyboard, theme, automation ids) are in `docs/gpui-port/CONVENTIONS.md`
+- Backend logic belongs in `crates/kore-core`; keep it free of UI dependencies
 - Keep PRs focused — one feature or fix per PR
-- Add tests for new frontend logic where appropriate
+- Add unit tests for new logic, and a harness scenario for new UI behavior
+
+### Releasing
+
+1. Bump `version` in `crates/kore-app/Cargo.toml` (both the `[package]` and `[package.metadata.bundle]` entries).
+2. Tag and push: `git tag vX.Y.Z && git push origin vX.Y.Z`.
+3. `.github/workflows/release.yml` builds the macOS DMGs (Apple Silicon and Intel), the Linux tarball and the Windows installer + portable zip, then opens a **draft** release with `SHA256SUMS.txt`. Review it and publish.
+
+macOS signing and notarization run when the repository secrets `APPLE_CERTIFICATE` (base64 .p12), `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD` (app-specific password) and `APPLE_TEAM_ID` are set; without them the app is ad-hoc signed. Run the workflow manually (Actions → Release → Run workflow) to build all artifacts without creating a release.
 
 ## License
 

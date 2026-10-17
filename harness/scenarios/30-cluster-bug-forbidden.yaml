@@ -1,0 +1,76 @@
+name: cluster-bug-forbidden
+description: >
+  Quirks 10.15 / 10.16 (fixed) and the RBAC forbidden banner (spec 03 §7.8). The app runs as a
+  restricted ServiceAccount kore-rbac/kore-bug-bot (token kubeconfig generated into harness/runs/,
+  built-in ClusterRole "view" + RBAC read + a Role granting only "get pods" in kore-demo).
+  Network Policies: after "view" is revoked, the next refresh fails with a 403, the last good data
+  stays with a "Refresh failed" indicator and a "Permission Denied" banner (identity, missing
+  permission, suggestion; Dismiss hides it); re-granting clears the error. Custom Resources:
+  listing CRDs is forbidden for "view" -> the banner names customresourcedefinitions. RBAC: with RBAC
+  read revoked, a "Who Can?" query shows "Query failed" with the error (no longer swallowed). All
+  objects and the kubeconfig are removed at the end.
+tags: [cluster, rbac, netpol, crd, bugfix]
+env: [[KUBECONFIG, "${HARNESS_DIR}/runs/bug-forbidden.kubeconfig"]]
+steps:
+  - include: cluster-bug-forbidden-cleanup
+  - shell: |
+      set -e
+      kubectl -n kore-rbac create serviceaccount kore-bug-bot
+      kubectl create clusterrolebinding kore-bug-bot-view --clusterrole=view --serviceaccount=kore-rbac:kore-bug-bot
+      kubectl create clusterrole kore-bug-rbac-reader --verb=get,list,watch --resource=roles.rbac.authorization.k8s.io,rolebindings.rbac.authorization.k8s.io,clusterroles.rbac.authorization.k8s.io,clusterrolebindings.rbac.authorization.k8s.io
+      kubectl create clusterrolebinding kore-bug-bot-rbac-reader --clusterrole=kore-bug-rbac-reader --serviceaccount=kore-rbac:kore-bug-bot
+      kubectl -n kore-demo create role kore-bug-pod-getter --verb=get --resource=pods
+      kubectl -n kore-demo create rolebinding kore-bug-pod-getter --role=kore-bug-pod-getter --serviceaccount=kore-rbac:kore-bug-bot
+      OUT="$(dirname "$KUBECONFIG")/../runs/bug-forbidden.kubeconfig"
+      TOKEN=$(kubectl -n kore-rbac create token kore-bug-bot --duration=2h)
+      kubectl config view --raw --minify --flatten --context kind-kore-harness > "$OUT"
+      kubectl --kubeconfig "$OUT" config set-credentials kore-bug-bot --token="$TOKEN" >/dev/null
+      kubectl --kubeconfig "$OUT" config set-context kore-bug-bot --cluster=kind-kore-harness --user=kore-bug-bot >/dev/null
+      kubectl --kubeconfig "$OUT" config use-context kore-bug-bot >/dev/null
+      kubectl --kubeconfig "$OUT" config delete-context kind-kore-harness >/dev/null
+      kubectl --kubeconfig "$OUT" config delete-user kind-kore-harness >/dev/null
+  - shell: {cmd: "kubectl --kubeconfig \"$(dirname \"$KUBECONFIG\")/../runs/bug-forbidden.kubeconfig\" -n kore-demo auth can-i list networkpolicies", expect_output: "yes", retry: 20}
+  # The app was launched before the kubeconfig existed: relaunch it as kore-bug-bot.
+  - restart_app: {wait: VIEWS}
+  - wait: {text: kore-bug-bot, within: [0, 0, 0.19, 0.3], timeout: 30}
+  - include: cluster-start
+  - include: cluster-ns-kore-demo
+  # ── Network Policies: a forbidden refresh keeps the last good data ──
+  - click: {text: Network Policies, within: [0, 0.3, 0.19, 1]}
+  - wait: {text: "2 policies", timeout: 30}
+  - shell: "kubectl delete clusterrolebinding kore-bug-bot-view"
+  - shell: {cmd: "kubectl --kubeconfig \"$(dirname \"$KUBECONFIG\")/../runs/bug-forbidden.kubeconfig\" -n kore-demo auth can-i list networkpolicies || true", expect_output: "no", retry: 20}
+  # The 30s poll refreshes; the refresh fails with a 403.
+  - element: {id: np.error, label: "forbidden", timeout: 45}
+  - wait: {text: Refresh failed, within: [0.19, 0, 1, 0.2], timeout: 5}
+  - expect: {texts: ["2 policies", "Network Policies (2)", default-deny-ingress]}
+  - expect_not: {texts: [Failed to load network policies]}
+  - element: {id: np.forbidden, label: "^kore-rbac/kore-bug-bot cannot list \\w+ in namespace \"kore-demo\"$", timeout: 15}
+  - expect: {texts: [Permission Denied, "re:kore-rbac/kore-bug-bot cannot list", "re:Create a RoleBinding in kore-demo"], within: [0.19, 0.1, 0.8, 0.7]}
+  - screenshot: {name: netpol-forbidden, mask: ["re:\\d+ pods?$", "re:\\d+ workloads", "re:\\d+ edges"], tolerance: 0.1}
+  - click: {text: Dismiss, within: [0.19, 0.1, 1, 0.4]}
+  - wait_gone: {text: Permission Denied, timeout: 5}
+  - expect: {texts: [Refresh failed, "2 policies"]}
+  - shell: "kubectl create clusterrolebinding kore-bug-bot-view --clusterrole=view --serviceaccount=kore-rbac:kore-bug-bot"
+  - shell: {cmd: "kubectl --kubeconfig \"$(dirname \"$KUBECONFIG\")/../runs/bug-forbidden.kubeconfig\" -n kore-demo auth can-i list networkpolicies", expect_output: "yes", retry: 20}
+  - wait_gone: {text: Refresh failed, timeout: 45}
+  # ── Custom Resources: "view" cannot list CRDs ──
+  - click: {text: Custom Resources, within: [0, 0.3, 0.19, 1]}
+  - element: {id: crd.forbidden, label: "^kore-rbac/kore-bug-bot cannot list customresourcedefinitions$", timeout: 20}
+  - expect: {texts: [Permission Denied, CLOSEST MATCHING RULES], within: [0.4, 0.1, 1, 0.4]}
+  - screenshot: {name: crd-forbidden, tolerance: 0.1}
+  # ── RBAC: query errors are shown ──
+  - shell: "kubectl delete clusterrolebinding kore-bug-bot-rbac-reader"
+  - shell: {cmd: "kubectl --kubeconfig \"$(dirname \"$KUBECONFIG\")/../runs/bug-forbidden.kubeconfig\" auth can-i list clusterroles || true", expect_output: "no", retry: 20}
+  - click: {text: RBAC, within: [0, 0.3, 0.19, 1]}
+  - wait: {text: RBAC Simulator, timeout: 10}
+  - element: {id: rbac.error, label: "forbidden", timeout: 15}
+  - key: "3"
+  - wait: {text: Check Permission, timeout: 5}
+  - click: {text: "Who Can?", within: [0.19, 0.1, 0.6, 0.4]}
+  - click: {text: "re:Check$", within: [0.3, 0.1, 1, 0.4]}
+  - element: {id: rbac.query.error, label: "forbidden", timeout: 15}
+  - wait: {text: Query failed, timeout: 5}
+  - element: {id: rbac.forbidden, label: "^kore-rbac/kore-bug-bot cannot list ", timeout: 15}
+  - screenshot: {name: rbac-query-error, tolerance: 0.1}
+  - include: cluster-bug-forbidden-cleanup

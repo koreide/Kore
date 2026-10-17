@@ -1,0 +1,34 @@
+[package]
+name = "kore-core"
+version = "0.2.0"
+edition = "2021"
+description = "Kore backend: Kubernetes state, streams and commands"
+publish = false
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "process", "net", "io-util", "time", "sync", "fs"] }
+tokio-util = { version = "0.7", features = ["codec", "rt"] }
+tracing = "0.1"
+rand = "0.8"
+kube = { workspace = true }
+kube-runtime = { workspace = true }
+futures = { workspace = true }
+anyhow = { workspace = true }
+k8s-openapi = { version = "0.22.0", features = ["v1_29"] }
+dirs = "5"
+chrono = "0.4"
+base64 = "0.22"
+serde_yaml = "0.9"
+similar = "2"
+rusqlite = { version = "0.31", features = ["bundled"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls"] }
+keyring = "2"
+uuid = { version = "1", features = ["v4"] }
+tempfile = "3"
+
+[dev-dependencies]
+tempfile = "3"
+futures = { workspace = true }

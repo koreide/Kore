@@ -1,0 +1,3 @@
+# Open the Settings page with the sidebar footer gear button.
+- click_at: [0.161, 0.965]
+- wait: {text: Default View, timeout: 10}

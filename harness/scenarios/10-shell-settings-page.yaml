@@ -1,0 +1,32 @@
+name: shell-settings-page
+description: >-
+  The sidebar gear opens Settings (Back + Esc hint, General / AI Provider / Display / Keyboard
+  Shortcuts / About cards); Esc returns to the table and the Back button does too
+  (spec 01 §4.4, §17, §21.8).
+tags: [shell, settings]
+steps:
+  - include: shell-pods-kore-demo
+  - include: shell-clear-search
+  - include: shell-open-settings
+  - expect:
+      texts: [Back, Esc, Settings, General, Default View, Which view to show when the app starts.,
+              Event Retention Period, How long to keep event history in the timeline view., AI Provider,
+              OpenAI, Anthropic, Ollama, Claude Code, Cursor Agent]
+  - expect_not: {texts: [Search...], within: [0.3, 0.04, 0.65, 0.1], timeout: 1}
+  - screenshot: {name: settings-top, mask_rects: [[0.19, 0.35, 1, 1]]}
+  - scroll: {at: [0.6, 0.6], dy: 400}
+  - wait: {text: Theme Accent Color, timeout: 5}
+  - element: {id: settings.card.keyboard-shortcuts}
+  - expect: {texts: [Display, Default Namespace per Context, Context name, Namespace, Add, "re:^C[vy]an$", Violet, Emerald, Orange, Red]}
+  - scroll: {at: [0.6, 0.6], dy: 3000}
+  - wait: {text: Check for Updates, timeout: 5}
+  - expect:
+      texts: [Navigate up / down, Enter detail view, Command palette, Refresh resources,
+              Search logs, Delete resource, Show shortcut overlay, About, Current Version]
+  - screenshot: {name: settings-bottom, mask: ["re:^\\d+\\.\\d+\\.\\d+$", "re:^unknown$"]}
+  - key: escape
+  - wait: {text: RESTARTS, within: [0.19, 0.1, 1, 0.14], timeout: 10}
+  - expect_not: {texts: [Theme Accent Color], timeout: 1}
+  - include: shell-open-settings
+  - click: {text: Back, within: [0.19, 0, 0.4, 0.15], exact: true}
+  - wait: {text: RESTARTS, within: [0.19, 0.1, 1, 0.14], timeout: 10}

@@ -1,0 +1,3 @@
+COMPUTED VALUES:
+message: hello-from-helm-v2
+replicaCount: 1

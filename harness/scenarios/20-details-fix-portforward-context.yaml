@@ -1,0 +1,31 @@
+name: details-fix-portforward-context
+description: >
+  Deliberate Fix 6: port-forward passes --context for the context selected in the app. The app is
+  started with KUBECONFIG=<override>:<harness config>, whose merged current-context is
+  kind-kore-harness-2; the scenario selects kind-kore-harness in the sidebar and forwards to a web pod there. Fixed: LIVE and curl gets nginx.
+  Regression symptom: kubectl port-forward runs against the kubeconfig's current context (the second cluster,
+  which has no kore-demo/web pods), so the forward errors.
+tags: [details, portforward, fix]
+env:
+  - [KUBECONFIG, "${HARNESS_DIR}/scenarios/_lib/details-ctx2-current.kubeconfig:${HARNESS_DIR}/.kube/config"]
+steps:
+  - shell: {cmd: "! curl -s --max-time 2 http://127.0.0.1:18081/", retry: 10}
+  # The app may restore its last context from saved settings, so select it explicitly.
+  - click: {text: "re:^kind-kore-harness(-2)?$", within: [0, 0.12, 0.2, 0.3], until: "re:^kind-kore-harness-2$", timeout: 30}
+  - click: {text: kind-kore-harness, within: [0, 0.27, 0.4, 0.8], exact: true}
+  - wait: {text: "re:^kind-kore-harness$", within: [0, 0.12, 0.2, 0.22], timeout: 10}
+  - include: ns-kore-demo
+  - include: nav-pods
+  - click: {text: "re:^web-[a-z0-9]+-[a-z0-9]+$", within: [0.2, 0.12, 1, 1], until: "Auto-scroll"}
+  - click: {text: Ports, within: [0.7, 0.1, 1, 0.17]}
+  - wait: {text: Port Forwarding, timeout: 5}
+  - click: {text: "re:^8080$", within: [0.75, 0.3, 1, 0.4]}
+  - key: cmd+a
+  - type: "18081"
+  - click: {text: Start Forward}
+  - wait: {text: "re:(LIVE|ERROR)$", within: [0.75, 0.3, 1, 1], timeout: 20}
+  - screenshot: {name: portforward-selected-context, mask: ["re:^web-"], mask_rects: [[0.2, 0.25, 0.77, 1]]}
+  - expect: {texts: [LIVE, "127.0.0.1:18081"], within: [0.75, 0.3, 1, 1], timeout: 3}
+  - shell: {cmd: "curl -s --max-time 3 http://127.0.0.1:18081/", expect_output: "Welcome to nginx", retry: 15}
+  - click: {text: LIVE, within: [0.75, 0.3, 1, 1], offset: [220, 0]}
+  - wait: {text: No active port forwards, timeout: 10}

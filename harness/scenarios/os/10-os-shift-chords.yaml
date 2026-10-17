@@ -1,0 +1,20 @@
+name: os-shift-chords
+layer: os
+description: >-
+  Layer 3 (real OS input). Cmd+Shift+R typed on the real keyboard path opens the RBAC view
+  (spec 01 §3, §21.36) rather than refreshing. macOS delivers the key as "R" with Shift held, and
+  that NSEvent translation is exactly what in-app injection (Layers 1–2) cannot reproduce: L1
+  covers both keystroke shapes the app can receive (`shell_nav` tests). Inside a text input the
+  chord must not navigate.
+tags: [shell, keyboard, os]
+steps:
+  - include: shell-pods-kore-demo
+  - key: cmd+shift+r
+  - wait: {text: RBAC Simulator, within: [0.19, 0, 1, 0.15], timeout: 10}
+  - state: [["/view", "rbac"]]
+  - include: nav-pods
+  - click: {id: header.search}
+  - key: cmd+shift+r
+  - sleep: 500
+  - state: [["/view", "table"]]
+  - key: escape

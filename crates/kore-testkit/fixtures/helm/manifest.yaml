@@ -1,0 +1,27 @@
+---
+# Source: kore-demo/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kore-demo-config
+data:
+  message: "hello-from-helm-v2"
+---
+# Source: kore-demo/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kore-demo
+  labels: {app: kore-demo}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: kore-demo}}
+  template:
+    metadata: {labels: {app: kore-demo}}
+    spec:
+      containers:
+      - name: app
+        image: busybox:1.36
+        command: ["sh","-c","echo $MESSAGE; sleep 36000"]
+        env: [{name: MESSAGE, valueFrom: {configMapKeyRef: {name: kore-demo-config, key: message}}}]
+

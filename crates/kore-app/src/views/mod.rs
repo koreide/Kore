@@ -1,0 +1,40 @@
+//! Feature views. Routing lives in `root.rs`; see docs/gpui-port/CONVENTIONS.md
+//! for module ownership and the view constructor contract.
+
+pub mod ai_chat;
+pub mod ai_chat_bubble;
+pub mod ai_panel;
+pub mod ai_settings;
+pub mod banners;
+pub mod command_palette;
+pub mod connection_setup;
+pub mod crd_browser;
+pub mod dashboard;
+pub mod deployment_details;
+pub mod graph;
+pub mod graph_layout;
+pub mod header;
+pub mod helm_detail;
+pub mod helm_releases;
+pub mod network_policy;
+pub mod pod_details;
+pub mod rbac;
+pub mod resource_details;
+pub mod resource_table;
+pub mod settings;
+pub mod shortcut_overlay;
+pub mod sidebar;
+pub mod debug_container;
+pub mod exec_terminal;
+pub mod multi_pod_logs;
+pub mod pod_logs;
+pub mod pod_metrics;
+pub mod port_forward;
+pub mod log_view;
+pub mod deployment_rollback;
+pub mod describe_content;
+pub mod detail_ui;
+pub mod events_timeline;
+pub mod yaml_editor;
+pub mod yaml_text_area;
+pub mod terminal_model;

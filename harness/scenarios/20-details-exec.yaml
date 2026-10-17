@@ -1,0 +1,40 @@
+name: details-exec
+description: >
+  Pod Shell tab (exec terminal) on multi-container: "SHELL: sh bash", Connected, a prompt; commands
+  run and print output; the port-forward sidebar is hidden on this tab; `exit` prints the yellow
+  "Session ended." and the status reads "Session ended"; switching shell starts a new session.
+tags: [details, pods, exec]
+steps:
+  - include: details-reset
+  - include: nav-pods
+  - click: {text: multi-container, within: [0.2, 0.12, 1, 1], until: "Auto-scroll"}
+  - click: {text: Ports, within: [0.7, 0.1, 1, 0.17]}
+  - wait: {text: Port Forwarding, timeout: 5}
+  - click: {text: Shell, within: [0.2, 0.15, 0.8, 0.21], exact: true}
+  - wait: {text: "SHELL:", timeout: 10}
+  - wait: {text: Connected, within: [0.6, 0.2, 1, 0.27], timeout: 15}
+  - expect_not: {texts: [Port Forwarding, Start Forward]}
+  - click_at: [0.6, 0.6]
+  - type: "echo KORE-$((6*7)) && hostname"
+  - key: enter
+  - wait: {text: "re:^KORE-42$", timeout: 10}
+  - expect: {texts: ["re:^multi-container$"], within: [0.2, 0.3, 1, 1]}
+  - expect_color: {text: Connected, within: [0.6, 0.2, 1, 0.27], colors: ["#34d399"]}
+  - screenshot: {name: exec-session, mask_rects: [[0.2, 0.28, 1, 1]]}
+  - type: "exit"
+  - key: enter
+  - wait: {text: "Session ended.", within: [0.2, 0.3, 1, 1], timeout: 10}
+  - wait: {text: "Session ended", within: [0.6, 0.2, 1, 0.27], timeout: 5}
+  - expect_color: {text: "Session ended.", within: [0.2, 0.3, 1, 1], colors: ["#fbbf24", "#facc15", "#fde68a"]}
+  - screenshot: {name: exec-ended, mask_rects: [[0.2, 0.28, 1, 1]]}
+  # New session via the shell switcher
+  - click: {text: bash, within: [0.2, 0.2, 0.5, 0.27], exact: true}
+  - wait: {text: "re:Session ended|Error|executable file not found|not found", within: [0.2, 0.2, 1, 1], timeout: 15}
+  - click: {text: sh, within: [0.2, 0.2, 0.5, 0.27], exact: true}
+  - wait: {text: Connected, within: [0.6, 0.2, 1, 0.27], timeout: 15}
+  - click_at: [0.6, 0.6]
+  - type: "echo AGAIN-$((1+1))"
+  - key: enter
+  - wait: {text: "re:^AGAIN-2$", timeout: 10}
+  - click: {text: Logs, within: [0.2, 0.15, 0.8, 0.21], exact: true}
+  - wait: {text: Auto-scroll, timeout: 10}

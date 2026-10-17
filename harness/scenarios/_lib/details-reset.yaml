@@ -1,0 +1,13 @@
+# Leave any detail view / modal / palette and land on a table view in namespace kore-demo.
+# Esc twice: closes search overlays, then navigates back from a detail view.
+# Also removes throwaway objects a previously failed details-* scenario may have left behind
+# (scenarios that need one create it right after this include).
+- shell: >-
+    kubectl -n kore-demo delete pod kore-events-probe kore-history-probe kore-debug-target kore-delete-probe
+    kore-bug-wrap kore-bug-status kore-bug-metrics
+    --ignore-not-found --grace-period=0 --wait=false >/dev/null &&
+    kubectl -n kore-demo delete deploy kore-scratch kore-restart-me kore-bug-selector --ignore-not-found --wait=false >/dev/null &&
+    kubectl -n kore-demo delete cm kore-yaml-edit kore-delete-me kore-bug-events-cm --ignore-not-found --wait=false >/dev/null
+- key: escape
+- key: escape
+- include: ns-kore-demo

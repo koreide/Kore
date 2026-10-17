@@ -1,0 +1,60 @@
+name: details-deployment-actions
+description: >
+  Scale, restart and delete from the deployment detail view, on a throwaway deployment whose pods
+  are labelled run=kore-scratch (no app=<name> label). Its Logs tab uses the real selector
+  "kore-demo/run=kore-scratch" (the pod prints nothing: "No logs available"). + then Scale toasts "Scaled to 2 replicas"; Restart asks
+  "Restart Deployment" and can be cancelled; Delete asks "Delete Deployment",
+  toasts "Deployment deleted" and returns to the table.
+tags: [details, deployments, logs, scale]
+steps:
+  - include: details-reset
+  - shell: |
+      kubectl -n kore-demo delete deploy kore-scratch --ignore-not-found --wait=true
+      cat <<'YAML' | kubectl apply -f -
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata: {name: kore-scratch, namespace: kore-demo}
+      spec:
+        replicas: 1
+        selector: {matchLabels: {run: kore-scratch}}
+        template:
+          metadata: {labels: {run: kore-scratch}}
+          spec:
+            terminationGracePeriodSeconds: 0
+            containers: [{name: c, image: "busybox:1.36", command: ["sleep", "3600"]}]
+      YAML
+      kubectl -n kore-demo rollout status deploy/kore-scratch --timeout=120s
+  - include: details-nav-deployments
+  - click: {text: kore-scratch, within: [0.2, 0.12, 0.5, 1], until: Restart}
+  - expect: {texts: [kore-scratch, "1/1"], within: [0.2, 0.15, 1, 0.25], timeout: 10}
+  # Logs tab: the Deployment's own selector (run=kore-scratch) finds its silent pod
+  - key: "4"
+  - wait: {text: "kore-demo/run=kore-scratch", timeout: 10}
+  - wait: {text: "No logs available", timeout: 15}
+  - expect_not: {texts: ["found matching the label selector"]}
+  - screenshot: {name: deployment-logs-selector}
+  # Scale 1 -> 2
+  - key: "1"
+  - wait: {text: '"kind": "Deployment"', timeout: 10}
+  - click: {text: Scale, within: [0.5, 0.1, 1, 0.17], exact: true, offset: [-44, 0]}
+  - expect: {texts: ["re:^2$"], within: [0.6, 0.1, 0.85, 0.17], timeout: 3}
+  - click: {text: Scale, within: [0.5, 0.1, 1, 0.17], exact: true}
+  - wait: {text: Scaled to 2 replicas, timeout: 10}
+  - shell: {cmd: "kubectl -n kore-demo get deploy kore-scratch -o jsonpath='{.spec.replicas}'", expect_output: "2", retry: 10}
+  # Restart
+  - click: {text: Restart, within: [0.5, 0.1, 1, 0.17]}
+  - wait: {text: Restart Deployment, timeout: 5}
+  - expect: {texts: ['rolling restart of deployment', Cancel]}
+  - screenshot: {name: deployment-restart-confirm}
+  # (Confirming is covered by details-fix-deployment-restart.)
+  - click: {text: Cancel, exact: true}
+  - wait_gone: {text: Restart Deployment, timeout: 5}
+  - click: {text: Delete, within: [0.5, 0.1, 1, 0.17], exact: true}
+  - wait: {text: Delete Deployment, timeout: 5}
+  - expect: {texts: ['want to delete deployment']}
+  - screenshot: {name: deployment-delete-confirm}
+  - click: {text: Delete, within: [0.3, 0.3, 0.8, 0.8], exact: true}
+  - wait: {text: Deployment deleted, timeout: 10}
+  - wait_gone: {text: Restart, timeout: 10}
+  - shell: {cmd: "! kubectl -n kore-demo get deploy kore-scratch", retry: 15}
+  - wait_gone: {text: kore-scratch, within: [0.2, 0.12, 1, 1], timeout: 15}

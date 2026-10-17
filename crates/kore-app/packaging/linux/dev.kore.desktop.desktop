@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=kore
+GenericName=Kubernetes IDE
+Comment=Kubernetes desktop IDE
+Exec=kore
+Icon=dev.kore.desktop
+Terminal=false
+Categories=Development;
+StartupWMClass=dev.kore.desktop

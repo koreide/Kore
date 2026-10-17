@@ -1,0 +1,27 @@
+name: shell-settings-accent
+description: >-
+  Settings > Theme Accent Color: choosing Violet recolors accent UI immediately (active sidebar
+  item text) and persists across restarts; Cyan restores the default (spec 01 §0.1, §17, §21.37).
+tags: [shell, settings]
+steps:
+  - include: shell-pods-kore-demo
+  - include: shell-clear-search
+  - expect_color: {text: Pods, within: [0, 0.6, 0.19, 0.95], exact: true, colors: ["#58d0ff"]}
+  - include: shell-open-settings
+  - scroll: {at: [0.6, 0.6], dy: 900}
+  - click: {text: Violet, exact: true, timeout: 5}
+  - screenshot: {name: violet-selected}
+  - key: escape
+  - wait: {text: RESTARTS, within: [0.19, 0.1, 1, 0.14], timeout: 10}
+  - expect_color: {text: Pods, within: [0, 0.6, 0.19, 0.95], exact: true, colors: ["#a78bfa"]}
+  - restart_app: {wait: Kubernetes Desktop}
+  - include: shell-pods-kore-demo
+  - expect_color: {text: Pods, within: [0, 0.6, 0.19, 0.95], exact: true, colors: ["#a78bfa"], timeout: 5}
+  - screenshot: {name: violet-after-restart, mask: ["re:^\\d+[smhd]$", "re:^\\d+$", "re:-[a-z0-9]{5,10}(-[a-z0-9]{5})?$"], mask_rects: [[0.7, 0.14, 0.8, 1]]}
+  - include: shell-open-settings
+  - scroll: {at: [0.6, 0.6], dy: 900}
+  - click: {text: "re:^C[vy]an$", timeout: 5}
+  - key: escape
+  - wait: {text: RESTARTS, within: [0.19, 0.1, 1, 0.14], timeout: 10}
+  - include: shell-pods-kore-demo
+  - expect_color: {text: Pods, within: [0, 0.6, 0.19, 0.95], exact: true, colors: ["#58d0ff"]}

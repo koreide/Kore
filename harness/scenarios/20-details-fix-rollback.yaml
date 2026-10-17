@@ -1,0 +1,35 @@
+name: details-fix-rollback
+description: >
+  Rollback actually works (regression guard: kube-rs rejects a merge patch combined with
+  PatchParams::force, so rollback_deployment must not use force). Rolling web back to its nginx:1.26-alpine revision toasts
+  "Rolled back to revision N", the live image becomes 1.26 and the timeline's current revision shows
+  it; rolling forward to the 1.27-alpine revision via the UI restores the fixture state.
+tags: [details, deployments, rollback, fix]
+steps:
+  - include: details-reset
+  - shell: "kubectl -n kore-demo set image deploy/web nginx=nginx:1.27-alpine && kubectl -n kore-demo rollout status deploy/web --timeout=120s"
+  - include: details-nav-deployments
+  - click: {text: web, within: [0.2, 0.12, 0.4, 1], exact: true, until: Restart}
+  - key: "3"
+  - wait: {text: Revision History, timeout: 10}
+  - click: {text: "nginx:1.26-alpine", until: View YAML}
+  - click: {text: Rollback, within: [0.2, 0.3, 1, 1], exact: true}
+  - wait: {text: Rollback Deployment, timeout: 5}
+  # Dialog button only (x >= 0.45): without backdrop blur the card's Rollback button behind it is OCR-visible.
+  - click: {text: Rollback, within: [0.45, 0.3, 0.8, 0.8], exact: true}
+  # Wait first: the 3s toast can expire while the screenshot step runs (both apps).
+  - wait: {text: "re:Rolled back to revision \\d+", timeout: 15}
+  - screenshot: {name: rollback-result-toast, mask: ["re:^\\d+[smhd] ago$", "re:#\\s?\\d+", "re:revision \\d+"]}
+  - wait_gone: {text: Rollback Deployment, timeout: 5}
+  - shell: {cmd: "kubectl -n kore-demo get deploy web -o jsonpath='{.spec.template.spec.containers[0].image}'", expect_output: "nginx:1.26-alpine", retry: 15}
+  - shell: "kubectl -n kore-demo rollout status deploy/web --timeout=120s"
+  - screenshot: {name: rollback-done, mask: ["re:^\\d+[smhd] ago$", "re:#\\s?\\d+", "re:revision \\d+"]}
+  # Roll forward to 1.27 via the UI
+  - click: {text: "nginx:1.27-alpine", within: [0.2, 0.3, 1, 1], until: View YAML}
+  - click: {text: Rollback, within: [0.2, 0.3, 1, 1], exact: true}
+  - wait: {text: Rollback Deployment, timeout: 5}
+  # Dialog button only (x >= 0.45): without backdrop blur the card's Rollback button behind it is OCR-visible.
+  - click: {text: Rollback, within: [0.45, 0.3, 0.8, 0.8], exact: true}
+  - wait: {text: "re:Rolled back to revision \\d+", timeout: 15}
+  - shell: {cmd: "kubectl -n kore-demo get deploy web -o jsonpath='{.spec.template.spec.containers[0].image}'", expect_output: "nginx:1.27-alpine", retry: 15}
+  - shell: "kubectl -n kore-demo rollout status deploy/web --timeout=120s"

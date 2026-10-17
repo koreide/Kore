@@ -1,0 +1,20 @@
+name: details-fix-yaml-gutter
+description: >
+  Deliberate Fix 15: the YAML editor line-number gutter is aligned with its text lines. On
+  multi-container's YAML, line 15 is `spec:`, so the number 15 must sit on the same row as "spec:".
+  Regression symptom: gutter rows of 26px vs 19.5px text rows put "spec:" next to 11 and 15 lower.
+tags: [details, yaml, fix]
+steps:
+  - include: details-reset
+  - include: nav-pods
+  - click: {text: multi-container, within: [0.2, 0.12, 1, 1], until: "Auto-scroll"}
+  - key: "3"
+  - wait: {text: Read-only, timeout: 10}
+  - wait: {text: "re:^spec:$", within: [0.24, 0.3, 0.5, 1], timeout: 10}
+  - screenshot: {name: yaml-gutter, mask: ["re:creationTimestamp", "re:resourceVersion", "re:uid:"]}
+  # "spec:" (text line 15) renders at y≈0.607 of the window; its gutter number must be 15.
+  - expect: {texts: ["re:^spec:$"], within: [0.24, 0.59, 0.5, 0.625], timeout: 3}
+  - expect: {texts: ["re:^15$"], within: [0.2, 0.59, 0.245, 0.625], timeout: 3}
+  # Line 17 sits two 19.5px rows below "spec:". (Was a check for "7": macOS OCR reads lone
+  # single-digit gutter numbers unreliably, in both apps.)
+  - expect: {texts: ["re:^17$"], within: [0.2, 0.645, 0.245, 0.675], timeout: 3}

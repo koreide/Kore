@@ -1,0 +1,7 @@
+# Select namespace kore-demo from the sidebar namespace dropdown.
+# The trigger shows the namespace (or "All Namespaces"); kube-node-lease is only listed in the open panel.
+- click: {text: "re:^(default|\\*|kore-demo|kube-system|kore-rbac|All Namespaces)$", within: [0, 0.18, 0.2, 0.32], until: kube-node-lease, timeout: 20}
+- type: kore-demo
+- click: {text: kore-demo, within: [0, 0.34, 0.35, 0.8]}
+- wait_gone: {text: All Namespaces, within: [0, 0.3, 0.35, 0.8], timeout: 5}
+- wait: {text: "re:^kore-demo$", within: [0, 0.18, 0.2, 0.32], timeout: 5}

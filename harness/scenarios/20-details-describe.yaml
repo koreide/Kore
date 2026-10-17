@@ -1,0 +1,31 @@
+name: details-describe
+description: >
+  Pod Describe tab renders the pod JSON (keys accent, strings green, numbers amber). Cmd+F opens the
+  describe search: a match shows a 1/N counter, a miss shows "No results", the X closes the
+  search and stays on the pod.
+tags: [details, pods, describe]
+steps:
+  - include: details-reset
+  - include: nav-pods
+  - click: {text: multi-container, within: [0.2, 0.12, 1, 1], until: "Auto-scroll"}
+  - click: {text: Describe, within: [0.2, 0.15, 0.8, 0.21], exact: true}
+  - wait: {text: '"apiVersion": "v1"', timeout: 10}
+  - expect: {texts: ['"kind": "Pod"', '"name": "multi-container"', '"namespace": "kore-demo"']}
+  - expect_color: {text: '"generation": 1', colors: ["#58d0ff"]}
+  - expect_color: {text: '"generation": 1', colors: ["#fbbf24"], min_pixels: 3}
+  - expect_color: {text: '"kind": "Pod"', colors: ["#34d399"]}
+  - screenshot: {name: describe-pod, mask_rects: [[0.2, 0.25, 1, 1]]}
+  - key: cmd+f
+  - wait: {text: "re:Search\\.", within: [0.6, 0.2, 1, 0.35], timeout: 5}
+  - type: "busybox"
+  - element: {id: searchbar.count, label: "^1/\\d+$", timeout: 5}
+  - key: enter
+  - wait: {text: "re:^2/\\d+$", within: [0.6, 0.2, 1, 0.35], timeout: 5}
+  - screenshot: {name: describe-search, mask_rects: [[0.2, 0.25, 1, 1]]}
+  - key: cmd+a
+  - type: "zzzz"
+  - wait: {text: No results, within: [0.6, 0.2, 1, 0.35], timeout: 5}
+  # Close with the bar's X.
+  - click_at: [0.945, 0.257]
+  - wait_gone: {text: No results, timeout: 5}
+  - expect: {texts: ['"kind": "Pod"', Describe, Shell]}

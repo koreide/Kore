@@ -1,0 +1,128 @@
+name: stress-describe-reopen
+description: >
+  Stress repro for an intermittent "describe skeleton never clears" seen in full-suite runs: switch kind
+  (ConfigMaps / Secrets / Jobs via the palette) and immediately open a row, 30 times; the describe JSON
+  (automation element `describe`) must appear within 6s every time. Kept out of `-f details` (slow).
+tags: [stress]
+steps:
+  - include: details-reset
+  - include: details-nav-configmaps
+  - click: {text: web-config, within: [0.2, 0.12, 1, 1], until: KIND}
+  - element: {id: describe, timeout: 6}
+  - key: escape
+  - include: details-nav-secrets
+  - click: {text: web-secret, within: [0.2, 0.12, 1, 1], until: KIND}
+  - element: {id: describe, timeout: 6}
+  - key: escape
+  - include: details-nav-jobs
+  - click: {text: one-shot, within: [0.2, 0.12, 1, 1], until: KIND}
+  - element: {id: describe, timeout: 6}
+  - key: escape
+  - include: details-nav-configmaps
+  - click: {text: web-config, within: [0.2, 0.12, 1, 1], until: KIND}
+  - element: {id: describe, timeout: 6}
+  - key: escape
+  - include: details-nav-secrets
+  - click: {text: web-secret, within: [0.2, 0.12, 1, 1], until: KIND}
+  - element: {id: describe, timeout: 6}
+  - key: escape
+  - include: details-nav-jobs
+  - click: {text: one-shot, within: [0.2, 0.12, 1, 1], until: KIND}
+  - element: {id: describe, timeout: 6}
+  - key: escape
+  - include: details-nav-configmaps
+  - click: {text: web-config, within: [0.2, 0.12, 1, 1], until: KIND}
+  - element: {id: describe, timeout: 6}
+  - key: escape
+  - include: details-nav-secrets
+  - click: {text: web-secret, within: [0.2, 0.12, 1, 1], until: KIND}
+  - element: {id: describe, timeout: 6}
+  - key: escape
+  - include: details-nav-jobs
+  - click: {text: one-shot, within: [0.2, 0.12, 1, 1], until: KIND}
+  - element: {id: describe, timeout: 6}
+  - key: escape
+  - include: details-nav-configmaps
+  - click: {text: web-config, within: [0.2, 0.12, 1, 1], until: KIND}
+  - element: {id: describe, timeout: 6}
+  - key: escape
+  - include: details-nav-secrets
+  - click: {text: web-secret, within: [0.2, 0.12, 1, 1], until: KIND}
+  - element: {id: describe, timeout: 6}
+  - key: escape
+  - include: details-nav-jobs
+  - click: {text: one-shot, within: [0.2, 0.12, 1, 1], until: KIND}
+  - element: {id: describe, timeout: 6}
+  - key: escape
+  - include: details-nav-configmaps
+  - click: {text: web-config, within: [0.2, 0.12, 1, 1], until: KIND}
+  - element: {id: describe, timeout: 6}
+  - key: escape
+  - include: details-nav-secrets
+  - click: {text: web-secret, within: [0.2, 0.12, 1, 1], until: KIND}
+  - element: {id: describe, timeout: 6}
+  - key: escape
+  - include: details-nav-jobs
+  - click: {text: one-shot, within: [0.2, 0.12, 1, 1], until: KIND}
+  - element: {id: describe, timeout: 6}
+  - key: escape
+  - include: details-nav-configmaps
+  - click: {text: web-config, within: [0.2, 0.12, 1, 1], until: KIND}
+  - element: {id: describe, timeout: 6}
+  - key: escape
+  - include: details-nav-secrets
+  - click: {text: web-secret, within: [0.2, 0.12, 1, 1], until: KIND}
+  - element: {id: describe, timeout: 6}
+  - key: escape
+  - include: details-nav-jobs
+  - click: {text: one-shot, within: [0.2, 0.12, 1, 1], until: KIND}
+  - element: {id: describe, timeout: 6}
+  - key: escape
+  - include: details-nav-configmaps
+  - click: {text: web-config, within: [0.2, 0.12, 1, 1], until: KIND}
+  - element: {id: describe, timeout: 6}
+  - key: escape
+  - include: details-nav-secrets
+  - click: {text: web-secret, within: [0.2, 0.12, 1, 1], until: KIND}
+  - element: {id: describe, timeout: 6}
+  - key: escape
+  - include: details-nav-jobs
+  - click: {text: one-shot, within: [0.2, 0.12, 1, 1], until: KIND}
+  - element: {id: describe, timeout: 6}
+  - key: escape
+  - include: details-nav-configmaps
+  - click: {text: web-config, within: [0.2, 0.12, 1, 1], until: KIND}
+  - element: {id: describe, timeout: 6}
+  - key: escape
+  - include: details-nav-secrets
+  - click: {text: web-secret, within: [0.2, 0.12, 1, 1], until: KIND}
+  - element: {id: describe, timeout: 6}
+  - key: escape
+  - include: details-nav-jobs
+  - click: {text: one-shot, within: [0.2, 0.12, 1, 1], until: KIND}
+  - element: {id: describe, timeout: 6}
+  - key: escape
+  - include: details-nav-configmaps
+  - click: {text: web-config, within: [0.2, 0.12, 1, 1], until: KIND}
+  - element: {id: describe, timeout: 6}
+  - key: escape
+  - include: details-nav-secrets
+  - click: {text: web-secret, within: [0.2, 0.12, 1, 1], until: KIND}
+  - element: {id: describe, timeout: 6}
+  - key: escape
+  - include: details-nav-jobs
+  - click: {text: one-shot, within: [0.2, 0.12, 1, 1], until: KIND}
+  - element: {id: describe, timeout: 6}
+  - key: escape
+  - include: details-nav-configmaps
+  - click: {text: web-config, within: [0.2, 0.12, 1, 1], until: KIND}
+  - element: {id: describe, timeout: 6}
+  - key: escape
+  - include: details-nav-secrets
+  - click: {text: web-secret, within: [0.2, 0.12, 1, 1], until: KIND}
+  - element: {id: describe, timeout: 6}
+  - key: escape
+  - include: details-nav-jobs
+  - click: {text: one-shot, within: [0.2, 0.12, 1, 1], until: KIND}
+  - element: {id: describe, timeout: 6}
+  - key: escape

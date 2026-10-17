@@ -1,0 +1,10 @@
+[package]
+name = "kore-automation"
+version = "0.1.0"
+edition = "2021"
+description = "Wire protocol between the Kore app's automation server and kore-harness"
+publish = false
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }

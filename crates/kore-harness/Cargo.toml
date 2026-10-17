@@ -1,0 +1,35 @@
+[package]
+name = "kore-harness"
+version = "0.1.0"
+edition = "2021"
+description = "Black-box test harness that drives the Kore desktop app against a local kind cluster"
+publish = false
+
+[[bin]]
+name = "kore-harness"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = "0.9"
+clap = { version = "4", features = ["derive"] }
+image = { version = "0.25", default-features = false, features = ["png"] }
+regex = "1"
+libc = "0.2"
+chrono = "0.4"
+base64 = "0.22"
+tokio = { workspace = true, features = ["net", "io-util", "time", "sync", "rt-multi-thread", "macros"] }
+kore-automation = { path = "../kore-automation" }
+kore-testkit = { path = "../kore-testkit" }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+core-foundation = "0.10"
+core-graphics = "0.24"
+foreign-types = "0.5"
+accessibility-sys = "0.2"
+objc2 = "0.6"
+objc2-foundation = { version = "0.3", features = ["NSArray", "NSString", "NSURL", "NSDictionary", "NSError"] }
+objc2-vision = { version = "0.3", features = ["VNRequest", "VNRequestHandler", "VNRecognizeTextRequest", "VNObservation", "VNTypes", "objc2-core-foundation"] }
+objc2-core-foundation = { version = "0.3", features = ["CFCGTypes"] }

@@ -1,0 +1,13 @@
+name: smoke
+description: App launches against the harness cluster; sidebar, context and default AI Chat view render.
+tags: [smoke, core]
+steps:
+  - window_title: Kore
+  - wait: {text: Kubernetes Desktop, timeout: 30}
+  - expect: {texts: [CONTEXT, NAMESPACES, kind-kore-harness, Multi-Cluster, VIEWS, AI Chat, Dashboard, Pods, Command Palette]}
+  - screenshot: {name: home}
+  - include: ns-kore-demo
+  - include: nav-pods
+  - wait: {text: multi-container, timeout: 20}
+  - expect: {texts: [crashloop, unschedulable, logger-]}
+  - screenshot: {name: pods-kore-demo, mask: ["re:^\\d+[smhd]$", "re:^\\d+m\\d+s$"]}

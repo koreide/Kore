@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kore — AI-Powered Kubernetes IDE</title>
-  <meta name="description" content="Kore is an AI-powered Kubernetes IDE. Native desktop app with real-time monitoring, AI troubleshooting, and keyboard-driven workflows. Built with Rust and React.">
+  <meta name="description" content="Kore is an AI-powered Kubernetes IDE. Native desktop app with real-time monitoring, AI troubleshooting, and keyboard-driven workflows. A native app built with Rust and GPUI.">
   <meta property="og:title" content="Kore — AI-Powered Kubernetes IDE">
   <meta property="og:description" content="Native Kubernetes IDE with AI troubleshooting, real-time watches, and keyboard-first navigation. Not Electron. Not a browser tab.">
   <meta property="og:image" content="icon.png">
@@ -638,9 +638,7 @@
     <div class="tech-strip-items">
       <span class="tech-strip-item">Rust</span>
       <span class="tech-strip-sep">&middot;</span>
-      <span class="tech-strip-item">React</span>
-      <span class="tech-strip-sep">&middot;</span>
-      <span class="tech-strip-item">Tauri v2</span>
+      <span class="tech-strip-item">GPUI</span>
       <span class="tech-strip-sep">&middot;</span>
       <span class="tech-strip-item">kube-rs</span>
     </div>
@@ -668,12 +666,13 @@
         <summary style="cursor:pointer;color:var(--text-muted);font-size:0.85rem;padding:8px 0;">Build from Source</summary>
         <div class="install-code" style="margin-top:8px;">
 <span class="cmd">git clone https://github.com/eladbash/kore && cd kore</span>
-<span class="cmd">npm install && npm run tauri:build</span>
-<span class="comment"># The .app bundle will be in src-tauri/target/release/bundle/macos/</span>
+<span class="cmd">cargo build --release -p kore-app</span>
+<span class="comment"># Binary: target/release/kore. On macOS, build kore.app with:</span>
+<span class="cmd">crates/kore-app/packaging/macos/bundle.sh</span>
         </div>
       </details>
       <div class="install-prereqs">
-        Available for macOS 14+ and Windows 10+<br>
+        Available for macOS 14+, Windows 10+ and Linux (x86_64)<br>
         Requires a valid <code style="color:var(--accent)">~/.kube/config</code> with at least one reachable context
       </div>
     </div>
@@ -703,7 +702,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
         </div>
         <h3>Native Performance</h3>
-        <p>Rust backend, ~80MB memory. Starts in under a second. No Electron overhead, no Chromium fork.</p>
+        <p>One Rust process with a GPU-rendered UI, ~120MB memory. Starts in under a second. No Electron overhead, no Chromium fork.</p>
       </div>
       <div class="feature-card glass">
         <div class="feature-icon">
@@ -921,7 +920,7 @@
           <tr><td>Ephemeral debug containers</td><td class="kore-col"><span class="check">&#10003;</span></td><td><span class="cross">&#10005;</span></td><td><span class="cross">&#10005;</span></td><td><span class="cross">&#10005;</span></td><td><span class="cross">&#10005;</span></td></tr>
           <tr><td>Network policy visualizer</td><td class="kore-col"><span class="check">&#10003;</span></td><td><span class="cross">&#10005;</span></td><td><span class="partial">Extension</span></td><td><span class="cross">&#10005;</span></td><td><span class="cross">&#10005;</span></td></tr>
           <tr><td>RBAC simulator</td><td class="kore-col"><span class="check">&#10003;</span></td><td><span class="cross">&#10005;</span></td><td><span class="cross">&#10005;</span></td><td><span class="cross">&#10005;</span></td><td><span class="cross">&#10005;</span></td></tr>
-          <tr><td>Memory usage</td><td class="kore-col" style="color:var(--accent);font-family:var(--font-mono);font-size:13px">~80 MB</td><td style="font-family:var(--font-mono);font-size:13px;color:var(--text-secondary)">~30 MB</td><td style="font-family:var(--font-mono);font-size:13px;color:var(--text-secondary)">~400 MB</td><td style="font-family:var(--font-mono);font-size:13px;color:var(--text-secondary)">~50 MB</td><td style="font-family:var(--font-mono);font-size:13px;color:var(--text-secondary)">~300 MB</td></tr>
+          <tr><td>Memory usage</td><td class="kore-col" style="color:var(--accent);font-family:var(--font-mono);font-size:13px">~120 MB</td><td style="font-family:var(--font-mono);font-size:13px;color:var(--text-secondary)">~30 MB</td><td style="font-family:var(--font-mono);font-size:13px;color:var(--text-secondary)">~400 MB</td><td style="font-family:var(--font-mono);font-size:13px;color:var(--text-secondary)">~50 MB</td><td style="font-family:var(--font-mono);font-size:13px;color:var(--text-secondary)">~300 MB</td></tr>
         </tbody>
       </table>
     </div>
@@ -940,13 +939,13 @@
     </div>
     <div class="stats-grid reveal">
       <div class="stat-card glass">
-        <div class="stat-value"><span class="accent" data-target="80">0</span><span style="font-size:24px;color:var(--text-muted)">MB</span></div>
+        <div class="stat-value"><span class="accent" data-target="120">0</span><span style="font-size:24px;color:var(--text-muted)">MB</span></div>
         <div class="stat-label">Memory Usage</div>
         <div class="stat-compare">vs ~400 MB (Lens)</div>
       </div>
       <div class="stat-card glass">
-        <div class="stat-value"><span class="accent" data-target="15">0</span><span style="font-size:24px;color:var(--text-muted)">MB</span></div>
-        <div class="stat-label">Binary Size</div>
+        <div class="stat-value"><span class="accent" data-target="25">0</span><span style="font-size:24px;color:var(--text-muted)">MB</span></div>
+        <div class="stat-label">Download Size</div>
         <div class="stat-compare">vs ~200 MB (Electron)</div>
       </div>
       <div class="stat-card glass">
@@ -1041,7 +1040,7 @@
         <a href="https://github.com/eladbash/kore/issues" target="_blank" rel="noopener">Issues</a>
       </div>
       <div class="footer-note">
-        Built with <span style="color:var(--accent)">Rust</span> &amp; <span style="color:var(--accent-blue)">React</span> &middot; MIT License
+        Built with <span style="color:var(--accent)">Rust</span> &amp; <span style="color:var(--accent-blue)">GPUI</span> &middot; MIT License
       </div>
     </div>
   </div>
