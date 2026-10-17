@@ -32,6 +32,8 @@ If you spend your day switching between `kubectl`, `k9s`, Lens, and your browser
 curl -fsSL https://raw.githubusercontent.com/koreide/Kore/main/install.sh | bash
 ```
 
+Kore is not notarized. The script clears the quarantine flag for you; if you install a DMG from the release page by hand, run `xattr -dr com.apple.quarantine /Applications/kore.app` once before opening it.
+
 **Windows 10+:** run `kore_<version>_x64-setup.exe` from the [latest release](https://github.com/koreide/Kore/releases/latest) (per-user install, no admin needed), or use the portable zip.
 
 **Linux (x86_64):** download `kore_<version>_x86_64.tar.gz` from the [latest release](https://github.com/koreide/Kore/releases/latest), extract it and run `./install.sh` (installs to `~/.local`; set `PREFIX` to change).
@@ -215,9 +217,10 @@ Contributions are welcome! Here's how to get started:
 
 1. Bump `version` in `crates/kore-app/Cargo.toml` (both the `[package]` and `[package.metadata.bundle]` entries).
 2. Tag and push: `git tag vX.Y.Z && git push origin vX.Y.Z`.
-3. `.github/workflows/release.yml` builds the macOS DMGs (Apple Silicon and Intel), the Linux tarball and the Windows installer + portable zip, then opens a **draft** release with `SHA256SUMS.txt`. Review it and publish.
+3. Add the version's entry to `CHANGELOG.md` (the release notes link to it).
+4. `.github/workflows/release.yml` publishes the GitHub release for the tag. Each platform attaches its files as soon as it is built: the macOS DMGs (Apple Silicon and Intel), the Linux tarball and the Windows installer + portable zip. `SHA256SUMS.txt` is attached last.
 
-macOS signing and notarization run when the repository secrets `APPLE_CERTIFICATE` (base64 .p12), `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD` (app-specific password) and `APPLE_TEAM_ID` are set; without them the app is ad-hoc signed. Run the workflow manually (Actions → Release → Run workflow) to build all artifacts without creating a release.
+Builds are not code signed or notarized. The macOS app is ad-hoc signed, and `install.sh` and the in-app updater clear the quarantine flag; a DMG installed by hand needs `xattr -dr com.apple.quarantine /Applications/kore.app` once. Run the workflow manually (Actions → Release → Run workflow) to build all artifacts without creating a release.
 
 ## License
 

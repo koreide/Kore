@@ -15,10 +15,10 @@ much less memory (~120 MB instead of a WebView process tree).
   app is ported with the same look, behavior and keyboard shortcuts. The legacy `src/`
   (React) and `src-tauri/` trees and the npm/Vite toolchain are removed.
 - **Packaging and releases** for all three platforms from one workflow:
-  - macOS DMGs (Apple Silicon and Intel), signed and notarized when the credentials are configured;
+  - macOS DMGs (Apple Silicon and Intel), ad-hoc signed and not notarized (the installer and the in-app updater clear the quarantine flag);
   - a Linux tarball with `install.sh`;
   - a Windows installer (per-user, NSIS) and a portable zip;
-  - all published as a draft release with `SHA256SUMS`.
+  - all published straight to the GitHub release, each platform as soon as it is built, followed by `SHA256SUMS`.
 - **In-app updates.** On macOS the app updates itself from the DMG. On Linux and Windows the
   update banner opens the release page instead of attempting an install. Version comparison is
   numeric, so an older release is never offered as an update.
