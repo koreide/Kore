@@ -3,7 +3,6 @@
 #
 #   crates/kore-app/packaging/macos/bundle.sh            # builds release, writes target/release/bundle/macos/kore.app
 #   SKIP_BUILD=1 crates/kore-app/packaging/macos/bundle.sh
-#   SIGN_IDENTITY="Developer ID Application: …" crates/kore-app/packaging/macos/bundle.sh
 #   TARGET=x86_64-apple-darwin crates/kore-app/packaging/macos/bundle.sh   # target/<triple>/release/…
 #
 # Bundle identity: product name "kore", bundle id dev.kore.desktop, version
@@ -72,8 +71,9 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 PLIST
 plutil -lint "$APP/Contents/Info.plist" >/dev/null
 
-# Ad-hoc signature by default (seals Info.plist + resources); pass SIGN_IDENTITY for a real one.
-codesign --force --sign "${SIGN_IDENTITY:--}" --identifier "$IDENTIFIER" \
-  ${SIGN_IDENTITY:+--options runtime --timestamp} "$APP"
+# Ad-hoc signature (seals Info.plist + resources; Apple Silicon requires a signature
+# to run). Releases are not Developer ID signed or notarized: install.sh and the
+# in-app updater clear the quarantine flag.
+codesign --force --sign - --identifier "$IDENTIFIER" "$APP"
 
 echo "$APP"

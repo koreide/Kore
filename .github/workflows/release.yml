@@ -1,7 +1,9 @@
 name: Release
 
-# Push a tag vX.Y.Z (matching crates/kore-app/Cargo.toml) to build every platform and open a
-# draft GitHub release. Run manually (workflow_dispatch) to build the artifacts without releasing.
+# Push a tag vX.Y.Z (matching crates/kore-app/Cargo.toml) to publish a GitHub release: each
+# platform job attaches its files as soon as it is built, then SHA256SUMS is added. Builds are
+# not code signed or notarized (macOS apps are ad-hoc signed; install.sh and the in-app updater
+# clear the quarantine flag). Run manually (workflow_dispatch) to build artifacts without releasing.
 on:
   push:
     tags:
@@ -32,6 +34,21 @@ jobs:
             exit 1
           fi
 
+      - name: Create the release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 ||
+            gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag \
+              --title "Kore $GITHUB_REF_NAME" --notes-file - <<'NOTES'
+          See the [CHANGELOG](https://github.com/koreide/Kore/blob/main/CHANGELOG.md) for details.
+
+          **macOS:** `curl -fsSL https://raw.githubusercontent.com/koreide/Kore/main/install.sh | bash`, or download the DMG for your Mac (`aarch64` = Apple Silicon, `x86_64` = Intel). The app is not notarized: if you install from the DMG, run `xattr -dr com.apple.quarantine /Applications/kore.app` once (install.sh does this for you).
+          **Windows:** run `kore_*_x64-setup.exe` (per-user install, no admin needed), or unzip the portable build.
+          **Linux:** extract `kore_*_x86_64.tar.gz` and run `./install.sh` (installs to `~/.local`).
+          NOTES
+
   macos:
     name: macOS (${{ matrix.arch }})
     needs: version
@@ -55,37 +72,12 @@ jobs:
         with:
           key: ${{ matrix.target }}
 
-      - name: Import signing certificate
-        if: env.APPLE_CERTIFICATE != ''
-        env:
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-        run: |
-          keychain="$RUNNER_TEMP/signing.keychain-db"
-          keychain_password="$(openssl rand -hex 16)"
-          echo "$APPLE_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/cert.p12"
-          security create-keychain -p "$keychain_password" "$keychain"
-          security set-keychain-settings -lut 21600 "$keychain"
-          security unlock-keychain -p "$keychain_password" "$keychain"
-          security import "$RUNNER_TEMP/cert.p12" -P "$APPLE_CERTIFICATE_PASSWORD" \
-            -A -t cert -f pkcs12 -k "$keychain"
-          security set-key-partition-list -S apple-tool:,apple: -k "$keychain_password" "$keychain" >/dev/null
-          security list-keychains -d user -s "$keychain" login.keychain-db
-          rm "$RUNNER_TEMP/cert.p12"
-
-      - name: Build and bundle kore.app
+      - name: Build and bundle kore.app (ad-hoc signed)
         env:
           TARGET: ${{ matrix.target }}
-          SIGN_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
         run: crates/kore-app/packaging/macos/bundle.sh
 
-      - name: Package DMG (sign + notarize when secrets are set)
-        timeout-minutes: 40
-        env:
-          SIGN_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      - name: Package DMG
         run: |
           crates/kore-app/packaging/macos/dmg.sh \
             "target/${{ matrix.target }}/release/bundle/macos/kore.app" \
@@ -96,6 +88,13 @@ jobs:
           name: macos-${{ matrix.arch }}
           path: dist/*
           if-no-files-found: error
+
+      - name: Attach to the release
+        if: github.ref_type == 'tag'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --clobber
 
   linux:
     name: Linux (x86_64)
@@ -129,6 +128,13 @@ jobs:
           name: linux-x86_64
           path: dist/*
           if-no-files-found: error
+
+      - name: Attach to the release
+        if: github.ref_type == 'tag'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --clobber
 
   windows:
     name: Windows (x64)
@@ -168,10 +174,17 @@ jobs:
           path: dist/*
           if-no-files-found: error
 
-  release:
-    name: Draft release
+      - name: Attach to the release
+        if: github.ref_type == 'tag'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --clobber
+
+  checksums:
+    name: Checksums
     if: github.ref_type == 'tag'
-    needs: [version, macos, linux, windows]
+    needs: [macos, linux, windows]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -179,15 +192,9 @@ jobs:
           path: dist
           merge-multiple: true
 
-      - name: Checksums
-        run: cd dist && sha256sum -- * > SHA256SUMS.txt && cat SHA256SUMS.txt
-
-      - uses: softprops/action-gh-release@v2
-        with:
-          draft: true
-          name: "Kore ${{ github.ref_name }}"
-          body: |
-            **macOS:** `curl -fsSL https://raw.githubusercontent.com/koreide/Kore/main/install.sh | bash`, or download the DMG for your Mac (`aarch64` = Apple Silicon, `x86_64` = Intel).
-            **Windows:** run `kore_*_x64-setup.exe` (per-user install, no admin needed), or unzip the portable build.
-            **Linux:** extract `kore_*_x86_64.tar.gz` and run `./install.sh` (installs to `~/.local`).
-          files: dist/*
+      - name: Attach SHA256SUMS
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd dist && sha256sum -- * > SHA256SUMS.txt && cat SHA256SUMS.txt
+          gh release upload "$GITHUB_REF_NAME" SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --clobber
