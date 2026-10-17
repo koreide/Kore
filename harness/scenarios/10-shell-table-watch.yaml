@@ -1,0 +1,17 @@
+name: shell-table-watch
+description: >-
+  Live watch: a pod created with kubectl appears in the Pods table without a refresh, and
+  disappears again when deleted (spec 01 §7.1, §21.26).
+tags: [shell, table, watch]
+steps:
+  - shell: kubectl -n kore-demo delete pod shell-watch-probe --ignore-not-found --grace-period=0 --force >/dev/null 2>&1; true
+  - include: shell-pods-kore-demo
+  - include: shell-clear-search
+  - expect_not: {texts: [shell-watch-probe], timeout: 1}
+  - shell: >-
+      kubectl -n kore-demo run shell-watch-probe --image=busybox:1.36 --restart=Never
+      --command -- sh -c "trap 'exit 0' TERM; sleep 3600 & wait"
+  - wait: {text: shell-watch-probe, within: [0.19, 0.14, 0.45, 1], timeout: 20}
+  - screenshot: {name: watch-added, mask: ["re:^\\d+[smhd]$", "re:^\\d+$", "re:-[a-z0-9]{5,10}(-[a-z0-9]{5})?$"], mask_rects: [[0.5, 0.14, 0.8, 1]]}
+  - shell: kubectl -n kore-demo delete pod shell-watch-probe --grace-period=0 --force --wait=false
+  - wait_gone: {text: shell-watch-probe, within: [0.19, 0.14, 0.45, 1], timeout: 30}

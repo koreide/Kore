@@ -1,0 +1,10 @@
+# Select namespace kore-demo in the sidebar namespace dropdown. Clicks the trigger by position, so it
+# works whatever the trigger currently shows (e.g. "All Namespaces").
+# Close any open dropdown first (outside mousedown), then open the namespace dropdown.
+- click_at: [0.205, 0.073]
+- click_at: [0.1, 0.257]
+- wait: {text: All Namespaces, within: [0, 0.3, 0.25, 0.5], timeout: 10}
+- type: kore-demo
+- click: {text: kore-demo, within: [0, 0.34, 0.35, 0.8], exact: true}
+- wait_gone: {text: All Namespaces, within: [0, 0.3, 0.35, 0.8], timeout: 5}
+- wait: {text: "re:^kore-demo$", within: [0, 0.18, 0.2, 0.32], timeout: 5}

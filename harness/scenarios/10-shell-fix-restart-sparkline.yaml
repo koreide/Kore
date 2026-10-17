@@ -1,0 +1,18 @@
+name: shell-fix-restart-sparkline
+description: >-
+  Deliberate Fix 14: restart history is recorded, so the RESTARTS cell of a restarting pod renders
+  through RestartSparkline (count drawn in amber #f59e0b, or red #ef4444 when rising) instead of the
+  plain row-colored number, so crashloop's count is not plain white.
+tags: [shell, fix, table]
+fresh_app: true
+steps:
+  - wait: {text: Kubernetes Desktop, timeout: 30}
+  - include: shell-pods-kore-demo
+  - click_at: [0.47, 0.073]
+  - type: crashloop
+  - wait_gone: {text: multi-container, within: [0.19, 0.14, 1, 1], timeout: 5}
+  - click_at: [0.205, 0.073]
+  - wait: {text: "re:^\\d+$", within: [0.55, 0.145, 0.8, 0.185], timeout: 10}
+  - expect_color: {text: "re:^\\d+$", within: [0.55, 0.145, 0.8, 0.185], colors: ["#f59e0b", "#ef4444"], timeout: 5}
+  - screenshot: {name: crashloop-restarts, mask: ["re:^\\d+[smhd]$"], mask_rects: [[0.69, 0.145, 0.8, 0.185]]}
+  - include: shell-clear-search

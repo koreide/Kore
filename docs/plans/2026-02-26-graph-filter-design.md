@@ -6,7 +6,7 @@ Add kind toggles and name search to the resource graph view so users can focus o
 
 ## Approach
 
-Frontend-only filtering (Approach A). No backend changes. Filter the already-fetched graph data on the client side.
+UI-only filtering (Approach A). No `kore-core` changes. Filter the already-fetched graph data in the graph view (`crates/kore-app/src/views/graph.rs`).
 
 ## UI
 
@@ -28,4 +28,4 @@ Layout stays fixed regardless of filters — nodes dim but don't move. Spatial o
 
 ## Implementation Scope
 
-Single file change: `src/components/resource-graph.tsx`. Add state for kind toggles + search string, compute visibility via `useMemo`, render filter bar UI, apply opacity based on match status.
+Implemented in `crates/kore-app/src/views/graph.rs`: view state holds the kind toggles and search string, visibility is computed per render, the filter bar is drawn above the canvas, and non-matching nodes are dimmed.

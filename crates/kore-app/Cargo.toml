@@ -1,0 +1,72 @@
+[package]
+name = "kore-app"
+version = "0.2.0"
+edition = "2021"
+description = "Kore — native Kubernetes desktop IDE (GPUI)"
+publish = false
+
+[[bin]]
+name = "kore"
+path = "src/main.rs"
+
+[dependencies]
+gpui-kit = "0.7.3"
+kore-automation = { path = "../kore-automation" }
+kore-core = { path = "../kore-core" }
+unicode-segmentation = "1"
+markdown = "1.0.0"
+futures = { workspace = true }
+anyhow = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+async-channel = "2"
+rust-embed = "8"
+dirs = "5"
+chrono = "0.4"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+regex = "1"
+base64 = "0.22"
+alacritty_terminal = { version = "=0.26.0", default-features = false }
+
+# Layer 2 control server (and GPUI's off-screen `render_to_image`). Never enabled
+# for release artifacts; `cargo build --release -p kore-app --features test-harness`
+# for harness runs.
+gpui = { package = "gpui-pre", version = "=0.3.9", optional = true }
+gpui_platform = { package = "gpui-pre-platform", version = "=0.3.9", optional = true }
+image = { version = "0.25", optional = true, default-features = false, features = ["png"] }
+
+[features]
+test-harness = ["dep:gpui", "dep:gpui_platform", "gpui/test-support", "gpui_platform/test-support", "dep:image"]
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-foundation = { version = "0.3", features = ["NSData", "NSString"] }
+objc2-app-kit = { version = "0.3", features = ["NSApplication", "NSImage", "NSResponder", "NSView", "NSWindow", "NSColor", "objc2-core-foundation"] }
+raw-window-handle = "0.6"
+
+[dev-dependencies]
+# gpui-kit's own `test-support` feature names gpui-fast (weakly), which Cargo still
+# resolves and which pins a conflicting `cocoa`; enable the same features on the
+# crates gpui-kit actually uses instead. Versions match gpui-kit 0.7.3.
+gpui = { package = "gpui-pre", version = "=0.3.9", features = ["test-support"] }
+gpui_platform = { package = "gpui-pre-platform", version = "=0.3.9", features = ["test-support"] }
+gpui-base = { version = "0.7.1", features = ["test-support"] }
+gpui-component = { version = "0.7.1", features = ["test-support"] }
+image = { version = "0.25", default-features = false, features = ["png"] }
+kore-testkit = { path = "../kore-testkit" }
+
+[build-dependencies]
+embed-resource = "3"
+
+# `cargo bundle --release` metadata. The canonical macOS bundle is built by
+# packaging/macos/bundle.sh (it writes the bundle's Info.plist); Linux uses
+# packaging/linux/, Windows embeds assets/icons/icon.ico via build.rs.
+# assets/icons holds Kore's app icons.
+[package.metadata.bundle]
+name = "kore"
+identifier = "dev.kore.desktop"
+version = "0.2.0"
+icon = ["assets/icons/32x32.png", "assets/icons/128x128.png", "assets/icons/128x128@2x.png", "assets/icons/icon.icns"]
+osx_minimum_system_version = "14.0"
+short_description = "Kubernetes desktop IDE"

@@ -1,0 +1,33 @@
+name: details-pod-tab-keys
+description: >
+  Number keys switch pod detail tabs: 2 Describe, 3 YAML, 4 Metrics, 5 Events, 6 Shell, 1 Logs.
+  Digits typed into the Shell terminal go to the terminal, not to tab switching.
+tags: [details, pods, keyboard]
+steps:
+  - include: details-reset
+  - include: nav-pods
+  - click: {text: multi-container, within: [0.2, 0.12, 1, 1], until: "Auto-scroll"}
+  - key: "2"
+  - wait: {text: '"apiVersion": "v1"', timeout: 10}
+  - key: "3"
+  - wait: {text: Read-only, timeout: 10}
+  - expect: {texts: ["apiVersion: v1", "kind: Pod"]}
+  - key: "4"
+  - wait: {text: CPU Usage, timeout: 15}
+  - key: "5"
+  - wait: {text: "re:^(\\(\\(o\\)\\) )?Live$|No events found", timeout: 10}
+  - key: "6"
+  - wait: {text: "SHELL:", timeout: 10}
+  - wait: {text: Connected, timeout: 15}
+  - screenshot: {name: pod-shell-tab}
+  # Digits typed in the terminal are terminal input
+  - click_at: [0.6, 0.6]
+  - type: "echo KORE-$((40+2))"
+  - key: enter
+  - wait: {text: KORE-42, timeout: 10}
+  - expect: {texts: ["SHELL:"]}
+  # Leave the terminal focus, then 1 returns to Logs
+  - click: {text: multi-container, within: [0.2, 0.1, 0.6, 0.17]}
+  - key: "1"
+  - wait: {text: Auto-scroll, timeout: 10}
+  - expect: {texts: [Previous, Copy, Download]}

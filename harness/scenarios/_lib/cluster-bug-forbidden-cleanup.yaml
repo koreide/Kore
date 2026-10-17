@@ -1,0 +1,8 @@
+# Removes the restricted identity kore-rbac/kore-bug-bot used by cluster-bug-forbidden.
+- shell: >-
+    kubectl delete clusterrolebinding kore-bug-bot-view kore-bug-bot-rbac-reader --ignore-not-found &&
+    kubectl delete clusterrole kore-bug-rbac-reader --ignore-not-found &&
+    kubectl -n kore-demo delete rolebinding kore-bug-pod-getter --ignore-not-found &&
+    kubectl -n kore-demo delete role kore-bug-pod-getter --ignore-not-found &&
+    kubectl -n kore-rbac delete serviceaccount kore-bug-bot --ignore-not-found &&
+    rm -f "$(dirname "$KUBECONFIG")/../runs/bug-forbidden.kubeconfig"

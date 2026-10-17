@@ -1,0 +1,66 @@
+name: cluster-bug-crd-cluster-scoped
+description: >
+  Quirk 10.10 (fixed): instances of a cluster-scoped CRD open and delete without a namespace. A
+  temporary CRD gadgets.kore-bug.dev (scope Cluster) with instance bug-gadget is applied; the CRD
+  browser shows it as "kore-bug.dev/v1 - Cluster" with namespace "-", the detail shows the JSON
+  (not "Error fetching instance"), and the trash icon deletes it with a namespace-free message.
+  The CRD is removed at the end (and before, in case a previous run was interrupted).
+tags: [cluster, crd, bugfix]
+steps:
+  - shell: "kubectl delete crd gadgets.kore-bug.dev --ignore-not-found --wait=true"
+  - shell: |
+      kubectl apply -f - <<'YAML'
+      apiVersion: apiextensions.k8s.io/v1
+      kind: CustomResourceDefinition
+      metadata:
+        name: gadgets.kore-bug.dev
+      spec:
+        group: kore-bug.dev
+        scope: Cluster
+        names: {plural: gadgets, singular: gadget, kind: Gadget}
+        versions:
+          - name: v1
+            served: true
+            storage: true
+            schema:
+              openAPIV3Schema:
+                type: object
+                properties:
+                  spec:
+                    type: object
+                    properties:
+                      color: {type: string}
+      YAML
+  - shell: "kubectl wait --for condition=established --timeout=30s crd/gadgets.kore-bug.dev"
+  - shell: {cmd: "printf 'apiVersion: kore-bug.dev/v1\\nkind: Gadget\\nmetadata:\\n  name: bug-gadget\\nspec:\\n  color: green\\n' | kubectl apply -f -", expect_output: bug-gadget, retry: 20}
+  - include: cluster-start
+  - include: cluster-ns-kore-demo
+  # Leave and re-enter so the CRD list is refetched with the new CRD.
+  - click: {text: Dashboard, within: [0, 0.3, 0.19, 1]}
+  - wait: {text: CLUSTER HEALTH, timeout: 30}
+  - click: {text: Custom Resources, within: [0, 0.3, 0.19, 1]}
+  - wait: {text: "re:CRDs? discovered", timeout: 20}
+  - click: {text: Search CRDs, within: [0.19, 0.1, 0.45, 0.25]}
+  - type: gadget
+  - wait: {text: "re:^Gadget( cluster)?$", within: [0.19, 0.2, 0.45, 1]}
+  - click: {text: "re:^Gadget( cluster)?$", within: [0.19, 0.2, 0.45, 1]}
+  - expect: {texts: ["re:bug.?.adget"], within: [0.4, 0.2, 1, 0.4], crop: true, timeout: 15}
+  - expect: {texts: ["kore-bug.dev/v1 - Cluster", NAME, NAMESPACE, AGE]}
+  - screenshot: {name: gadget-instances, mask: ["re:^\\d+[smhd]$"]}
+  - click: {text: "re:bug.?.adget", within: [0.4, 0.25, 0.6, 0.35], until: Back to list}
+  - wait: {text: "\"color\": \"green\"", timeout: 10}
+  - expect: {texts: ["\"kind\": \"Gadget\"", "\"name\": \"bug-gadget\""]}
+  - expect_not: {texts: [Error fetching instance]}
+  - screenshot: {name: gadget-detail, mask_rects: [[0.45, 0.2, 1, 1]], tolerance: 0.1}
+  - key: escape
+  - expect: {texts: ["re:bug.?.adget"], within: [0.4, 0.2, 1, 0.4], crop: true, timeout: 5}
+  # The row's trash icon (same row, actions column).
+  - click: {text: "re:bug.?.adget", within: [0.4, 0.25, 0.6, 0.35], at_x: 0.959}
+  - wait: {text: Delete Gadget, timeout: 5}
+  - expect: {texts: ["Are you sure you want to delete \"bug-gadget\"", cannot be undone]}
+  - expect_not: {texts: [in namespace]}
+  - click: {text: "re:^Delete$", within: [0.5, 0.4, 0.8, 0.7]}
+  - element: {id: "toast.*", label: "^Resource deleted$", timeout: 10}
+  - expect_not: {texts: ["re:bug.?.adget"], within: [0.4, 0.2, 1, 0.4], crop: true, timeout: 10}
+  - shell: {cmd: "kubectl get gadget bug-gadget 2>&1 || true", expect_output: NotFound}
+  - shell: "kubectl delete crd gadgets.kore-bug.dev --ignore-not-found --wait=true"

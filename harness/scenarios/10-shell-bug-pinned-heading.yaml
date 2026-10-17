@@ -1,0 +1,21 @@
+name: shell-bug-pinned-heading
+description: >-
+  Sidebar PINNED section: the "Pinned" heading is rendered once (the pinned list no longer adds a
+  second heading) and pinned rows are aligned with the other nav items (no extra 16px indent).
+  The pin is removed again at the end (spec 01 §4.3, §9).
+tags: [shell, bugfix, sidebar, pin]
+steps:
+  - include: shell-pods-kore-demo
+  - expect_not: {texts: [Pinned], within: [0, 0.3, 0.19, 0.95], timeout: 1}
+  - click: {text: multi-container, within: [0.19, 0.14, 0.45, 1], at_x: 0.910}
+  - wait: {text: Pinned, within: [0, 0.3, 0.19, 0.95], timeout: 5}
+  - element: {id: sidebar.pin.kore-demo/multi-container, timeout: 5}
+  - expect: {texts: [multi-c, kore-demo], within: [0, 0.6, 0.19, 0.95]}
+  # Exactly one heading: nothing reads "Pinned" between the pinned row and WORKLOADS.
+  # Layout: heading at y~0.666, the pinned row at y~0.695, WORKLOADS below it.
+  - expect: {texts: [Pinned], within: [0, 0.64, 0.19, 0.685]}
+  - expect: {texts: [WORKLOADS], within: [0, 0.55, 0.19, 0.95]}
+  - expect_not: {texts: [Pinned], within: [0, 0.685, 0.19, 0.95], timeout: 1}
+  - screenshot: {name: pinned-section, mask: ["re:^\\d+[smhd]$", "re:^\\d+$", "re:-[a-z0-9]{5,10}(-[a-z0-9]{5})?$"], mask_rects: [[0.7, 0.14, 0.8, 1]]}
+  - click: {text: multi-container, within: [0.19, 0.14, 0.45, 1], at_x: 0.910}
+  - wait_gone: {text: Pinned, within: [0, 0.3, 0.19, 0.95], timeout: 5}

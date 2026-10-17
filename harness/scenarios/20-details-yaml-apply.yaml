@@ -1,0 +1,72 @@
+name: details-yaml-apply
+description: >
+  YAML editor on a throwaway ConfigMap: read-only by default; Read-only -> Editing; an added line
+  shows Diff/Reset/Apply and the "Unsaved changes" pill; Diff shows "1 additions, 0 deletions";
+  Reset restores; toggling back to Read-only discards edits; Apply asks "Apply YAML Changes", toasts
+  "Applied successfully", returns to Read-only, and kubectl sees the change. Cmd+F search counts matches.
+tags: [details, yaml]
+steps:
+  - include: details-reset
+  - shell: "kubectl -n kore-demo delete cm kore-yaml-edit --ignore-not-found && kubectl -n kore-demo create cm kore-yaml-edit --from-literal=greeting=hello"
+  - include: details-nav-configmaps
+  - click: {text: kore-yaml-edit, within: [0.2, 0.12, 1, 1], until: "KIND"}
+  - key: "2"
+  - wait: {text: Read-only, timeout: 10}
+  - expect: {texts: ["apiVersion: v1", "greeting: hello", "kind: ConfigMap", "name: kore-yaml-edit", Copy]}
+  - expect_not: {texts: [managedFields, Diff, Reset, Apply, Unsaved changes]}
+  - screenshot: {name: yaml-readonly, mask: ["re:creationTimestamp", "re:resourceVersion", "re:uid:"]}
+  # Read-only text cannot be edited
+  - click: {text: "greeting: hello"}
+  - key: cmd+right
+  - type: "x"
+  - expect_not: {texts: ["greeting: hellox", Unsaved changes], timeout: 2}
+  # Edit -> diff -> close -> reset
+  - click: {text: Read-only, until: Editing}
+  - click: {text: "greeting: hello"}
+  - key: cmd+right
+  - key: enter
+  - type: "  edited: by-harness"
+  - wait: {text: Unsaved changes, timeout: 5}
+  - expect: {texts: [Diff, Reset, Apply, "edited: by-harness"], timeout: 3}
+  - click: {text: Diff, within: [0.5, 0.27, 1, 0.36]}
+  - wait: {text: "Diff: 1 additions, 0 deletions", timeout: 10}
+  - expect: {texts: [Close diff, "edited: by-harness"]}
+  - screenshot: {name: yaml-diff, mask: ["re:creationTimestamp", "re:resourceVersion", "re:uid:"]}
+  - click: {text: Close diff}
+  - wait_gone: {text: "Diff: 1 additions", timeout: 5}
+  - click: {text: Reset, within: [0.5, 0.27, 1, 0.36]}
+  - wait_gone: {text: "edited: by-harness", timeout: 5}
+  - expect: {texts: [Editing]}
+  - expect_not: {texts: [Unsaved changes, Diff, Apply], timeout: 3}
+  # Toggling back to Read-only discards changes
+  - click: {text: "greeting: hello"}
+  - key: cmd+right
+  - type: "-discard-me"
+  - wait: {text: "greeting: hello-discard-me", timeout: 5}
+  - click: {text: Editing, until: Read-only}
+  - wait_gone: {text: "hello-discard-me", timeout: 5}
+  # Apply
+  - click: {text: Read-only, until: Editing}
+  - click: {text: "greeting: hello"}
+  - key: cmd+right
+  - key: enter
+  - type: "  edited: by-harness"
+  - wait: {text: Unsaved changes, timeout: 5}
+  - click: {text: Apply, within: [0.5, 0.27, 1, 0.36]}
+  - wait: {text: Apply YAML Changes, timeout: 5}
+  - expect: {texts: ['apply the modified', Cancel]}
+  - screenshot: {name: yaml-apply-confirm, mask: ["re:creationTimestamp", "re:resourceVersion", "re:uid:"]}
+  - click: {text: Apply, within: [0.3, 0.3, 0.8, 0.8], exact: true}
+  - wait: {text: Applied successfully, timeout: 10}
+  - wait: {text: Read-only, timeout: 5}
+  - shell: {cmd: "kubectl -n kore-demo get cm kore-yaml-edit -o jsonpath='{.data.edited}'", expect_output: by-harness, retry: 10}
+  # Search
+  - key: cmd+f
+  - wait: {text: "re:Search\\.", within: [0.6, 0.2, 1, 0.45], timeout: 5}
+  - type: "kore"
+  - wait: {text: "re:^1/\\d+$", within: [0.6, 0.2, 1, 0.45], timeout: 5}
+  - click: {text: NAME, within: [0.2, 0.1, 0.5, 0.25], exact: true}
+  - key: escape
+  - wait_gone: {text: KIND, within: [0.2, 0.1, 1, 0.25], timeout: 10}
+  # Restore
+  - shell: "kubectl -n kore-demo delete cm kore-yaml-edit --ignore-not-found"

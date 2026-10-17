@@ -1,0 +1,33 @@
+name: shell-table-pods
+description: >-
+  Pods table in kore-demo: breadcrumb "Pods" + count pill, the sidebar Pods item shows the same
+  count, column headers NAME/NAMESPACE/STATUS/READY/RESTARTS/AGE and status badges as rendered
+  (kubectl's phase / reason: Running, Completed, Pending, CrashLoopBackOff) (spec 01 §6, §7, §21.5).
+tags: [shell, table]
+steps:
+  - include: shell-pods-kore-demo
+  - include: shell-clear-search
+  - wait: {text: crashloop, within: [0.19, 0.12, 0.4, 1], timeout: 10}
+  - expect: {texts: [NAME, NAMESPACE, STATUS, READY, RESTARTS, AGE], within: [0.19, 0.1, 1, 0.14]}
+  - expect: {texts: ["re:^Pods$", Search...], within: [0.19, 0.04, 1, 0.1]}
+  # Count pill next to the breadcrumb and on the active sidebar item. Vision OCR does not
+  # reliably read some 10px numbers (e.g. "11"), so the pills are asserted via the
+  # automation registry instead (same rendered text, see harness README `element`).
+  - element: {id: header.count, label: "^\\d+$"}
+  - element: {id: sidebar.count, label: "^\\d+$"}
+  # Rows by automation id: OCR drops whole mono rows now and then (e.g. the logger pods).
+  - element: {id: table.row.kore-demo/crashloop}
+  - element: {id: table.row.kore-demo/unschedulable}
+  - element: {id: table.row.kore-demo/multi-container}
+  - element: {id: "table.row.kore-demo/one-shot-*"}
+  - element: {id: "table.row.kore-demo/logger-*"}
+  - element: {id: "table.row.kore-demo/web-*"}
+  - element: {id: "table.row.kore-demo/kore-demo-*"}
+  # crashloop shows CrashLoopBackOff most of the time (briefly Error); plain text is OCR-tolerant.
+  - wait: {text: CrashLoopBackOff, within: [0.4, 0.14, 0.75, 1], timeout: 60}
+  - expect: {texts: [Running, Completed, Pending, 2/2, 0/1], within: [0.4, 0.14, 0.75, 1], crop: true}
+  - expect: {texts: [kind-kore-harness, AI], within: [0.75, 0.04, 1, 0.1]}
+  - screenshot:
+      name: pods-table
+      mask: ["re:^\\d+[smhd]$", "re:^\\d+$", "re:-[a-z0-9]{5,10}(-[a-z0-9]{5})?$"]
+      mask_rects: [[0.7, 0.14, 0.8, 1]]

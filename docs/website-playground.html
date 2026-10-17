@@ -864,7 +864,7 @@ function renderPreview() {
     html += '<div style="text-align:center;padding:48px 0 0;">';
     html += '<div style="font-size:12px;color:#4a5568;text-transform:uppercase;letter-spacing:2px;font-family:monospace;margin-bottom:14px;">Powered by</div>';
     html += '<div style="display:flex;align-items:center;justify-content:center;gap:32px;font-size:14px;font-family:monospace;color:#7a8ba8;">';
-    html += '<span>Rust</span><span style="color:#4a5568;">&middot;</span><span>React</span><span style="color:#4a5568;">&middot;</span><span>Tauri v2</span><span style="color:#4a5568;">&middot;</span><span>kube-rs</span>';
+    html += '<span>Rust</span><span style="color:#4a5568;">&middot;</span><span>GPUI</span><span style="color:#4a5568;">&middot;</span><span>kube-rs</span>';
     html += '</div></div>';
   }
 
@@ -885,7 +885,7 @@ function renderPreview() {
     html += '<div style="display:grid;grid-template-columns:repeat(' + s.gridCols + ',1fr);gap:' + s.cardGap + 'px;margin-bottom:36px;">';
     const features = [
       { name: 'AI Troubleshooting', desc: 'Built-in AI with cluster context. OpenAI, Anthropic, Ollama.', hl: true },
-      { name: 'Native Performance', desc: 'Rust backend, ~80MB. Starts under 1 second.' },
+      { name: 'Native Performance', desc: 'Rust + GPU-rendered UI, ~120MB. Starts under 1 second.' },
       { name: 'Real-Time Streaming', desc: 'Live watches, logs, events via K8s watch API.' },
       { name: 'Command Palette', desc: 'Cmd+K for resources, views, filters.' },
       { name: 'Cluster Dashboard', desc: 'Health score, pod chart, node bars.' },
@@ -925,8 +925,8 @@ function renderPreview() {
     html += '<div style="color:#7a8ba8;font-size:18px;margin-bottom:56px;line-height:1.7;max-width:560px;margin-left:auto;margin-right:auto;">Native Rust backend means no Node.js runtime, no Chromium fork.</div>';
     html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px;">';
     const stats = [
-      { val: '~80', unit: 'MB', label: 'Memory', compare: 'vs ~400 MB (Lens)' },
-      { val: '~15', unit: 'MB', label: 'Binary Size', compare: 'vs ~200 MB (Electron)' },
+      { val: '~120', unit: 'MB', label: 'Memory', compare: 'vs ~400 MB (Lens)' },
+      { val: '~25', unit: 'MB', label: 'Download Size', compare: 'vs ~200 MB (Electron)' },
       { val: '<1', unit: 's', label: 'Startup Time', compare: 'vs 3-5s (Lens)' },
       { val: 'Rust', unit: '', label: 'Backend', compare: 'vs Node.js / Go' },
     ];
@@ -965,7 +965,7 @@ function renderPreview() {
     html += '<div style="background:' + darken(s.surfaceColor, -0.15) + ';border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:28px;font-family:monospace;font-size:14px;text-align:left;color:#7a8ba8;line-height:1.8;margin-bottom:28px;">';
     html += '<span style="color:#4a5568;"># Clone and build</span><br>';
     html += '<span style="color:#e8edf5;">git clone https://github.com/eladbash/kore && cd kore</span><br>';
-    html += '<span style="color:#e8edf5;">npm install && npm run tauri:build</span>';
+    html += '<span style="color:#e8edf5;">cargo build --release -p kore-app</span>';
     html += '</div>';
     html += '<span style="display:inline-flex;align-items:center;gap:8px;padding:13px 28px;border-radius:10px;background:linear-gradient(135deg,' + darken(s.btnColor, 0.2) + ',' + s.btnColor + ');color:#fff;font-family:\'Outfit\',sans-serif;font-weight:600;font-size:15px;">&#8595; Download Latest Release</span>';
     html += '</div></div>';
@@ -976,7 +976,7 @@ function renderPreview() {
   html += '<div style="' + containerStyle + 'display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">';
   html += '<div style="font-family:\'Outfit\',sans-serif;font-weight:600;font-size:15px;color:#7a8ba8;">&#9670; Kore</div>';
   html += '<div style="display:flex;gap:24px;font-size:13px;color:#4a5568;">GitHub &middot; Releases &middot; Sponsor &middot; Issues</div>';
-  html += '<div style="font-size:13px;color:#4a5568;">Built with <span style="color:' + s.accentColor + ';">Rust</span> &amp; <span style="color:' + s.accent2Color + ';">React</span> &middot; MIT License</div>';
+  html += '<div style="font-size:13px;color:#4a5568;">Built with <span style="color:' + s.accentColor + ';">Rust</span> &amp; <span style="color:' + s.accent2Color + ';">GPUI</span> &middot; MIT License</div>';
   html += '</div></div>';
 
   html += '</div>'; // end body wrapper

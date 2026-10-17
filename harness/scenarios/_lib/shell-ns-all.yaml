@@ -1,0 +1,8 @@
+# Select "All Namespaces" in the sidebar namespace dropdown (the trigger then shows "All Namespaces").
+# Close any open dropdown first (outside mousedown), then open the namespace dropdown.
+- click_at: [0.205, 0.073]
+- click_at: [0.1, 0.257]
+- wait: {text: All Namespaces, within: [0, 0.3, 0.25, 0.5], timeout: 10}
+- click: {text: All Namespaces, within: [0, 0.3, 0.25, 0.5]}
+- wait_gone: {text: All Namespaces, within: [0, 0.3, 0.25, 0.5], timeout: 5}
+- wait: {text: All Namespaces, within: [0, 0.22, 0.19, 0.3], timeout: 5}

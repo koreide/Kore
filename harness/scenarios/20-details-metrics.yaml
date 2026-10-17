@@ -1,0 +1,18 @@
+name: details-metrics
+description: >
+  Pod Metrics tab (metrics-server installed) on a logger pod without requests/limits: CPU Usage and
+  Memory Usage cards with "used / limit" subtitles and 50.0% gauges (limit = usage x 2), then the
+  "Usage Trend (Last 2 Minutes)" chart with a % axis.
+tags: [details, pods, metrics]
+steps:
+  - include: details-reset
+  - include: nav-pods
+  - click: {text: "re:^[l1I]ogger-[a-z0-9]+-[a-z0-9]+$", within: [0.2, 0.12, 1, 1], until: "Auto-scroll"}
+  - key: "4"
+  - wait: {text: CPU Usage, timeout: 30}
+  - expect: {texts: [Memory Usage, "re:^\\d+ ?m ?/ ?\\d+ ?m$", "re:\\d+\\.\\d+ [KMG]?B ?/ ?\\d+\\.\\d+ [KMG]?B"], timeout: 10}
+  - wait: {text: "re:^50\\.0%$", timeout: 10}
+  - wait: {text: Usage Trend (Last 2 Minutes), timeout: 20}
+  - expect: {texts: ["re:^100"]}
+  - expect_color: {text: "re:^50\\.0%$", colors: ["#58d0ff"]}
+  - screenshot: {name: pod-metrics, mask: ["re:\\d+ ?m ?/", "re:B ?/", "re:\\d{1,2}:\\d{2}:\\d{2}"], mask_rects: [[0.2, 0.5, 1, 1]]}

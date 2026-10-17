@@ -1,0 +1,27 @@
+name: shell-boot-connection-error
+description: >-
+  Startup context has a broken client certificate, so ConnectionSetup shows the error with a
+  "Try a different context" picker ("current" tag on the startup context). Picking an unreachable
+  context and retrying shows "Cluster Unreachable"; picking kind-kore-harness connects and the main
+  UI renders (spec 01 §12, §21.3).
+tags: [shell, boot]
+env: [[KUBECONFIG, "${HARNESS_DIR}/scenarios/_lib/shell-broken.kubeconfig:${HARNESS_DIR}/.kube/config"]]
+steps:
+  - wait: {text: Try a different context, timeout: 30}
+  # The missing client certificate surfaces as a kube client error -> "Cluster Unreachable".
+  # (The tiny dim "current" tag on kore-broken is not OCR-readable; covered by the screenshot.)
+  - expect: {texts: [Cluster Unreachable, HOW TO FIX, Show technical details, kore-broken, kore-unreachable, kind-kore-harness, kind-kore-harness-2, Retry Connection]}
+  - screenshot: {name: picker}
+  - click: {text: kore-unreachable, exact: true}
+  - wait: {text: Connect to kore-unreachable, timeout: 5}
+  - click: Connect to kore-unreachable
+  # Connection refused comes back immediately; there is no other visible change to wait for.
+  - sleep: 2000
+  - wait: {text: Cluster Unreachable, timeout: 20}
+  - expect: {texts: [Cluster Unreachable, "Kore found your kubeconfig but couldn't connect to the cluster.", Check that your cluster is running and accessible]}
+  - screenshot: {name: unreachable}
+  - click: {text: kind-kore-harness, exact: true}
+  - wait: {text: Connect to kind-kore-harness, timeout: 5}
+  - click: Connect to kind-kore-harness
+  - wait: {text: Kubernetes Desktop, timeout: 30}
+  - expect: {texts: [kind-kore-harness, Multi-Cluster, VIEWS], within: [0, 0, 0.19, 1]}

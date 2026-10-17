@@ -1,0 +1,47 @@
+name: details-logs-stream
+description: >
+  Pod Logs tab on a single-container logger pod: lines stream in with a line-number gutter and
+  level colors (INFO blue, ERROR red); no container select; search (Cmd+F) counts and steps through
+  matches and its X closes it without leaving the pod; Copy and Download show toasts; Previous shows the "not restarted" message.
+tags: [details, pods, logs]
+steps:
+  - include: details-reset
+  - include: nav-pods
+  - click: {text: "re:^[l1I]ogger-[a-z0-9]+-[a-z0-9]+$", within: [0.2, 0.12, 1, 1], until: "Auto-scroll"}
+  - wait: {text: "re:KORE-LOG [l1I]ogger-.* line=\\d+ level=INFO", timeout: 20}
+  - wait: {text: "re:KORE-LOG [l1I]ogger-.* line=\\d+ level=ERROR", timeout: 20}
+  - expect: {texts: [Previous, Auto-scroll, Copy, Download]}
+  - expect_not: {texts: [All containers]}
+  - expect_color: {text: "level=INFO", colors: ["#60a5fa"]}
+  - expect_color: {text: "level=ERROR", colors: ["#f87171"]}
+  - screenshot: {name: logs-streaming, mask_rects: [[0.2, 0.27, 1, 1]]}
+  # Search
+  - key: cmd+f
+  - wait: {text: "re:earch logs", timeout: 5}
+  - type: "level=ERROR"
+  - element: {id: searchbar.count, label: "^1/\\d+$", timeout: 5}
+  - key: enter
+  - element: {id: searchbar.count, label: "^2/\\d+$", timeout: 5}
+  - key: shift+enter
+  - element: {id: searchbar.count, label: "^1/\\d+$", timeout: 5}
+  - screenshot: {name: logs-search, mask_rects: [[0.2, 0.27, 1, 1]]}
+  # Close with the overlay's X.
+  - click: {id: searchbar.close}
+  - element_gone: {id: searchbar.count, timeout: 5}
+  - expect: {texts: [Auto-scroll, Previous]}
+  # Copy / Download
+  - click: {text: Copy, within: [0.6, 0.2, 1, 0.27]}
+  - wait: {text: Copied to clipboard, timeout: 5}
+  - click: {text: Download, within: [0.6, 0.2, 1, 0.27]}
+  - wait: {text: Logs downloaded, timeout: 5}
+  # Auto-scroll can be toggled off and back on
+  - click: {text: Auto-scroll, within: [0.2, 0.2, 0.6, 0.27]}
+  - sleep: 1500
+  - click: {text: Auto-scroll, within: [0.2, 0.2, 0.6, 0.27]}
+  - wait: {text: "re:KORE-LOG [l1I]ogger-", timeout: 10}
+  # Previous on a never-restarted container
+  - click: {text: Previous, within: [0.2, 0.2, 0.6, 0.27]}
+  - wait: {text: "previous logs", timeout: 10}
+  - expect: {texts: ["this container has not been restarted"]}
+  - click: {text: Previous, within: [0.2, 0.2, 0.6, 0.27]}
+  - wait: {text: "re:KORE-LOG [l1I]ogger-", timeout: 15}

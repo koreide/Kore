@@ -1,0 +1,20 @@
+name: shell-boot-home
+description: >-
+  Fresh launch against the harness cluster lands on the AI Chat view (default view) with the full
+  sidebar (branding, Context/Namespaces dropdowns, Multi-Cluster toggle, all nav sections) and no
+  resource header (spec 01 §1, §4, §21.1).
+tags: [shell, sidebar, boot]
+fresh_app: true
+steps:
+  - window_title: Kore
+  - wait: {text: Kubernetes Desktop, timeout: 30}
+  - expect:
+      texts: [Kore, Kubernetes Desktop, CONTEXT, NAMESPACES, kind-kore-harness, Multi-Cluster, VIEWS, AI Chat,
+              Dashboard, Graph, Network Policies, RBAC, Custom Resources, Helm, WORKLOADS, Pods, Deployments,
+              CronJobs, NETWORK, Services, Command Palette]
+      within: [0, 0, 0.19, 1]
+  - expect: {texts: ["re:^default$"], within: [0, 0.22, 0.19, 0.3]}
+  # AI Chat view is active: its own header, and no table header/search box.
+  - expect: {texts: [Kore AI, Cluster assistant with live data, What can I help you with?], within: [0.19, 0, 1, 1]}
+  - expect_not: {texts: [Search..., RESTARTS], within: [0.19, 0, 1, 0.15], timeout: 1}
+  - screenshot: {name: home}

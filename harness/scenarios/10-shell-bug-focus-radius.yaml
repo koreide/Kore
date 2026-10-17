@@ -1,0 +1,18 @@
+name: shell-bug-focus-radius
+description: >-
+  A focused text field keeps its corner radius under the focus ring (header search 8px, Settings
+  inputs 6px) instead of snapping to 4px. Verified on the screenshots (spec 01 header note).
+tags: [shell, bugfix]
+steps:
+  - include: shell-pods-kore-demo
+  - click_at: [0.47, 0.073]
+  - screenshot: {name: header-search-focused, mask_rects: [[0, 0.12, 1, 1]]}
+  - click_at: [0.205, 0.073]
+  - include: shell-open-settings
+  - scroll: {at: [0.6, 0.6], dy: 400}
+  - click: {text: Context name, exact: true, timeout: 5}
+  - screenshot: {name: settings-input-focused}
+  - key: escape
+  - click_at: [0.6, 0.05]
+  - key: escape
+  - wait: {text: RESTARTS, within: [0.19, 0.1, 1, 0.14], timeout: 10}

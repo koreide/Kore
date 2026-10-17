@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata: {name: viewer-bot, namespace: kore-rbac}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata: {name: deployer-bot, namespace: kore-rbac}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata: {name: pod-reader, namespace: kore-demo}
+rules:
+- {apiGroups: [""], resources: [pods, pods/log], verbs: [get, list, watch]}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata: {name: viewer-bot-pod-reader, namespace: kore-demo}
+subjects: [{kind: ServiceAccount, name: viewer-bot, namespace: kore-rbac}]
+roleRef: {kind: Role, name: pod-reader, apiGroup: rbac.authorization.k8s.io}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata: {name: kore-deployer}
+rules:
+- {apiGroups: [apps], resources: [deployments], verbs: [get, list, watch, create, update, patch]}
+- {apiGroups: [""], resources: [services, configmaps], verbs: [get, list]}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata: {name: deployer-bot-kore-deployer}
+subjects:
+- {kind: ServiceAccount, name: deployer-bot, namespace: kore-rbac}
+- {kind: User, name: alice@kore.dev, apiGroup: rbac.authorization.k8s.io}
+- {kind: Group, name: kore-devs, apiGroup: rbac.authorization.k8s.io}
+roleRef: {kind: ClusterRole, name: kore-deployer, apiGroup: rbac.authorization.k8s.io}

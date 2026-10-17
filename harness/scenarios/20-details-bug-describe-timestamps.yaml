@@ -1,0 +1,17 @@
+name: details-bug-describe-timestamps
+description: >
+  Bugfix: Describe JSON highlighting never touches string contents. Timestamps such as
+  "creationTimestamp": "2026-10-15T10:41:26Z" are shown verbatim and green (no inserted space
+  after the hour, no amber digits), while real number values stay amber.
+tags: [details, bugfix]
+steps:
+  - include: details-reset
+  - include: nav-pods
+  - click: {text: multi-container, within: [0.2, 0.12, 1, 1], until: "Auto-scroll"}
+  - key: "2"
+  - wait: {text: '"apiVersion": "v1"', timeout: 10}
+  - expect: {texts: ['re:"creationTimestamp": "\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ"'], within: [0.2, 0.25, 1, 1], crop: true}
+  - expect_not: {texts: ['re:T\d\d: \d\d'], within: [0.2, 0.25, 1, 1]}
+  - expect_color: {text: 're:"creationTimestamp": "\d{4}', colors: ["#34d399"], min_pixels: 40}
+  - expect_color: {text: '"generation": 1', colors: ["#fbbf24"], min_pixels: 3}
+  - screenshot: {name: describe-timestamps, mask_rects: [[0.2, 0.25, 1, 1]]}

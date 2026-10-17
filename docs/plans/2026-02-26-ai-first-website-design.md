@@ -45,7 +45,7 @@ Section subtitle: "AI-powered workflows, designed for dark mode operators"
 Move "AI troubleshooting" row to 2nd position (after "Native desktop app").
 
 ### 7. Footer
-Update: "Built with AI, Rust & React"
+Update: "Built with Rust & GPUI"
 
 ### Unchanged Sections
 - Performance stats

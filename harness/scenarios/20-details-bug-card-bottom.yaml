@@ -1,0 +1,56 @@
+name: details-bug-card-bottom
+description: >
+  Bugfix: the content cards (pod Logs, Describe, YAML editor, deployment Logs) are inset 16px on
+  every side, so their bottom border and rounded corners are visible above the window edge.
+  Previously the card was as tall as the content area but started 16px down, which clipped its
+  bottom 16px. Each screenshot is checked for a full-width slate-800 (#1e293b) bottom border row
+  near (not at) the bottom edge.
+tags: [details, bugfix]
+steps:
+  - include: details-reset
+  - include: nav-pods
+  - click: {text: multi-container, within: [0.2, 0.12, 1, 1], until: "Auto-scroll"}
+  - wait: {text: "MAIN-CONTAINER-LOG", timeout: 20}
+  - screenshot: {name: card-bottom-logs, mask_rects: [[0.2, 0.25, 1, 0.9]]}
+  - shell: &check |
+      python3 - "$HARNESS_APP_HOME/../details-bug-card-bottom" <<'PY'
+      import glob, os, sys
+      from PIL import Image
+      shot = max(glob.glob(os.path.join(sys.argv[1], "card-bottom-*.png")), key=os.path.getmtime)
+      im = Image.open(shot).convert("RGB")
+      w, h = im.size
+      px = im.load()
+      border = (0x1e, 0x29, 0x3b)
+      x0, x1 = int(w * 0.25), int(w * 0.75)
+      def near(c):
+          return sum((a - b) ** 2 for a, b in zip(c, border)) ** 0.5 < 18
+      best = None
+      for y in range(h - 1, int(h * 0.9), -1):
+          frac = sum(near(px[x, y]) for x in range(x0, x1)) / (x1 - x0)
+          if frac > 0.9:
+              best = y
+              break
+      print(os.path.basename(shot), "size", w, h, "border row", best)
+      # The border must exist and sit above the bottom edge (16px inset, >= 8px at 1x).
+      ok = best is not None and (h - 1 - best) >= h * 0.008
+      sys.exit(0 if ok else 1)
+      PY
+  # Describe
+  - key: "2"
+  - wait: {text: '"apiVersion": "v1"', timeout: 10}
+  - screenshot: {name: card-bottom-describe, mask_rects: [[0.2, 0.25, 1, 0.9]]}
+  - shell: *check
+  # YAML editor
+  - key: "3"
+  - wait: {text: "Read-only", timeout: 10}
+  - wait: {text: "apiVersion: v1", timeout: 10}
+  - screenshot: {name: card-bottom-yaml, mask_rects: [[0.2, 0.25, 1, 0.9]]}
+  - shell: *check
+  # Deployment logs (multi-pod)
+  - include: details-reset
+  - include: details-nav-deployments
+  - click: {text: logger, within: [0.2, 0.12, 0.4, 1], exact: true, until: Restart}
+  - key: "4"
+  - wait: {text: "re:KORE-LOG [l1I]ogger-", timeout: 20}
+  - screenshot: {name: card-bottom-multilogs, mask_rects: [[0.2, 0.3, 1, 0.9]]}
+  - shell: *check

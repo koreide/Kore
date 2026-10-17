@@ -1,0 +1,9 @@
+apiVersion: kore.dev/v1
+kind: Widget
+metadata: {name: blue-widget, namespace: kore-demo}
+spec: {color: blue, size: 3}
+---
+apiVersion: kore.dev/v1
+kind: Widget
+metadata: {name: red-widget, namespace: kore-demo}
+spec: {color: red, size: 7}

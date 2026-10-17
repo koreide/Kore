@@ -1,0 +1,23 @@
+name: cluster-bug-chat-copy
+description: >
+  Quirk 10.13 (fixed): the assistant bubble's copy button is not clipped by the bubble. After an
+  answer renders, hovering the bubble shows the whole button over its top-right corner, and
+  clicking its outer (formerly clipped) part copies the message ("Copied to clipboard").
+tags: [cluster, ai, bugfix]
+steps:
+  - include: cluster-start
+  - include: cluster-ai-ollama-mock
+  - click: {text: AI Chat, within: [0, 0.3, 0.19, 1]}
+  - wait: {text: "What can I help you with?", timeout: 10}
+  - click: {text: Ask about your cluster, within: [0.19, 0.8, 1, 1]}
+  - type: hello there
+  - key: enter
+  - wait: {text: Summary, timeout: 20}
+  # Hover the bubble (a right click only moves the pointer there).
+  - right_click: {text: Cluster looks fine, within: [0.19, 0.1, 1, 0.9]}
+  - screenshot: {name: chat-copy-hover}
+  # The copy button's top-right part lies outside the bubble (it used to be clipped away):
+  # clicking there copies the message.
+  - click_at: [0.4735, 0.232]
+  - element: {id: "toast.*", label: "^Copied to clipboard$", timeout: 5}
+  - shell: {cmd: "pbpaste", expect_output: "Cluster **looks** fine."}

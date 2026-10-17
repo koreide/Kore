@@ -1,0 +1,17 @@
+name: details-fix-exec-resize
+description: >
+  Deliberate Fix 7: the exec terminal sends its size to the backend, so `stty size` inside the pod
+  prints the real "<rows> <cols>" of the Shell tab (dozens of rows, 100+ columns). Regression
+  symptom: the size is never sent, so stty reports no usable size.
+tags: [details, exec, fix]
+steps:
+  - include: details-reset
+  - include: nav-pods
+  - click: {text: multi-container, within: [0.2, 0.12, 1, 1], until: "Auto-scroll"}
+  - key: "6"
+  - wait: {text: Connected, within: [0.6, 0.2, 1, 0.27], timeout: 15}
+  - click_at: [0.6, 0.6]
+  - type: "stty size"
+  - key: enter
+  - wait: {text: "re:^[2-9]\\d \\d{3}$", within: [0.2, 0.28, 1, 1], timeout: 10}
+  - screenshot: {name: exec-stty-size, mask_rects: [[0.2, 0.28, 1, 1]]}

@@ -1,0 +1,35 @@
+name: details-rollback
+description: >
+  Deployment Rollback tab for web (revisions nginx 1.25 / 1.26 / 1.27-alpine, numbers vary). The
+  timeline shows "Revision History", the current revision tag and each image; expanding a revision
+  shows Image, Created, Replicas, Change Cause (No annotation), View YAML (REPLICASET YAML viewer,
+  Hide YAML) and Rollback, which asks "Rollback Deployment". Cancelled here; the actual rollback is
+  covered by details-fix-rollback.
+tags: [details, deployments, rollback]
+steps:
+  # Precondition: web is on its newest fixture image (1.27-alpine).
+  - shell: "kubectl -n kore-demo set image deploy/web nginx=nginx:1.27-alpine && kubectl -n kore-demo rollout status deploy/web --timeout=120s"
+  - include: details-reset
+  - include: details-nav-deployments
+  - click: {text: web, within: [0.2, 0.12, 0.4, 1], exact: true, until: Restart}
+  - key: "3"
+  - wait: {text: Revision History, timeout: 10}
+  - expect: {texts: [current, "nginx:1.27-alpine", "nginx:1.26-alpine", "nginx:1.25-alpine"], timeout: 5}
+  - screenshot: {name: rollback-timeline, mask: ["re:^\\d+[smhd] ago$", "re:#\\s?\\d+"]}
+  # Expand the 1.26 revision
+  - click: {text: "nginx:1.26-alpine", until: View YAML}
+  - expect: {texts: [IMAGE, CREATED, REPLICAS, CHANGE CAUSE, No annotation, Rollback]}
+  - click: {text: View YAML, until: REPLICASET YAML}
+  - wait: {text: "kind: ReplicaSet", timeout: 10}
+  - expect: {texts: [Hide YAML, "apiVersion: apps/v1"]}
+  - screenshot: {name: rollback-revision-yaml, mask: ["re:^\\d+[smhd] ago$", "re:#\\s?\\d+"], mask_rects: [[0.2, 0.45, 1, 1]]}
+  - click: {text: Hide YAML, exact: true}
+  - wait_gone: {text: REPLICASET YAML, timeout: 5}
+  # Rollback asks for confirmation; cancel
+  - click: {text: Rollback, within: [0.2, 0.3, 1, 1], exact: true}
+  - wait: {text: Rollback Deployment, timeout: 5}
+  - expect: {texts: ['Roll back "web" to revision', "This will", Cancel]}  # "replace" wraps once the revision has 2+ digits
+  - screenshot: {name: rollback-confirm, mask: ["re:^\\d+[smhd] ago$", "re:revision \\d+", "re:#\\s?\\d+"]}
+  - click: {text: Cancel, exact: true}
+  - wait_gone: {text: Rollback Deployment, timeout: 5}
+  - shell: {cmd: "kubectl -n kore-demo get deploy web -o jsonpath='{.spec.template.spec.containers[0].image}'", expect_output: "nginx:1.27-alpine"}

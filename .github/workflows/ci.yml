@@ -10,35 +10,27 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  frontend:
-    name: Frontend Checks
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-      - run: npm ci
-      - run: npm run lint
-      - run: npm run format:check
-      - run: npm run build
-      - run: npm run test
-
-  backend:
-    name: Backend Checks
+  rust:
+    name: Rust Checks
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
-          components: clippy, rustfmt
+          components: clippy
       - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: src-tauri
-      - name: Check formatting
-        run: cd src-tauri && cargo fmt -- --check
       - name: Clippy
-        run: cd src-tauri && cargo clippy -- -D warnings
+        run: cargo clippy -p kore-app -p kore-core -p kore-automation -p kore-harness -p kore-testkit --all-targets -- -D warnings
+      - name: Clippy (test-harness feature)
+        run: cargo clippy -p kore-app --features test-harness -- -D warnings
+      # Layer 1: unit tests plus the headless GPUI UI tests against the fake cluster.
       - name: Tests
-        run: cd src-tauri && cargo test
+        run: cargo test -p kore-core -p kore-app -p kore-testkit
+      # Release artifacts must never contain the Layer 2 control server.
+      - name: Release build has no control server
+        run: |
+          cargo build --release -p kore-app
+          if strings target/release/kore | grep -E 'KORE_CONTROL_SOCKET|control server on'; then
+            echo "::error::release binary contains the test-harness control server"
+            exit 1
+          fi

@@ -1,0 +1,61 @@
+name: details-debug
+description: >
+  Debug container flow on a throwaway pod (ephemeral containers cannot be removed, so the pod is
+  created and deleted here). `b` opens "Debug Container" with netshoot/busybox/ubuntu/curl/Custom,
+  "Share process namespace" (reveals TARGET CONTAINER) and Cancel / Create & Connect. Creating a
+  busybox debugger shows "Creating debug container...", then switches to Shell with a ready toast,
+  the "Debug:" banner and "Stop Debug". Re-opening the pod restores that state; Stop Debug toasts
+  "Debug container stopped".
+tags: [details, pods, debug, exec]
+steps:
+  - include: details-reset
+  - shell: |
+      kubectl -n kore-demo delete pod kore-debug-target --ignore-not-found --grace-period=0
+      kubectl -n kore-demo run kore-debug-target --image=busybox:1.36 --restart=Never -- sleep 3600
+      kubectl -n kore-demo wait --for=condition=Ready pod/kore-debug-target --timeout=120s
+  - include: nav-pods
+  - click: {text: kore-debug-target, within: [0.2, 0.12, 1, 1], until: "Auto-scroll"}
+  - key: b
+  - wait: {text: Debug Container, timeout: 5}
+  - expect: {texts: ["Inject an ephemeral container into", "DEBUG IMAGE", netshoot, Network troubleshooting, "nicolaka/netshoot", busybox, Minimal Unix utilities, ubuntu, Full Ubuntu environment, curl, cURL for HTTP debugging, Custom, Share process namespace, Cancel, Create & Connect]}
+  - screenshot: {name: debug-modal}
+  # Custom with an empty image: input appears (Create & Connect is disabled)
+  - click: {text: Custom, within: [0.3, 0.2, 0.7, 0.9], exact: true}
+  - wait: {text: "e.g. alpine:latest", timeout: 5}
+  - screenshot: {name: debug-modal-custom-empty}
+  # Share process namespace reveals the target select
+  - click: {text: Share process namespace, until: TARGET CONTAINER}
+  - expect: {texts: ["Select a container..."]}
+  - click: {text: Share process namespace}
+  - wait_gone: {text: TARGET CONTAINER, timeout: 5}
+  # Cancel closes it and stays on the pod
+  - click: {text: Cancel, exact: true}
+  - wait_gone: {text: Debug Container, timeout: 5}
+  - expect: {texts: [Auto-scroll, kore-debug-target]}
+  # Create a busybox debugger
+  - key: b
+  - wait: {text: Debug Container, timeout: 5}
+  - click: {text: Minimal Unix utilities}
+  - click: {text: Create & Connect}
+  - wait: {text: "re:Creating debug container|is ready", timeout: 10}
+  - wait: {text: "re:is ready$", timeout: 90}
+  - wait: {text: "SHELL:", timeout: 10}
+  - expect: {texts: ["Debug:", "re:^debugger-[0-9a-f]{8}$", "busybox:latest", Stop Debug]}
+  - wait: {text: Connected, within: [0.6, 0.2, 1, 0.3], timeout: 15}
+  - screenshot: {name: debug-active, mask: ["re:debugger-[0-9a-f]+"], mask_rects: [[0.2, 0.3, 1, 1]]}
+  - click_at: [0.6, 0.65]
+  - type: "echo DBG-$((3*3))"
+  - key: enter
+  - wait: {text: "re:^DBG-9$", timeout: 10}
+  # Back and re-open: debug state is restored from the pod
+  - click: {text: Esc, within: [0.2, 0.1, 0.4, 0.17], exact: true}
+  - wait: {text: crashloop, within: [0.2, 0.12, 1, 1], timeout: 10}
+  - click: {text: kore-debug-target, within: [0.2, 0.12, 1, 1], until: "Auto-scroll"}
+  - wait: {text: Stop Debug, timeout: 15}
+  - expect: {texts: ["Debug:", "busybox:latest"]}
+  # Stop
+  - click: {text: Stop Debug}
+  - wait: {text: Debug container stopped, timeout: 30}
+  - wait_gone: {text: "Debug:", timeout: 10}
+  - expect: {texts: [Debug], within: [0.6, 0.1, 1, 0.17]}
+  - shell: "kubectl -n kore-demo delete pod kore-debug-target --ignore-not-found --grace-period=0 --wait=false"

@@ -1,0 +1,8 @@
+# Select namespace kore-demo. Like ns-kore-demo, but opens the dropdown by position so it also
+# works whatever the trigger currently shows (e.g. "All Namespaces").
+- click_at: [0.09, 0.267]
+- wait: {text: All Namespaces, within: [0, 0.3, 0.35, 0.8], timeout: 5}
+- type: kore-demo
+- click: {text: kore-demo, within: [0, 0.34, 0.35, 0.8]}
+- wait_gone: {text: All Namespaces, within: [0, 0.3, 0.35, 0.8], timeout: 5}
+- wait: {text: "re:^kore-demo$", within: [0, 0.18, 0.2, 0.32], timeout: 5}

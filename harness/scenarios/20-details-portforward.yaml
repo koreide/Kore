@@ -1,0 +1,50 @@
+name: details-portforward
+description: >
+  Port forwarding sidebar on a web (nginx) pod. Ports opens "Port Forwarding" with Pod Port 80 /
+  Local Port 8080 and "No active port forwards". Forwarding 80 -> 18080 shows a LIVE card
+  (Local 127.0.0.1:18080, Pod <pod>:80, Connected), toasts "Port forward active on :18080", and
+  curl gets the nginx page. Validation errors for a duplicate local port and an out-of-range pod
+  port. Stopping removes the card and closes the port.
+tags: [details, pods, portforward]
+steps:
+  - shell: {cmd: "! curl -s --max-time 2 http://127.0.0.1:18080/", retry: 10}
+  - include: details-reset
+  - include: nav-pods
+  - click: {text: "re:^web-[a-z0-9]+-[a-z0-9]+$", within: [0.2, 0.12, 1, 1], until: "Auto-scroll"}
+  - click: {text: Ports, within: [0.7, 0.1, 1, 0.17]}
+  - wait: {text: Port Forwarding, timeout: 5}
+  - expect: {texts: [Forward local ports to pod ports, Pod Port, Local Port, "(leave blank for auto)", Start Forward, No active port forwards]}
+  - expect: {texts: ["re:^80$", "re:^8080$"], within: [0.75, 0.2, 1, 0.4]}
+  - screenshot: {name: portforward-panel, mask_rects: [[0.2, 0.25, 0.77, 1]]}
+  # Start 80 -> 18080
+  - click: {text: "re:^8080$", within: [0.75, 0.3, 1, 0.4]}
+  - key: cmd+a
+  - type: "18080"
+  - click: {text: Start Forward}
+  # The toast lives 3s, so it is asserted through the automation registry (250ms polling).
+  - element: {id: "toast.*", label: "^Port forward active on :18080$", timeout: 20}
+  - wait: {text: LIVE, within: [0.75, 0.3, 1, 1], timeout: 20}
+  - expect: {texts: ["127.0.0.1:18080", "re:web-[a-z0-9]+-[a-z0-9]+: ?80", Connected], within: [0.75, 0.3, 1, 1]}
+  - shell: {cmd: "curl -s --max-time 3 http://127.0.0.1:18080/", expect_output: "Welcome to nginx", retry: 15}
+  - screenshot: {name: portforward-live, mask: ["re:^web-"], mask_rects: [[0.2, 0.25, 0.77, 1]]}
+  # Inputs reset after success; duplicate local port is rejected
+  - expect: {texts: ["re:^8080$"], within: [0.75, 0.3, 1, 0.4]}
+  - click: {text: "re:^8080$", within: [0.75, 0.3, 1, 0.4]}
+  - key: cmd+a
+  - type: "18080"
+  - click: {text: Start Forward}
+  - wait: {text: "Port 18080 is already in use", timeout: 5}
+  # Pod port out of range
+  - click: {text: "re:^80$", within: [0.75, 0.2, 1, 0.3]}
+  - key: cmd+a
+  - type: "70000"
+  - click: {text: Start Forward}
+  - wait: {text: "Pod port must be a valid number", timeout: 5}
+  - screenshot: {name: portforward-validation, mask: ["re:^web-"], mask_rects: [[0.2, 0.25, 0.77, 1]]}
+  - click: {text: "re:^70000$", within: [0.75, 0.2, 1, 0.3]}
+  - key: cmd+a
+  - type: "80"
+  # Stop: the X button sits at the right end of the card's LIVE row
+  - click: {text: LIVE, within: [0.75, 0.3, 1, 1], offset: [220, 0]}
+  - wait: {text: No active port forwards, timeout: 10}
+  - shell: {cmd: "! curl -s --max-time 2 http://127.0.0.1:18080/", retry: 10}

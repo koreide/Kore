@@ -1,0 +1,5 @@
+# Pods table in namespace kore-demo with an empty search box and the seeded rows visible.
+- include: shell-ns-kore-demo
+- include: nav-pods
+- include: shell-clear-search
+- wait: {text: multi-container, within: [0.19, 0.12, 1, 1], timeout: 20}

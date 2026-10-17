@@ -1,0 +1,15 @@
+# Configure the AI provider as Ollama pointing at the harness mock (127.0.0.1:47900).
+# Requires `kore-harness mock-ai --port 47900` to be running. Idempotent: clicking Ollama
+# resets the base URL to the default, which is then replaced.
+- shell: {cmd: "curl -sf -m 2 http://127.0.0.1:47900/api/tags", expect_output: mock-model}
+- include: cluster-open-settings
+- click: {text: Ollama, within: [0.19, 0.1, 1, 1], exact: true}
+- click: {text: "re:^http://(localhost|127\\.0\\.0\\.1):\\d+$", within: [0.19, 0.1, 1, 1], timeout: 10}
+- key: cmd+a
+- type: "http://127.0.0.1:47900"
+- wait: {text: mock-model, within: [0.19, 0.1, 1, 1], timeout: 15}
+- click: {text: Test Connection, within: [0.19, 0.1, 1, 1]}
+# The success toast lives 3s: assert it through the automation registry right away
+# (OCR polling can miss it).
+- element: {id: "toast.*", label: "^Connection successful$", timeout: 15}
+- wait: {text: "re:Connected$", within: [0.19, 0.1, 1, 1], timeout: 15}

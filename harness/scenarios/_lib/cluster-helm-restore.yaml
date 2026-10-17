@@ -1,0 +1,5 @@
+# Ensure Helm release kore-demo is deployed with the seeded rev-2 content (message hello-from-helm-v2).
+- shell: >-
+    helm --kube-context kind-kore-harness -n kore-demo get values kore-demo --all | grep -q 'message: hello-from-helm-v2$'
+    || helm --kube-context kind-kore-harness -n kore-demo upgrade kore-demo harness/cluster/charts/kore-demo --set message=hello-from-helm-v2 --wait
+- shell: {cmd: "helm --kube-context kind-kore-harness -n kore-demo get values kore-demo --all", expect_output: "message: hello-from-helm-v2"}

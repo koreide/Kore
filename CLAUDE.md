@@ -4,122 +4,113 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Kore is a macOS desktop Kubernetes IDE (Tauri v2) combining a Rust backend (kube-rs) with a React frontend (Vite + Tailwind + shadcn/ui). It supports 10 resource types, real-time watches, pod exec/logs/metrics, deployment rollback, label filtering, port forwarding, YAML editing with live apply, CRD browsing, dependency graphs, Helm management, AI troubleshooting, multi-cluster view, and persistent event history.
+Kore is a native Kubernetes IDE for macOS, Linux and Windows. It is a single Rust binary:
+- a backend library, `kore-core` (kube-rs);
+- a GPU-rendered UI, `kore-app` (GPUI via gpui-kit / gpui-component).
+
+Features:
+- 11 resource kinds with real-time watches
+- pod logs, exec, metrics and port forwarding
+- YAML editing with diff and live apply
+- deployment rollback
+- CRD browsing, dependency graph, Helm management, RBAC simulator, network policies
+- AI troubleshooting (OpenAI, Anthropic, Ollama)
+- multi-cluster view
+- persistent event history
+
+Behavior and visual specs for every area of the app are in `docs/gpui-port/spec/` (01 shell, 02 details & workloads, 03 cluster views, 04 backend).
 
 ## Commands
 
 ```bash
-npm install                # Install frontend dependencies
-npm run tauri:dev          # Full app dev mode (Vite + Tauri) — primary dev command
-npm run dev                # Frontend only (Vite dev server on localhost:5173)
-npm run build              # TypeScript check + Vite build (frontend only)
-npm run tauri:build        # Production macOS binary
-npm run lint               # ESLint
-npx vitest run             # Frontend unit tests
-```
+cargo run -p kore-app                                   # run the app (debug)
+cargo build --release -p kore-app                       # target/release/kore (what ships: no control server)
+cargo clippy -p kore-app -p kore-core -- -D warnings    # must stay clean (`just lint` = what CI runs)
+crates/kore-app/packaging/macos/bundle.sh               # kore.app (dev.kore.desktop)
 
-Rust backend builds automatically during `tauri:dev` and `tauri:build`. To check Rust code independently:
-```bash
-cd src-tauri && cargo check
-cd src-tauri && cargo clippy
+just test-unit                  # Layer 1: cargo test (unit + headless UI tests on the fake cluster)
+just test-app [-f <filter>]     # Layer 2: real app in the background via its control socket
+just test-os <scenario>...      # Layer 3: real OS input. ONLY after the user approves (see below)
+just test-kind                  # kore-core backend tests against the kind clusters
 ```
+`just` is `brew install just`. Each recipe is a thin wrapper, so you can read `justfile` and run the commands directly.
+
+## Testing layers
+
+Three layers, cheapest first. **For every change, pick the lowest layer that can actually catch a regression.**
+
+| Layer | What runs | Where | Cost |
+|---|---|---|---|
+| 1 | `#[gpui_kit::test]` tests of the real UI in a headless window against `kore-testkit`'s in-memory Kubernetes API (`crates/kore-app/src/tests/`, driver `crates/kore-app/src/testing.rs`), plus unit tests | `cargo test`, CI | seconds; no cluster, network, keychain or window |
+| 2 | The real release app, built with `--features test-harness`. It is driven through its in-app control server (Unix socket): input is injected inside the app, screenshots are rendered off-screen, YAML scenarios run against the kind clusters (`harness/scenarios/*.yaml`) | `just test-app`, or the `kore` MCP server (`.mcp.json`) | minutes; runs in the background, never touches the mouse or keyboard |
+| 3 | Real macOS input (CGEvent) and window-server capture (`harness/scenarios/os/`) | `just test-os <name>` | takes over the user's mouse and keyboard |
+
+### Routing rules
+- **Logic, state, actions, keybindings, data handling:** Layer 1. Always add or update a test.
+- **Layout, styling, rendering, new views, anything visual:** Layer 1 for the behavior, plus Layer 2 with a screenshot check.
+- **Kubernetes integration behavior:** Layer 1 with the fake cluster (`FakeCluster`, `FakeEnv`), plus Layer 2 against the kind clusters when relevant (real API server semantics, watches, helm/kubectl, RBAC).
+- **Platform/input layer (NSEvent handling, IME, drag & drop outside the window, window management, system menus, permissions, multi-window focus):** Layer 3, **but only after asking the user**.
+- **Before choosing Layer 3,** check whether Layer 2 can cover it. Prefer extending the control server (`crates/kore-app/src/automation/server.rs`, protocol in `crates/kore-automation`) over falling back to real input.
+- **After any UI change,** run the relevant Layer 2 scenarios yourself and look at the screenshots in `harness/runs/<run>/` before calling the work done.
+
+### Layer 3 is the user's call
+Layer 3 takes over the user's mouse and keyboard, so **never run it on your own initiative.** When a change needs it:
+1. Stop and explain why Layers 1–2 can't cover it.
+2. Ask the user.
+3. After they approve, run only the specific scenarios needed: `just test-os <name>`. The harness refuses to run Layer 3 without names unless `--all` is given; don't use `--all` without explicit approval.
+
+The run releases all modifiers and mouse buttons and stops the app on completion, Ctrl-C, panic, or the per-scenario hard timeout (`--timeout`, default 60 s).
+
+### How to run each layer
+- **Layer 1.** `just test-unit`, or `cargo test -p kore-app tests::<area>`. To add tests:
+  - Boot the UI with `Kore::boot(cx)`, which loads the harness world snapshot from `crates/kore-testkit/fixtures`.
+  - Drive it by automation id: `k.click(id)`, `k.keys("cmd-k")`, `k.type_text(..)`.
+  - Assert on `k.state()`, `k.element(id)` and `k.wait_*`.
+  - Shape the world with `k.cluster.apply/modify/delete/forbid/set_logs`. `FakeEnv` provides fake CLIs (`tool`), update/AI endpoints and broken contexts; `kore_testkit::MockAi` is the AI provider.
+- **Layer 2.** Needs Docker + kind: `just test-app -f <filter>`. Write scenarios with `click: {id: ...}`, `element:`, `state:` and `wait:`/`expect:`, then `just compare <run>` for visual regression against `harness/BASELINE_RUN`. To drive the app interactively, use the `kore` MCP server tools (`launch`, `snapshot`, `click`, `type`, `key`, `wait`, `screenshot`, ...).
+- **Layer 3.** `just test-os <scenario-name>`, after approval.
+
+Give new interactive elements a stable automation id with `.auto_id(id, role, label)`. It is layout-neutral. Layers 1, 2 and 3 all target these ids.
 
 ## Architecture
 
-**Two-process model**: Tauri spawns a Rust backend process and a webview rendering the React frontend. They communicate via Tauri's invoke (request/response) and event (push/streaming) systems.
+- **`crates/kore-core`**: all backend logic, with no UI dependency.
+  - `Core` owns its tokio runtime and exposes one async method per operation.
+  - Streams (watches, logs, exec, AI) return `Subscription<T>`; dropping it cancels the stream.
+  - The `state/` modules: resources, logs, exec, metrics, port_forward, yaml, rollback, dashboard, event_store (SQLite), multi_logs, crd, graph, helm, multi_cluster, rbac, network_policy, debug, update, ai.
+  - `json::sort_keys` keeps JSON/YAML output key-sorted. serde_json's `preserve_order` is enabled by GPUI.
+- **`crates/kore-app`** (binary `kore`): the UI.
+  - `main.rs`, `root.rs`: window, routing, global keymap.
+  - `backend.rs`: bridge to Core.
+  - `state/`: `AppState`, `ResourceStore`, settings, storage.
+  - `views/`: one module per feature view.
+  - `ui/`: shared widgets, e.g. inputs, dropdowns, toast, confirm, `mono_text`, markdown.
+  - `theme.rs`.
+  - `automation/`: element registry (`auto_id`); the Layer 2 control server exists only with the `test-harness` feature and starts when `KORE_CONTROL_SOCKET` is set.
+  - `testing.rs` + `tests/`: the Layer 1 driver and UI tests (test builds only).
+- **`crates/kore-automation`**: control protocol types.
+- **`crates/kore-testkit`** (dev-only): `FakeCluster` (in-memory Kubernetes API for kube-rs), `FakeEnv` (sandboxed kubeconfig/data dirs/fake CLIs/offline endpoints), harness-world fixtures, `MockAi`.
+- **`crates/kore-harness`**: Layer 2/3 driver (control socket client; CGEvent input + window capture for Layer 3 only), Vision OCR, scenario runner, screenshot compare, MCP server, mock AI server.
 
-### Backend (`src-tauri/src/`)
+**Read `docs/gpui-port/CONVENTIONS.md` before changing UI code.** It covers the view constructor contract, Core access, the navigation API, keyboard/Esc rules, theme tokens, mono-text pitch, and automation ids.
 
-- **`main.rs`** — Tauri app setup, registers all commands and initializes `K8sState`
-- **`commands.rs`** — All Tauri command handlers (~30 commands)
-- **`error.rs`** — Custom error types via thiserror (`K8sError` enum)
-- **`constants.rs`** — Shared constants
+The behavior specs are in `docs/gpui-port/spec/`; update them when you change behavior.
 
-**`state/` module** — Core backend logic, split into focused files:
-- **`mod.rs`** — `K8sState` struct wrapping kube-rs client with `Arc<RwLock<>>`. Context/namespace management, resource listing
-- **`resources.rs`** — Resource CRUD, watching, describing, event listing, search across kinds
-- **`logs.rs`** — Pod log fetching and streaming (`pod-logs://{ns}/{pod}` events)
-- **`exec.rs`** — Pod exec terminal sessions (`exec-stdout://{session}` events)
-- **`metrics.rs`** — Pod metrics via Metrics Server API
-- **`port_forward.rs`** — Port forwarding via kubectl subprocess with TCP proxying
-- **`yaml.rs`** — YAML get/apply/diff for resources (server-side apply via `Patch::Apply`)
-- **`rollback.rs`** — Deployment revision history (reads ReplicaSets by ownerReference) and rollback
-- **`dashboard.rs`** — Cluster health aggregation (pods, nodes, metrics, events → health score 0-100)
-- **`event_store.rs`** — SQLite persistent event store (`~/.kore/events.db` via rusqlite)
-- **`multi_logs.rs`** — Aggregated multi-pod log streaming by label selector
-- **`crd.rs`** — CRD discovery and dynamic resource browsing via `DynamicObject`/`ApiResource`
-- **`graph.rs`** — Resource dependency graph (ownerReferences + label selector matching)
-- **`helm.rs`** — Helm release management (shells out to `helm` CLI)
-- **`multi_cluster.rs`** — Cross-context resource listing with temporary Client instances
-- **`ai.rs`** — AI troubleshooting (OpenAI/Anthropic/Ollama streaming via reqwest)
+## Styling
 
-**Key patterns**: Commands access `K8sState` via Tauri's managed state. Watchers emit `resource://event` Tauri events. Port forwarding uses kubectl subprocess with TCP proxying. AI responses stream via `ai-response://{session}` events. Multi-pod logs emit to `multi-pod-logs://{id}`. Watch cancellation uses oneshot channels.
+- Dark theme: background `#0b1221`, surface `#101828`. The accent `#58d0ff` is user-configurable, so always use `theme::accent(cx)`.
+- Fonts: system UI font, plus SF Mono (Menlo/Consolas/DejaVu Sans Mono fallback). Mono text is laid out at a 0.601em pitch via `ui::mono_text`.
+- Icons are exact Lucide SVGs in `assets/lucide`. SVGs don't inherit color, so always set `.text_color` on the icon.
 
-### Frontend (`src/`)
+## Keyboard shortcuts
 
-- **`App.tsx`** — Root component with all top-level state, routing between views (table/details/dashboard/graph/crds/helm/settings), keyboard handler
-- **`lib/api.ts`** — Tauri invoke wrappers for all backend commands
-- **`lib/types.ts`** — TypeScript types (ResourceItem, ResourceKind, AppView, WatchEventPayload, etc.)
-- **`lib/transforms.ts`** — `toResourceItem()` converts raw K8s objects to unified `ResourceItem`
-- **`lib/errors.ts`** — Error formatting utilities
-- **`lib/utils.ts`** — `cn()` classname utility
-
-**`hooks/`**:
-- `use-k8s-context.ts` — Context/namespace state management
-- `use-resource-watch.ts` — Resource listing + real-time watch subscription (supports multi-cluster)
-- `use-keyboard-shortcuts.ts` — Global keyboard shortcut registration
-- `use-pinned-resources.ts` — Bookmark/pin resources (localStorage)
-- `use-restart-history.ts` — Tracks pod restart counts over time for sparklines
-
-**`components/`** (key components):
-- `resource-table.tsx` — TanStack Table with kind-specific columns, pin button, restart sparklines, multi-cluster column
-- `pod-details-view.tsx` — Tabbed: logs/describe/yaml/metrics/events/shell. Log download, Copy YAML
-- `deployment-details-view.tsx` — Tabbed: describe/yaml/rollback/logs/events
-- `resource-details-view.tsx` — Generic detail view with describe/yaml/events tabs
-- `yaml-editor.tsx` — YAML viewer/editor with diff view and live apply
-- `deployment-rollback.tsx` — Revision timeline with image diffs and one-click rollback
-- `cluster-dashboard.tsx` — Health score, pod ring chart (Recharts), node bars, restart hotlist
-- `resource-graph.tsx` — Interactive SVG dependency graph with hierarchical layout, zoom/pan
-- `crd-browser.tsx` — Two-panel CRD discovery and instance browsing
-- `helm-releases.tsx` / `helm-detail-view.tsx` — Helm release table and detail (values/manifest/history/rollback)
-- `ai-panel.tsx` / `ai-settings.tsx` — AI chat panel with streaming, provider config
-- `multi-pod-logs.tsx` — Color-coded aggregated log viewer
-- `diff-viewer.tsx` — Side-by-side YAML diff with LCS algorithm
-- `events-timeline.tsx` — Live events + SQLite history toggle with time range
-- `command-palette.tsx` — cmdk-based palette with resource search, views, quick filters, actions
-- `sidebar.tsx` — Navigation with context/namespace dropdowns, views, pinned resources, multi-cluster toggle
-- `settings.tsx` — Preferences page (event retention, accent color, shortcuts)
-- `shortcut-overlay.tsx` — Keyboard shortcut reference modal
-- `restart-sparkline.tsx` — Inline SVG sparkline for pod restart trends
-- `pinned-resources.tsx` — Sidebar pinned resources list
-- `label-filter-bar.tsx` — Label selector filter UI
-- `port-forwarding.tsx` — Port forward management panel
-- `pod-metrics.tsx` — CPU/memory charts (Recharts)
-- `exec-terminal.tsx` — Pod exec terminal
-- `searchable-dropdown.tsx` — Dropdown with search and localStorage favorites
-- `toast.tsx` — Toast notification system
-- `confirm-dialog.tsx` — Confirmation dialog
-- `error-boundary.tsx` — React error boundary
-
-**Resource kinds**: pods, deployments, services, nodes, events, configmaps, secrets, ingresses, jobs, cronjobs.
-
-**Keyboard shortcuts**: `Cmd+K` palette, `/` focus search, `j/k` navigate rows, `l` enter detail, `h` go back, `1-6` switch tabs in detail views, `?` shortcut overlay.
-
-### Styling
-
-Dark theme with custom Tailwind config: background `#0b1221`, surface `#101828`, accent `#58d0ff`. Monospace font (SFMono). Custom `.glass` utility for glassmorphism. Animations via Framer Motion.
-
-### Path alias
-
-`@` maps to `/src` (configured in both vite.config.ts and tsconfig.json).
-
-## Key Dependencies
-
-**Rust**: kube, k8s-openapi, tokio, serde/serde_json, serde_yaml, similar (diff), rusqlite (SQLite), reqwest (AI HTTP), tauri, thiserror, tracing, rand
-**Frontend**: react, @tanstack/react-table, recharts, cmdk, framer-motion, lucide-react, @tauri-apps/api
+`Cmd/Ctrl+K` palette, `/` search, `j/k` rows, `l` details, `h` back, `1-6` tabs, `?` overlay, `Cmd/Ctrl+R` refresh, `Cmd/Ctrl+Shift+R` RBAC, `Cmd/Ctrl+F` search in logs/describe/YAML.
 
 ## Prerequisites
 
-- macOS 14+, Rust stable, Node.js 18+, Xcode CLT
-- Valid `~/.kube/config` with at least one reachable context
-- Optional: `helm` in PATH for Helm features, `kubectl` for port forwarding and exec
+- Rust stable; a `~/.kube/config` with a reachable context.
+- Optional: `helm` (Helm features) and `kubectl` (port forwarding, exec) in `PATH`.
+- macOS: Xcode CLT.
+- Linux: see `crates/kore-app/packaging/linux/deps.sh`.
+- Windows: MSVC. Release builds need a Windows host because of GPUI's `fxc.exe` shader step.
+- Harness: Docker + kind (Layer 2). Layer 3 also needs macOS Accessibility + Screen Recording permission for the terminal.

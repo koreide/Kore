@@ -1,0 +1,30 @@
+name: cluster-ai-chat
+description: >
+  AI Chat (Ollama -> mock): the empty state shows the suggestion buttons; "Cluster health" triggers a
+  get_cluster_health tool call, shown as the "Querying get cluster health..." status pill, then the
+  assistant answer renders markdown (heading, bold, table, inline code, code block). Shift+Enter
+  inserts a newline, Enter sends.
+tags: [cluster, ai]
+steps:
+  - include: cluster-start
+  - include: cluster-ai-ollama-mock
+  - click: {text: AI Chat, within: [0, 0.3, 0.19, 1]}
+  - wait: {text: "What can I help you with?", timeout: 10}
+  - expect: {texts: [Kore AI, Cluster assistant with live data, Cluster health, Failing pods, High restarts, Recent warnings, Resource overview, "Shift+Enter for newline"]}
+  - expect_not: {texts: [Configure an AI provider]}
+  - screenshot: {name: chat-empty}
+  - click: {text: Cluster health, within: [0.19, 0.3, 1, 0.8]}
+  - wait: {text: Querying get cluster health, timeout: 15}
+  - screenshot: {name: chat-tool-status, mask: ["re:Querying"]}
+  - wait: {text: Summary, timeout: 20}
+  - expect: {texts: [Give me an overview of the cluster health, Cluster looks fine, Pod, Status, web, Running, inline, code block]}
+  - expect_not: {texts: [Querying get cluster health]}
+  - screenshot: {name: chat-markdown}
+  - click: {text: Ask about your cluster, within: [0.19, 0.8, 1, 1]}
+  - type: hello
+  - key: shift+enter
+  - type: world
+  - key: enter
+  - wait: {text: world, exact: true, timeout: 10}
+  - expect: {texts: [hello]}
+  - wait: {text: Summary, within: [0.19, 0.5, 1, 0.9], timeout: 20}

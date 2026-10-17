@@ -1,0 +1,24 @@
+name: shell-multi-cluster
+description: >-
+  Toggling Multi-Cluster in the sidebar prepends a CLUSTER column and lists rows from every
+  kubeconfig context (remote-web from kind-kore-harness-2); toggling off removes them
+  (spec 01 §4.2, §7.8, §21.9).
+tags: [shell, sidebar, table]
+steps:
+  - include: shell-pods-kore-demo
+  - include: shell-clear-search
+  - include: shell-ns-all
+  - click: {text: Deployments, within: [0, 0.6, 0.19, 0.95], exact: true}
+  - wait: {text: coredns, within: [0.19, 0.14, 1, 1], timeout: 15}
+  - expect_not: {texts: [CLUSTER, remote-web], within: [0.19, 0.1, 1, 1], timeout: 1}
+  - click: {text: Multi-Cluster, within: [0, 0.28, 0.19, 0.36]}
+  - wait: {text: remote-web, within: [0.19, 0.14, 1, 1], timeout: 30}
+  - expect: {texts: [CLUSTER, NAMESPACE, NAME, READY], within: [0.19, 0.1, 1, 0.14]}
+  - expect: {texts: [kind-kore-harne, kore-remote], within: [0.19, 0.14, 1, 1]}
+  - screenshot: {name: multi-cluster-on, mask: ["re:^\\d+[smhd]$", "re:^\\d+(/\\d+)?$"]}
+  - click: {text: Multi-Cluster, within: [0, 0.28, 0.19, 0.36]}
+  - wait_gone: {text: remote-web, within: [0.19, 0.14, 1, 1], timeout: 20}
+  - wait: {text: coredns, within: [0.19, 0.14, 1, 1], timeout: 15}
+  - expect_not: {texts: [CLUSTER], within: [0.19, 0.1, 1, 0.14], timeout: 1}
+  - include: shell-ns-kore-demo
+  - include: nav-pods
